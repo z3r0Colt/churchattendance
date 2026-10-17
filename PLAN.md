@@ -174,12 +174,15 @@ Firestore stores documents in collections. Locking happens per document, not per
 people/{personId}
   firstName, lastName, preferredName, gender, birthDate, email, mobilePhone, homePhone,
   photoPath, householdId, membershipStatus, elderDistrictId, smsOptIn, emailOptIn,
-  isDeceased, customFields{}, updatedAt, updatedBy
+  isDeceased, customFields{}, updatedAt, updatedBy, firstVisitDate (optional, visitor quick add)
   membershipEvents/{id}   date, fromStatus, toStatus, method, otherChurch, reason
   sacraments/{id}         type (baptism | profession), date, place, officiant
   offices/{id}            role (pastor | elder | deacon), ordainedOn, installedOn, endedOn
 
 sessionPrivate/{personId}    disciplineFlag, disciplineHistory[]     (Session only)
+attendanceRoster/{personId}  id, firstName, lastName, preferredName, householdId,
+                             householdName, membershipStatus, isDeceased
+                             (server-maintained names-only roll for attendance volunteers)
 careNotes/{noteId}           personId, authorUid, body, createdAt    (Session only)
 followUps/{taskId}           personId, assignedToUid, dueDate, done  (Session only)
 diaconalTasks/{taskId}       title, personId, assignedToUid, dueDate, done   (Session and assigned deacon)
@@ -189,7 +192,7 @@ elderDistricts/{id}          name, elderPersonId
 serviceTypes/{id}            name, dayOfWeek, defaultTime, isActive
 
 services/{serviceId}
-  serviceTypeId, date, notes
+  serviceTypeId, date, notes, lastAttendancePersonId
   present { personId: { at, method (roll | kiosk), byUid } }
 
 groups/{groupId}             name, type, leaderPersonId, memberIds[]
@@ -203,12 +206,16 @@ messages/{messageId}         channel (email | sms), subject, body, audience, sch
   recipients/{personId}      address, status, providerId, error
 smsInbox/{id}                fromNumber, personId, body, receivedAt, read
 
-users/{uid}                  personId, displayName, role
+users/{uid}                  personId, displayName, roles[]
 auditLog/{id}                uid, collection, docId, action, before, after, at   (written only by Functions)
 settings/church              name, address, service defaults, message footer
 ```
 
 Attendance for a service is one document with a `present` map. A full year of three services a week is only about 150 documents, so reports are fast and cheap. The booth and a kiosk can check people in at the same moment without clashing, because each check mark updates its own field.
+
+Implementation clarification, Phase 1 foundation: volunteers read `attendanceRoster`, never `people` or the full household records. People and household writes run through validated callable Functions, which update the roster in the same transaction or batch. Client roll-call writes change one person's field per write; household marking issues separate field updates. Creating a service uses a transaction while online, and an existing cached service works offline. Membership changes and their history entries are atomic. Roles use an array custom claim, `roles`, so a Pastor can also be an Admin. Only a Session administrator can grant or remove Session roles, and administrators cannot change their own roles. Audit records are Session-only because their before/after values may contain sensitive information. Pastoral client writes are disabled until validated care Functions are added in Phase 3.
+
+Each roll-call update also writes `lastAttendancePersonId`. Rules constrain the changed map keys to that one ID and validate its entry. This is a validation hint, not an attendance record or a lock. Firestore Rules sets cannot be indexed, so this hint allows strict entry validation without replacing the `present` map. Simultaneous PCs still update independent person fields.
 
 ### 4.4 Roles and security rules
 * Roles are Admin, Pastor, Clerk, Elder, Deacon, Attendance Volunteer, and Read Only. They are set by an Admin through a Cloud Function that writes a custom claim on the user's login.

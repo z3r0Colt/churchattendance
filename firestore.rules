@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function roles() { return request.auth != null ? request.auth.token.get('roles', []) : []; }
+    function session() { return roles().hasAny(['pastor', 'clerk', 'elder']); }
+    function editor() { return roles().hasAny(['admin', 'pastor', 'clerk', 'elder']); }
+    function reader() { return roles().hasAny(['admin', 'pastor', 'clerk', 'elder', 'deacon', 'readOnly']); }
+    function attendanceWriter() { return roles().hasAny(['admin', 'pastor', 'clerk', 'elder', 'deacon', 'attendanceVolunteer']); }
+    function attendanceReader() { return reader() || roles().hasAny(['attendanceVolunteer']); }
+    function validService() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['serviceTypeId', 'date', 'notes', 'present', 'lastAttendancePersonId']) &&
+        d.keys().hasOnly(['serviceTypeId', 'date', 'notes', 'present', 'lastAttendancePersonId']) &&
+        d.serviceTypeId is string && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        d.notes is string && d.notes.size() <= 1000 && d.present is map && d.lastAttendancePersonId is string;
+    }
+    function validMark(personId) {
+      let person = get(/databases/$(database)/documents/attendanceRoster/$(personId)).data;
+      let marks = request.resource.data.present;
+      return !(personId in marks) || (
+        person.isDeceased == false && person.membershipStatus != 'former' &&
+        marks[personId] is map && marks[personId].keys().hasAll(['at', 'method', 'byUid']) &&
+        marks[personId].keys().hasOnly(['at', 'method', 'byUid']) &&
+        marks[personId].at == request.time && marks[personId].byUid == request.auth.uid &&
+        marks[personId].method in ['roll', 'kiosk']);
+    }
+    function validAttendanceUpdate() {
+      let changed = request.resource.data.present.diff(resource.data.present).affectedKeys();
+      let personId = request.resource.data.lastAttendancePersonId;
+      return personId.matches('^[A-Za-z0-9_-]{1,128}$') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['present', 'lastAttendancePersonId']) &&
+        changed.hasOnly([personId]) && validMark(personId);
+    }
+    match /attendanceRoster/{personId} { allow read: if attendanceReader(); allow write: if false; }
+    match /people/{personId} {
+      allow read: if reader(); allow write: if false;
+      match /{subcollection}/{id} { allow read: if reader() && subcollection in ['membershipEvents', 'sacraments', 'offices']; allow write: if false; }
+    }
+    match /households/{id} { allow read: if reader(); allow write: if false; }
+    match /serviceTypes/{id} {
+      allow read: if attendanceReader();
+      allow write: if false;
+    }
+    match /services/{id} {
+      allow read: if attendanceReader();
+      allow create: if attendanceWriter() && validService() && request.resource.data.present.size() == 0 && request.resource.data.lastAttendancePersonId == '' && request.resource.data.notes == '' &&
+        id == request.resource.data.serviceTypeId + '_' + request.resource.data.date &&
+        get(/databases/$(database)/documents/serviceTypes/$(request.resource.data.serviceTypeId)).data.isActive == true;
+      allow update: if attendanceWriter() && validService() && validAttendanceUpdate();
+      allow delete: if false;
+    }
+    match /sessionPrivate/{id} { allow read: if session(); allow write: if false; }
+    match /careNotes/{id} { allow read: if session(); allow write: if false; }
+    match /followUps/{id} { allow read: if session(); allow write: if false; }
+    match /diaconalTasks/{id} {
+      allow read: if session() || (roles().hasAny(['deacon']) && resource.data.assignedToUid == request.auth.uid);
+      allow update: if roles().hasAny(['deacon']) && resource.data.assignedToUid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done']) && request.resource.data.done == true;
+      allow create, delete: if false;
+    }
+    match /auditLog/{id} { allow read: if session(); allow write: if false; }
+    match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
+    match /users/{uid} { allow read: if request.auth != null && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function reader() { return request.auth != null && request.auth.token.get('roles', []).hasAny(['admin', 'pastor', 'clerk', 'elder', 'deacon', 'readOnly']); }
+    function editor() { return request.auth != null && request.auth.token.get('roles', []).hasAny(['admin', 'pastor', 'clerk', 'elder']); }
+    match /photos/{personId}/{filename} {
+      allow read: if reader();
+      allow create, update: if editor() && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow delete: if editor();
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}
