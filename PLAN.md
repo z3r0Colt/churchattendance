@@ -77,6 +77,7 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Opt-out handling (STOP / UNSUBSCRIBE honored automatically)
 * Delivery log with sent, delivered, failed
 * Prayer chain and emergency broadcast list
+* **Automatic weekly bulletin email** every Saturday (see 4.8)
 
 ### 3.6 Pastoral Care
 * Pastoral notes, visit log, and discipline records are visible to the **Session only** (Pastor, Clerk, and Elders). No one else can open them, including Deacons and Admins who are not on Session
@@ -236,7 +237,7 @@ The church has Microsoft 365 but no email set up yet, so setup is part of Phase 
 1. Add **sycamorerpc.org** to Microsoft 365 (skip if it is already added). Sending from the free onmicrosoft.com address is heavily limited by Microsoft and tends to land in spam.
 2. Turn on SPF, DKIM, and DMARC for the domain so messages reach inboxes.
 3. Create a **shared mailbox** such as office@sycamorerpc.org. Shared mailboxes need no paid license. Give the pastor and the Clerk access so replies can be read in Outlook.
-4. Register an app in Microsoft Entra with the Mail.Send permission, and limit it to that one shared mailbox so it cannot send as anyone else.
+4. Register an app in Microsoft Entra with the Mail.Send permission (plus read access to the Bulletin folder only), and limit it to that one shared mailbox so it cannot send as anyone else.
 5. A Cloud Function sends through the **Microsoft Graph API** using that app. Microsoft has retired basic SMTP passwords for Exchange Online, so Graph is the supported way.
 
 Other details
@@ -244,12 +245,21 @@ Other details
 * Unsubscribe footer and per person email opt-out.
 * Replies go to the shared mailbox and are read in Outlook.
 
-### 4.8 Export details
+### 4.8 Weekly bulletin email
+* Settings hold the send day and time (default Saturday 10:00 AM, church time zone), the subject line pattern ("Sycamore RPC Bulletin, Lord's Day {Date}"), a short standard message, and who gets it (default everyone with an email who has not opted out).
+* The bulletin PDF can arrive two ways. Someone uploads it in the app's Bulletin screen, or saves it to a "Bulletin" folder in the church's Microsoft 365 OneDrive or SharePoint. The app picks up the newest file from that folder through Microsoft Graph, so whoever makes the bulletin does not have to open the app at all.
+* Friday evening a preview copy goes to the Pastor. If no new bulletin has shown up by then, the Pastor gets a reminder instead.
+* Saturday at the set time a scheduled Cloud Function sends it from office@sycamorerpc.org. Each person gets their own copy (no long To or CC list, so no reply-all), with the PDF attached and their name in the greeting. Files over 3 MB are sent with Graph's large attachment upload.
+* If the bulletin still is not there on Saturday, nothing is sent and the Pastor is notified. The same week's bulletin is never sent twice.
+* An optional text goes out at the same time with a short link to the PDF for people who prefer texts.
+* Each send shows in the message log with delivered and failed counts, and a Send Now button covers weeks when plans change.
+
+### 4.9 Export details
 * Every grid gets an Export button (CSV or XLSX) that exports exactly what is filtered on screen, saved through a normal Windows save dialog.
 * XLSX exports include a header row, frozen panes, column widths, date formatting, and a "Summary" sheet when the report has totals.
 * Attendance matrix export with people down the side, dates across the top, check marks, and per person totals.
 
-### 4.9 Backups
+### 4.10 Backups
 * Firestore scheduled backups run daily and are kept 30 days.
 * An Admin "Export Everything" button saves the whole database to an XLSX workbook on the PC.
 
@@ -283,6 +293,7 @@ Other details
 * Email through Microsoft Graph with templates and merge fields
 * SMS through Twilio with opt-out handling and a live reply inbox
 * Message log on each person, scheduled sends
+* Automatic Saturday bulletin email with OneDrive folder pickup
 * Absence alerts to shepherding elders
 
 **Phase 3, ChMS extras (about 4 to 6 weeks)**
@@ -331,8 +342,8 @@ Other details
 
 These four make up the Session group, so they are the only ones who can see pastoral notes and discipline records. The Pastor sets up other logins (Clerk role, deacons, sound booth volunteer) from Settings after launch.
 
-## 8b. Still Open
-1. Which elder serves as Clerk of Session? That person also gets the Clerk role for the membership roll and statistical report.
+## 8b. Later
+1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
 Approve this plan (with any changes), and Phase 1 development starts with the Firebase project, the Electron app scaffold, security rules, and the roll call screen.
