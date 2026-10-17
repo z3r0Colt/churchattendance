@@ -70,7 +70,7 @@ Officer roles (Pastor, Elder, Deacon) show as a second small badge after the nam
 
 ```
 +--------------------------------------------------------------------------------+
-| [Sycamore RPC]                        (o) Online   Shawn Anderson, Pastor  [v] |
+| [Sycamore RPC]                        (o) Online   James Calder, Pastor    [v] |
 +--------------+-----------------------------------------------------------------+
 |  Dashboard   |  Page title                                    [Primary action] |
 |  Attendance  |  ---------------------------------------------------------------|
@@ -130,9 +130,9 @@ Centered card with the church name, email, password, and a "Keep this PC signed 
 |  [ Search name or family...                        ]   [+ Add visitor]         |
 |  Show: (All) (Members) (Adherents) (Visitors)   Sort: Last name  [v]           |
 |  -------------------------------------------------------------------------------|
-|  ANDERSON                                                  [Mark all 5]        |
-|   [x] Shawn  Pastor  Communicant                                               |
-|   [x] Sarah          Communicant                                               |
+|  CALDER                                                    [Mark all 5]        |
+|   [x] James  Pastor  Communicant                                               |
+|   [x] Ruth           Communicant                                               |
 |   [x] Caleb          Baptized                                                  |
 |   [ ] Grace          Baptized                                                  |
 |   [x] Hannah         Baptized                                                  |
