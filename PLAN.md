@@ -246,11 +246,12 @@ Other details
 * Replies go to the shared mailbox and are read in Outlook.
 
 ### 4.8 Weekly bulletin email
-* Settings hold the send day and time (default Saturday 10:00 AM, church time zone), the subject line pattern ("Sycamore RPC Bulletin, Lord's Day {Date}"), a short standard message, and who gets it (default everyone with an email who has not opted out).
+* Settings hold the send day and time (default Saturday 6:00 PM, church time zone, since the Pastor builds the sermon on Saturday and the bulletin is often finished that day), the subject line pattern ("Sycamore RPC Bulletin, Lord's Day {Date}"), a short standard message, and who gets it (default everyone with an email who has not opted out).
 * The bulletin PDF can arrive two ways. Someone uploads it in the app's Bulletin screen, or saves it to a "Bulletin" folder in the church's Microsoft 365 OneDrive or SharePoint. The app picks up the newest file from that folder through Microsoft Graph, so whoever makes the bulletin does not have to open the app at all.
-* Friday evening a preview copy goes to the Pastor. If no new bulletin has shown up by then, the Pastor gets a reminder instead.
+* As soon as a new bulletin file shows up, a preview copy goes to the Pastor so there is time to fix anything before it sends.
+* If nothing has shown up by 4:00 PM Saturday, one short reminder goes out. It goes to whoever is set as the bulletin maker (default the Pastor), so it can be pointed at a secretary or volunteer instead.
 * Saturday at the set time a scheduled Cloud Function sends it from office@sycamorerpc.org. Each person gets their own copy (no long To or CC list, so no reply-all), with the PDF attached and their name in the greeting. Files over 3 MB are sent with Graph's large attachment upload.
-* If the bulletin still is not there on Saturday, nothing is sent and the Pastor is notified. The same week's bulletin is never sent twice.
+* If the bulletin is late, the app keeps watching and sends it as soon as it shows up, up until 11:00 PM Saturday. After that nothing is sent automatically and the Pastor can use Send Now on Lord's Day morning if wanted. The same week's bulletin is never sent twice.
 * An optional text goes out at the same time with a short link to the PDF for people who prefer texts.
 * Each send shows in the message log with delivered and failed counts, and a Send Now button covers weeks when plans change.
 
