@@ -1,0 +1,232 @@
+# DESIGN.md
+
+The UI design system and screen specs for the Sycamore RPC church management app. Agents and developers follow this file for every screen. Product scope lives in `PLAN.md`.
+
+## 1. Principles
+
+1. **Plain and reverent.** The app serves a Reformed congregation. Keep it quiet, orderly and uncluttered. No playful illustrations, confetti, emoji or bright marketing colors.
+2. **Built for the sound booth.** Roll call happens in a dim booth during the minutes before worship, often by a volunteer. Big targets, high contrast, keyboard friendly, and nothing that needs a second click when one will do.
+3. **One job per screen.** Each screen answers one question, such as "who is here today" or "who has the elder not seen lately".
+4. **Show what is private.** Session only data always carries a lock icon and the words "Session only", so no one is surprised about who can see it.
+5. **Never lose a check mark.** Offline and sync state is always visible, and saved work is never thrown away.
+
+## 2. Foundations
+
+Built on **Fluent UI React v9**. Use its components and tokens. Do not hand roll a control Fluent already has.
+
+### 2.1 Brand color
+The brand color is a deep sycamore green. Generate the Fluent `BrandVariants` ramp from `#2F6B4F` with the Fluent theme designer and store it in `renderer/theme/brand.ts`.
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| brand primary | `#2F6B4F` | `#6FB592` | Primary buttons, selected nav, links |
+| background | `#FAFAF8` | `#1B1D1C` | App background |
+| surface | `#FFFFFF` | `#242726` | Cards, panels, dialogs |
+| text primary | `#1F2321` | `#ECEEEC` | Body text |
+| text secondary | `#5B625E` | `#A9B0AC` | Labels, hints |
+| border | `#DADFDC` | `#3A3F3D` | Dividers, inputs |
+| present | `#2F6B4F` | `#6FB592` | Present check marks and counts |
+| warning | `#9A6200` | `#E0A84A` | Absence alerts, pending sync |
+| danger | `#B3261E` | `#F2B8B5` | Errors, failed sends, destructive actions |
+| session lock | `#5A4A8A` | `#B9A8E8` | Session only badges and borders |
+
+All text and icon pairs must meet WCAG AA contrast (4.5 to 1 for text, 3 to 1 for large text and icons). Check both themes.
+
+### 2.2 Themes
+* Light, Dark, and Match Windows. The setting is per PC, so the sound booth PC can stay in Dark while the Pastor's office PC stays in Light.
+* The Kiosk always uses the light theme with extra large type.
+
+### 2.3 Type
+* Font is **Segoe UI Variable** (Windows default) through Fluent tokens. No web fonts.
+* Base size 14px. Roll call names are 16px semibold. Kiosk names are 24px.
+* Page titles use Fluent `Title3`. Section headings use `Subtitle2`.
+* Numbers in tables and stat tiles use tabular figures.
+
+### 2.4 Spacing, size and shape
+* 4px grid. Common gaps are 8, 12, 16 and 24.
+* Corner radius uses Fluent `borderRadiusMedium` (4px) for controls and `borderRadiusLarge` (8px) for cards.
+* Minimum click target is 40px tall on regular screens, 48px on Take Attendance, and 64px on the Kiosk.
+* Minimum window size is 1024 by 680. Layouts must work at 1366 by 768, which is typical for an older booth PC.
+
+### 2.5 Icons
+Fluent UI System Icons only, regular style, filled style for the selected state. Every icon button has a tooltip and an `aria-label`.
+
+## 3. Membership status badges
+
+Status always shows as a text badge. Color is never the only signal.
+
+| Status | Badge text | Badge style |
+|---|---|---|
+| communicant | Communicant | brand, filled |
+| baptized | Baptized | brand, outline |
+| nonResident | Non-resident | neutral, filled |
+| adherent | Adherent | informative, outline |
+| visitor | Visitor | warning, outline |
+| former | Former | neutral, outline, dimmed row |
+
+Officer roles (Pastor, Elder, Deacon) show as a second small badge after the name.
+
+## 4. App shell
+
+```
++--------------------------------------------------------------------------------+
+| [Sycamore RPC]                        (o) Online   Shawn Anderson, Pastor  [v] |
++--------------+-----------------------------------------------------------------+
+|  Dashboard   |  Page title                                    [Primary action] |
+|  Attendance  |  ---------------------------------------------------------------|
+|  People      |                                                                 |
+|  Households  |  Page content                                                   |
+|  Groups      |                                                                 |
+|  Calendar    |                                                                 |
+|  Serving     |                                                                 |
+|  Messages    |                                                                 |
+|  Bulletin    |                                                                 |
+|  Reports     |                                                                 |
+|  Pastoral  # |                                                                 |
+|              |                                                                 |
+|  Settings    |                                                                 |
++--------------+-----------------------------------------------------------------+
+```
+
+* Left nav is 220px and collapses to icons below 1200px wide.
+* `#` marks Session only sections. They show the lock icon and are hidden entirely for users without a Session role.
+* Top right shows the connection pill and the signed in user with role. The menu holds Theme, Lock now, and Sign out.
+
+### 4.1 Connection pill
+| State | Pill | Extra |
+|---|---|---|
+| Online, all saved | green dot, "Online" | none |
+| Saving | spinner, "Saving" | none |
+| Offline | amber dot, "Offline, changes saved on this PC" | thin amber bar across the top of the page |
+| Back online, syncing | spinner, "Syncing 12 changes" | bar turns green, then fades after 3 seconds |
+| Sync error | red dot, "Some changes did not save" | click opens details with a Retry button |
+
+### 4.2 Navigation by role
+| Section | Admin | Pastor | Clerk | Elder | Deacon | Attendance Volunteer | Read Only |
+|---|---|---|---|---|---|---|---|
+| Dashboard | yes | yes | yes | yes | yes | no | yes |
+| Attendance | yes | yes | yes | yes | yes | yes (only screen) | view |
+| People, Households | yes | yes | yes | yes | view | names only | view |
+| Groups, Calendar, Serving | yes | yes | yes | yes | yes | no | view |
+| Messages, Bulletin | yes | yes | yes | yes | no | no | no |
+| Reports | yes | yes | yes | yes | attendance only | no | yes |
+| Pastoral (Session only) | no | yes | yes | yes | no | no | no |
+| Deacon Tasks | yes | yes | yes | yes | own tasks | no | no |
+| Settings | yes | yes | limited | no | no | no | no |
+
+An Admin who is not on Session never sees Pastoral, even though Admin can do everything else.
+
+## 5. Screens
+
+### 5.1 Sign in
+Centered card with the church name, email, password, and a "Keep this PC signed in" checkbox (meant for the booth PC). Errors read plainly, such as "That email and password do not match."
+
+### 5.2 Take Attendance (most important screen)
+
+```
++--------------------------------------------------------------------------------+
+|  Lord's Day Morning  [v]     Nov 1, 2026  [<] [>]          Present  87 of 142 |
+|  -------------------------------------------------------------------------------|
+|  [ Search name or family...                        ]   [+ Add visitor]         |
+|  Show: (All) (Members) (Adherents) (Visitors)   Sort: Last name  [v]           |
+|  -------------------------------------------------------------------------------|
+|  ANDERSON                                                  [Mark all 5]        |
+|   [x] Shawn  Pastor  Communicant                                               |
+|   [x] Sarah          Communicant                                               |
+|   [x] Caleb          Baptized                                                  |
+|   [ ] Grace          Baptized                                                  |
+|   [x] Hannah         Baptized                                                  |
+|  -------------------------------------------------------------------------------|
+|  BAKER                                                     [Mark all 2]        |
+|   [ ] John           Adherent                                                  |
+|   [ ] Mary           Adherent                                                  |
+|  -------------------------------------------------------------------------------|
+|  ...                                                                           |
++--------------------------------------------------------------------------------+
+|  Members 71   Adherents 9   Visitors 7   Children counted in families          |
++--------------------------------------------------------------------------------+
+```
+
+* Opens to today's service automatically when a service type matches the day and time, otherwise to the next upcoming one.
+* Households are cards in last name order. Each row is a 48px tall toggle. Clicking anywhere on the row toggles it.
+* "Mark all" marks every active person in the household. Clicking again clears them.
+* Present rows get a green check, a light green fill, and bold names. Changes save instantly. There is no Save button.
+* The search box filters as you type and matches first, last, or preferred name. Pressing Enter toggles the first match and clears the search, so a volunteer can type "bak", Enter, "mck", Enter quickly.
+* Keyboard support uses arrow keys to move, Space to toggle, Ctrl+F to search, and Ctrl+N to add a visitor.
+* Add visitor opens a small side panel with first name, last name, phone, email, "first time here" (checked by default), and an optional "with household". Saving creates the person as Visitor and marks them present.
+* The sticky footer shows live counts by category.
+* Former and deceased people never appear. People away (non-resident) appear in a collapsed "Non-resident" section at the bottom.
+
+### 5.3 Dashboard
+
+```
++-------------------+-------------------+-------------------+-------------------+
+| Last Lord's Day   | 4 week average    | Visitors this     | Absent 3+ weeks   |
+| AM 121  PM 88     | AM 118  PM 84     | month  9          | 6 people          |
++-------------------+-------------------+-------------------+-------------------+
+| Attendance, last 12 months (line chart, AM and PM)                            |
++---------------------------------------+---------------------------------------+
+| Needs attention                       | This week                             |
+|  6 absent 3+ Lord's Days   [View]     |  Birthdays and anniversaries          |
+|  3 visitors not followed up [View]    |  Serving schedule gaps                |
+|  2 follow-ups due  # Session only     |  Bulletin status: waiting for file    |
++---------------------------------------+---------------------------------------+
+```
+
+* Stat tiles are clickable and open the matching report already filtered.
+* Session only items show only for Session roles.
+
+### 5.4 People list
+Data grid with columns for Name, Status, Household, Elder district, Mobile, Email, and Last attended. Filters for Status, Elder district, Group, and "absent X weeks" sit above the grid. Saved lists appear as chips. Toolbar holds Add person, Add household, Export (CSV / XLSX), and Message these people.
+
+### 5.5 Person detail
+Header with photo, name, status badge, officer badge, household link, and quick actions (Email, Text, Mark status change). Tabs below.
+
+* **Info** for contact, birthday, anniversary, and custom fields
+* **Membership** for the status history timeline, sacraments, offices, received and removed details
+* **Attendance** for a 12 month calendar heat strip plus a list
+* **Groups and Serving**
+* **Messages** for the email and text history, including replies
+* **Pastoral** (Session only, purple left border and lock icon) for notes, visits, follow-ups, and the discipline record
+
+Status changes always open a dialog asking for date, method, other church, and reason, so the membership history is never skipped.
+
+### 5.6 Messages
+* Compose panel with channel (Email, Text, or Both), audience picker (person, household, group, status, elder district, or saved list), a live recipient count with opted out people listed separately, a template picker, merge field chips such as `{FirstName}`, Send now or Schedule, and Send a test to me.
+* Text messages show a character and segment counter.
+* Tabs for Scheduled, Sent (with delivered and failed counts), and Text inbox. Unread replies show a badge on the nav item.
+
+### 5.7 Bulletin
+* Card for this week showing file name, where it came from (OneDrive folder or upload), preview thumbnail, scheduled send time ("Saturday 6:00 PM"), and status.
+* Status steps read Waiting for file, Preview sent to Pastor, Scheduled, Sending, and Sent to 134 (2 failed).
+* Buttons for Upload PDF, Open in OneDrive, Send test to me, Send now, and Skip this week.
+* History list of past bulletins below.
+
+### 5.8 Reports
+Left list of the seven reports from `PLAN.md` section 3.7. The right side holds filters (date range, service types, status, elder district), an on screen preview, and Export XLSX, Export CSV, and Print / PDF buttons. Print layouts use letter size, the church name at top, the report name and date range, and page numbers.
+
+### 5.9 Kiosk (optional)
+Full screen, light theme, no nav. Big search box reading "Type your last name or phone number". Results show household cards with every member as a 64px toggle and a large "Check in" button. Shows "Welcome, Baker family" for 3 seconds, then resets. Exiting requires an Admin or Pastor PIN.
+
+### 5.10 Settings
+Sections for Church (name, address, time zone), Service types, Elder districts, Users and roles, Email (Microsoft 365 connection status), Text (Twilio status and number), Bulletin (day, time, reminder person, OneDrive folder, subject, standard message), Custom fields, Backups, and Theme for this PC.
+
+## 6. Patterns
+
+* **Empty states** give one sentence and one button, such as "No services yet. Add your Lord's Day services to start taking attendance. [Add service type]".
+* **Confirmations** are only for destructive or wide actions, such as deleting, merging people, or sending to more than 20 people. The confirm button names the action ("Send to 134 people"), never just "OK".
+* **Undo** shows a toast with Undo for 8 seconds after unmarking a household, archiving a person, or removing from a group.
+* **Errors** say what happened and what to do next in one or two plain sentences, with no codes on the face of the message.
+* **Loading** uses skeleton rows for grids and never blocks the roll call screen once its cached data is there.
+* **Dates** read "Lord's Day, Nov 1, 2026" on attendance screens and "Nov 1, 2026" elsewhere. Times are 12 hour with AM and PM.
+
+## 7. Accessibility
+* Full keyboard use on every screen, with a visible focus ring from Fluent tokens.
+* Screen reader labels on every control, with live region announcements for roll call counts and sync state.
+* Respect Windows text scaling up to 150% without clipping.
+* Honor "reduce motion" by turning off chart and toast animations.
+
+## 8. Copy style
+* Short, plain, warm. Write "Saved" instead of "Your changes have been saved successfully!"
+* Say Lord's Day, Session, elder, adherent, and visitor. Never say "guest", "member ID", or "customer".
+* No exclamation marks, emoji, or jokes in system text.
