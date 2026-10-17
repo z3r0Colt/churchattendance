@@ -45,16 +45,17 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Households with head, spouse, children, shared address
 * Search, filter, saved lists ("All adherents who missed 4 weeks")
 * Merge duplicates
-* Import from CSV/XLSX (for moving off spreadsheets or Tithely)
+* Fast entry form for adding a whole household at once (there is no existing data to import)
+* CSV/XLSX import kept as a later nice to have
 * Timeline per person showing attendance, messages sent, notes, status changes
 
 ### 3.2 Attendance
 * Service types set up by the church, such as Lord's Day Morning, Lord's Day Evening, Midweek Prayer, Sabbath School classes, Communion Season
 * **Quick roll call screen** with a checklist of all active people grouped by household, one click marks the whole family
-* Headcount only mode for services where names are not taken
-* Visitor quick add right on the attendance screen
+* Every service is taken name by name. There is no headcount only mode
+* Children are marked on the same roll with their household. No separate children's check-in and no labels
+* Visitor quick add right on the attendance screen, so visitors are counted by name too
 * Optional **self check-in kiosk mode** (tablet or second monitor, search by last name or phone)
-* Optional **children's check-in** with printed name labels and matching parent tags (Dymo / Brother label printers)
 * Absence alerts, for example "flag anyone absent 3 Lord's Days in a row" sent to their shepherding elder
 
 ### 3.3 Groups
@@ -78,24 +79,38 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Prayer chain and emergency broadcast list
 
 ### 3.6 Pastoral Care
-* Private notes with visibility levels (Pastor only, Session, Deacons)
-* Visit log and follow-up tasks assigned to an elder or deacon
-* Diaconal needs list (meals, rides, benevolence requests without money amounts)
+* Pastoral notes, visit log, and discipline records are visible to the **Session only** (Pastor, Clerk, and Elders). No one else can open them, including Deacons and Admins who are not on Session
+* Follow-up tasks assigned to an elder
+* Diaconal task list (meals, rides, help with a move). The Session creates a task with only what the deacon needs to know, and deacons see their own tasks without any Session notes
 
 ### 3.7 Reports & Exports
-All reports export to **CSV and XLSX** and print to PDF.
-* Attendance by service, by date range, by person, by status
-* Weekly totals and averages, trend chart
-* Members vs adherents vs visitors breakdown
-* Absentee report
-* First time visitors and follow-up status
-* Membership roll (communicant, baptized, non-resident) for the Clerk
-* Annual statistical report figures for presbytery/synod (received, removed, baptisms, professions, deaths, totals)
-* Birthdays and anniversaries
-* Directory print (photo directory as PDF)
+Every report follows the same layout so it is easy to read. The XLSX file opens to a **Summary** sheet with the totals and a chart, then a **Detail** sheet, then a **Data** sheet with the raw rows for anyone who wants to sort and filter. Every report also exports to CSV and prints as a one page PDF for the Session meeting packet.
+
+**Weekly Attendance Summary**
+One row per service for the week. Columns show communicant members, baptized members, non-resident members, adherents, visitors, and the total. It also shows the 4 week average and the same week last year so the trend is plain at a glance.
+
+**Attendance Matrix**
+People down the side grouped by household, Lord's Days across the top, a check for each service attended, and an attendance percent per person. It can be filtered by status, elder district, or date range.
+
+**Shepherding Report (one per elder district)**
+Each family in the district with the last date attended, attendance percent for the last 3 months, and any open follow-ups. Anyone absent 3 or more Lord's Days in a row is highlighted at the top. This is the report elders will use most.
+
+**Visitor Follow-up**
+First time and returning visitors with the dates they came, how many times, contact info, and whether someone has followed up.
+
+**Membership Roll**
+The Clerk's roll in the usual sections of communicant members, baptized members, and non-resident members, with date received, how received, baptism and profession dates, and address. A second sheet lists everyone received and removed during the chosen period.
+
+**Annual Statistical Report**
+The numbers presbytery and synod usually ask for. That means communicant and baptized members at the start and end of the year, received by profession, by transfer, and by baptism, removed by transfer, death, discipline, or erasure, infant and adult baptisms, and average Lord's Day attendance. The Clerk can adjust labels to match the presbytery's form.
+
+**Congregational Meeting Summary**
+A yearly overview with average attendance per service by month, a 12 month trend chart, membership changes, and visitor count. It is meant to be printed and handed out.
+
+**Birthdays & Anniversaries** and the **Photo Directory** (PDF) are included as well.
 
 ### 3.8 Users & Security
-* Logins with roles: Admin, Pastor, Clerk of Session, Elder, Deacon, Attendance Volunteer, Read Only
+* Logins with roles: Admin, Pastor, Clerk of Session, Elder, Deacon, Attendance Volunteer, Read Only. Pastor, Clerk, and Elder together make up the **Session** group
 * Sensitive data (discipline, pastoral notes) kept in separate locked records that only the right roles can open
 * Each person logs in with their own account on any PC. The sound booth PC can stay logged in as an Attendance Volunteer account that only sees the roll call screen, while the pastor logs in with full access from the office or home
 * All traffic encrypted, passwords handled by Firebase Authentication, auto lock after idle
@@ -124,8 +139,8 @@ The app is a Windows desktop program built with Electron, backed by Google Fireb
 | Photos | Cloud Storage for Firebase | Person and directory photos |
 | Grids | TanStack Table | Fast sorting, filtering, and export of what is on screen |
 | Excel export | ExcelJS | Real .xlsx with formatting, no Excel install needed |
-| CSV | Papa Parse | Import and export |
-| PDF / printing | HTML report templates printed with Electron's printToPDF and silent print | Reports, directory, check-in labels |
+| CSV | Papa Parse | Export (and import later if wanted) |
+| PDF / printing | HTML report templates printed with Electron's printToPDF and silent print | Reports, directory |
 | Charts | Chart.js | Attendance trends |
 | SMS | Twilio (behind a provider interface so another carrier can be swapped in) | Reliable, two-way, cheap |
 | Email | Nodemailer over SMTP with the church's Google or Microsoft account, optional SendGrid for bulk | Church keeps its own address |
@@ -163,17 +178,18 @@ people/{personId}
   sacraments/{id}         type (baptism | profession), date, place, officiant
   offices/{id}            role (pastor | elder | deacon), ordainedOn, installedOn, endedOn
 
-sessionPrivate/{personId}    disciplineFlag, notes        (Pastor, Clerk, Elders only)
-careNotes/{noteId}           personId, authorUid, visibility, body, createdAt
-followUps/{taskId}           personId, assignedToUid, dueDate, done
+sessionPrivate/{personId}    disciplineFlag, disciplineHistory[]     (Session only)
+careNotes/{noteId}           personId, authorUid, body, createdAt    (Session only)
+followUps/{taskId}           personId, assignedToUid, dueDate, done  (Session only)
+diaconalTasks/{taskId}       title, personId, assignedToUid, dueDate, done   (Session and assigned deacon)
 
 households/{householdId}     name, address, homePhone
 elderDistricts/{id}          name, elderPersonId
 serviceTypes/{id}            name, dayOfWeek, defaultTime, isActive
 
 services/{serviceId}
-  serviceTypeId, date, headcount, anonymousVisitors, notes
-  present { personId: { at, method (roll | kiosk | import), byUid } }
+  serviceTypeId, date, notes
+  present { personId: { at, method (roll | kiosk), byUid } }
 
 groups/{groupId}             name, type, leaderPersonId, memberIds[]
   meetings/{meetingId}       date, present{}
@@ -196,7 +212,8 @@ Attendance for a service is one document with a `present` map. A full year of th
 ### 4.4 Roles and security rules
 * Roles are Admin, Pastor, Clerk, Elder, Deacon, Attendance Volunteer, and Read Only. They are set by an Admin through a Cloud Function that writes a custom claim on the user's login.
 * An Attendance Volunteer can read names and households and write check marks, and nothing else.
-* `sessionPrivate` and Session level `careNotes` are readable only by Pastor, Clerk, and Elders. Deacons see deacon level notes only.
+* `sessionPrivate`, `careNotes`, and `followUps` can be read and written only by users with the Pastor, Clerk, or Elder role. An Admin who is not on Session cannot open them either.
+* Deacons can read and complete only the `diaconalTasks` assigned to them.
 * The audit log is written by a Cloud Function every time a person, membership, or note changes. Users cannot write or edit it.
 * Every rule has an automated test run against the Firebase emulator before release.
 * Electron is locked down with context isolation on and Node access off in the UI.
@@ -214,11 +231,18 @@ Attendance for a service is one document with a `present` map. A full year of th
 * Edits only send the fields that changed, so if the pastor fixes a phone number while the booth fixes an address, both changes stick. If two people change the very same field, the later save wins, and the audit log keeps the old value so it can be restored.
 * Adding another PC later just means installing the app and signing in.
 
-### 4.7 Email details
-* Sent by a Cloud Function over SMTP with the church's own account (an app password for Google Workspace or Microsoft 365).
-* Bulk sends are batched to stay under provider limits (Google Workspace allows about 2,000 a day).
-* Optional SendGrid key for larger lists and open tracking.
+### 4.7 Email details (Microsoft 365)
+The church has Microsoft 365 but no email set up yet, so setup is part of Phase 2.
+1. Add the church's own domain to Microsoft 365 (buy one for about $12 a year if needed). Sending from the free onmicrosoft.com address is heavily limited by Microsoft and tends to land in spam.
+2. Turn on SPF, DKIM, and DMARC for the domain so messages reach inboxes.
+3. Create a **shared mailbox** such as office@yourchurch.org. Shared mailboxes need no paid license. Give the pastor and the Clerk access so replies can be read in Outlook.
+4. Register an app in Microsoft Entra with the Mail.Send permission, and limit it to that one shared mailbox so it cannot send as anyone else.
+5. A Cloud Function sends through the **Microsoft Graph API** using that app. Microsoft has retired basic SMTP passwords for Exchange Online, so Graph is the supported way.
+
+Other details
+* Sends are throttled to stay under Exchange Online limits (about 30 messages a minute and 10,000 recipients a day per mailbox), which is plenty for this church.
 * Unsubscribe footer and per person email opt-out.
+* Replies go to the shared mailbox and are read in Outlook.
 
 ### 4.8 Export details
 * Every grid gets an Export button (CSV or XLSX) that exports exactly what is filtered on screen, saved through a normal Windows save dialog.
@@ -249,13 +273,14 @@ Attendance for a service is one document with a `present` map. A full year of th
 * Firebase project, Electron app setup, logins and roles, security rules with tests
 * Offline cache turned on and tested for the booth PC
 * People, households, membership statuses and history
-* Service types, roll call attendance, headcount, visitor quick add
+* Service types, name by name roll call, visitor quick add
 * Attendance reports with CSV and XLSX export
-* CSV/XLSX import of existing people
+* Fast household entry form for loading the congregation by hand
 * Daily backups, desktop installer with auto update
 
 **Phase 2, Communication (about 3 to 4 weeks)**
-* Email through Cloud Functions with templates and merge fields
+* Microsoft 365 email setup (domain, shared mailbox, app registration)
+* Email through Microsoft Graph with templates and merge fields
 * SMS through Twilio with opt-out handling and a live reply inbox
 * Message log on each person, scheduled sends
 * Absence alerts to shepherding elders
@@ -264,9 +289,12 @@ Attendance for a service is one document with a `present` map. A full year of th
 * Groups with group attendance
 * Calendar, events, RSVPs
 * Serving schedule with reminder texts
-* Pastoral care notes, follow-up tasks, role based visibility
-* Kiosk and children's check-in with label printing
-* Annual statistical report, photo directory PDF
+* Session only pastoral notes and follow-ups, diaconal task list
+* Optional self check-in kiosk
+* Annual statistical report, congregational meeting summary, photo directory PDF
+
+**Later, if wanted**
+* CSV/XLSX import
 
 **Phase 4, Optional online pieces**
 * Member portal or phone app for directory and RSVP
@@ -280,17 +308,22 @@ Attendance for a service is one document with a `present` map. A full year of th
 | Twilio number | about $1.15 per month |
 | Texts | about $0.008 to $0.01 each, so a weekly 150 person text is about $6 per month |
 | 10DLC registration | one time about $4 to $45 depending on brand type, small monthly campaign fee |
-| Email | Free through existing Google or Microsoft account |
+| Email | Free through the existing Microsoft 365 (shared mailbox needs no license) |
+| Church domain name | about $12 per year if the church does not have one |
 | Code signing certificate (optional, stops Windows warnings) | about $100 to $300 per year, or about $10 per month through Azure Trusted Signing |
 
-## 8. Open Questions for the Session
-1. ~~One PC only, or several PCs sharing data?~~ Decided. Several PCs (sound booth and pastor to start), shared through Firebase.
-2. Will children be checked in with labels, or just marked on the roll?
-3. Which services get name-by-name attendance and which get headcount only?
-4. Who should see pastoral notes and discipline flags?
-5. Is there existing data (Tithely export, spreadsheet) to import?
-6. Does the church already have Google Workspace or Microsoft 365 for email?
-7. Does the presbytery want a specific statistical report layout?
+## 8. Decisions
+1. Several PCs (sound booth and pastor to start), shared through Firebase.
+2. Children are marked on the roll with their household. No labels.
+3. Every service is taken name by name.
+4. Pastoral notes and discipline are visible to the Session only.
+5. No existing data to import. People are entered by hand.
+6. Email goes through the church's Microsoft 365, which still needs a mailbox set up.
+7. Reports follow the layout in section 3.7.
+
+## 8a. Still Open
+1. Does the church own a domain name (like yourchurch.org)? If not, one needs to be bought before email is set up.
+2. Who will be the first Admin, and who is on the Session list for logins?
 
 ## 9. Next Step
 Approve this plan (with any changes), answer the open questions, and Phase 1 development starts with the Firebase project, the Electron app scaffold, security rules, and the roll call screen.
