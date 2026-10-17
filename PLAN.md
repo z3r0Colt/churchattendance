@@ -1,6 +1,6 @@
 # Church Attendance & Management (Windows) Plan
 
-A Windows desktop program for a Reformed Presbyterian congregation. It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and copies the useful parts of Tithely ChMS (people, households, groups, events, check-in, email and text messaging). Giving and tithing are left out on purpose.
+A Windows desktop program for Sycamore Reformed Presbyterian Church (sycamorerpc.org). It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and copies the useful parts of Tithely ChMS (people, households, groups, events, check-in, email and text messaging). Giving and tithing are left out on purpose.
 
 ## 1. Goals
 
@@ -233,9 +233,9 @@ Attendance for a service is one document with a `present` map. A full year of th
 
 ### 4.7 Email details (Microsoft 365)
 The church has Microsoft 365 but no email set up yet, so setup is part of Phase 2.
-1. Add the church's own domain to Microsoft 365 (buy one for about $12 a year if needed). Sending from the free onmicrosoft.com address is heavily limited by Microsoft and tends to land in spam.
+1. Add **sycamorerpc.org** to Microsoft 365 (skip if it is already added). Sending from the free onmicrosoft.com address is heavily limited by Microsoft and tends to land in spam.
 2. Turn on SPF, DKIM, and DMARC for the domain so messages reach inboxes.
-3. Create a **shared mailbox** such as office@yourchurch.org. Shared mailboxes need no paid license. Give the pastor and the Clerk access so replies can be read in Outlook.
+3. Create a **shared mailbox** such as office@sycamorerpc.org. Shared mailboxes need no paid license. Give the pastor and the Clerk access so replies can be read in Outlook.
 4. Register an app in Microsoft Entra with the Mail.Send permission, and limit it to that one shared mailbox so it cannot send as anyone else.
 5. A Cloud Function sends through the **Microsoft Graph API** using that app. Microsoft has retired basic SMTP passwords for Exchange Online, so Graph is the supported way.
 
@@ -309,7 +309,7 @@ Other details
 | Texts | about $0.008 to $0.01 each, so a weekly 150 person text is about $6 per month |
 | 10DLC registration | one time about $4 to $45 depending on brand type, small monthly campaign fee |
 | Email | Free through the existing Microsoft 365 (shared mailbox needs no license) |
-| Church domain name | about $12 per year if the church does not have one |
+| Church domain name | already owned (sycamorerpc.org), normal renewal only |
 | Code signing certificate (optional, stops Windows warnings) | about $100 to $300 per year, or about $10 per month through Azure Trusted Signing |
 
 ## 8. Decisions
@@ -321,9 +321,18 @@ Other details
 6. Email goes through the church's Microsoft 365, which still needs a mailbox set up.
 7. Reports follow the layout in section 3.7.
 
-## 8a. Still Open
-1. Does the church own a domain name (like yourchurch.org)? If not, one needs to be bought before email is set up.
-2. Who will be the first Admin, and who is on the Session list for logins?
+## 8a. Starting Users
+| Person | Office | App roles |
+|---|---|---|
+| Shawn Anderson | Pastor | Pastor, Admin (first admin) |
+| Brentt Vansickle | Elder | Elder |
+| Dr. Robert McKissick | Elder | Elder |
+| Tom Dinkledine | Elder | Elder |
+
+These four make up the Session group, so they are the only ones who can see pastoral notes and discipline records. The Pastor sets up other logins (Clerk role, deacons, sound booth volunteer) from Settings after launch.
+
+## 8b. Still Open
+1. Which elder serves as Clerk of Session? That person also gets the Clerk role for the membership roll and statistical report.
 
 ## 9. Next Step
-Approve this plan (with any changes), answer the open questions, and Phase 1 development starts with the Firebase project, the Electron app scaffold, security rules, and the roll call screen.
+Approve this plan (with any changes), and Phase 1 development starts with the Firebase project, the Electron app scaffold, security rules, and the roll call screen.
