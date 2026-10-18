@@ -238,6 +238,12 @@ importantDates/{id}          personId, kind (weddingAnniversary | baptismAnniver
 bereavementDates/{id}        personId, relatedPersonId, kind (deathAnniversary | lateSpouseBirthday | lateWeddingAnniversary |
                              other), date, encrypted{note}, endKind, endYear, endCount, remindDaysBefore, remindUid,
                              createdAt, revision, updatedAt, updatedBy   (Session API only)
+workflows/{id}               name, description, trigger, steps[], status (draft | active | paused | archived), publishedVersion,
+                             createdAt, revision, updatedAt, updatedBy   (Session API only; the draft)
+workflowVersions/{id_vN}     workflowId, version, name, trigger, steps[], publishedAt, publishedBy   (Session API only; immutable)
+workflowRuns/{workflowId_subject} workflowId, version, subject{personId, householdId, requestId, dateId, occurrence}, status
+                             (active | waiting | paused | blocked | cancelled | completed), stepIndex, nextAt, startedAt,
+                             startedBy, waitingFor, pausedFrom, error, history[], lease, revision, updatedAt   (Session API only)
 mercyVisits/{id}             householdId, requestId, start (Timestamp), durationMinutes, location, deaconUids[], officerUids[],
                              status (planned | completed | cancelled), encrypted{purpose, cancelReason}, completedAt,
                              completedBy, noteId, authorUid, createdAt, revision, updatedAt, updatedBy
@@ -317,6 +323,7 @@ Each roll-call update also writes `lastAttendancePersonId`. Rules constrain the 
 * An Attendance Volunteer can read names and households and write check marks, and nothing else.
 * `sessionPrivate`, `careNotes`, and `followUps` are accessed only through audited callable APIs by Pastor, Clerk or Elder. Direct client reads/writes are denied even for Session. An Admin who is not on Session cannot open them either.
 * Deacons can read and complete only their assigned `diaconalTasks` through the audited API.
+* Care workflows, their versions and runs are Session only through audited callables. Approval steps refuse the person who started the run unless the step allows it.
 * Mercy ministry is its own boundary. Deacons currently assigned to a household or request, and the Pastor, read its private content through audited mercy APIs. Session officers and Session-named deacon chairs triage requests and assign households without reading notes. A note reaches the Session only through an explicit, logged share. No mercy record holds money or donation data.
 * Every staff role requires verified email and completed assurance. Server-owned access and session records enforce revocation in rules and callables. Account updates close access before Auth changes and preserve a pending lock on partial failure.
 * The audit log is written by a Cloud Function every time a person, membership, or note changes. Users cannot write or edit it.

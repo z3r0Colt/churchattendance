@@ -23,6 +23,8 @@ import { processServingReminders } from "../chms.js";
 import { processVisitReminders } from "../shepherding/visits.js";
 import { processDeaconDigests } from "../mercy/digest.js";
 import { processDateReminders } from "../care/dates.js";
+import { processWorkflows } from "../workflows/engine.js";
+import { privateKeys } from "../security/encryption.js";
 import { processShepherdingDigests } from "../shepherding/digests.js";
 import { parse, requireRoles } from "../access.js";
 import { emulatorMode, providerConfig } from "./environment.js";
@@ -387,6 +389,7 @@ export async function communicationTick(now = new Date()) {
     ["visit", processVisitReminders],
     ["deacon", processDeaconDigests],
     ["dates", processDateReminders],
+    ["workflow", processWorkflows],
   ] as const) {
     try {
       await task(now);
@@ -423,7 +426,8 @@ export async function communicationTick(now = new Date()) {
 }
 export const scheduledCommunications = onSchedule(
   {
-    ...secretOptions,
+    // Workflow tasks seal their titles, so the scheduler also needs the private key ring.
+    secrets: [...secretOptions.secrets, privateKeys],
     schedule: "every 1 minutes",
     timeZone: "Etc/UTC",
     timeoutSeconds: 540,

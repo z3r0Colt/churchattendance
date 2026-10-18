@@ -64,6 +64,7 @@ export type StoredMessage = {
     occurrence: string;
     remindUid: string;
   } | null;
+  workflowRun?: { id: string; stepId: string } | null;
 };
 export const identityHash = (channel: Channel, address: string) =>
   createHash("sha256").update(`${channel}:${address}`).digest("hex");
@@ -187,6 +188,7 @@ export async function queueMessage(
     pastoralVisit?: StoredMessage["pastoralVisit"];
     recipientRole?: "deacon";
     importantDate?: StoredMessage["importantDate"];
+    workflowRun?: StoredMessage["workflowRun"];
   } = {},
 ) {
   const settings = await getSettings();
@@ -294,6 +296,7 @@ export async function queueMessage(
       pastoralVisit: options.pastoralVisit ?? null,
       recipientRole: options.recipientRole ?? null,
       importantDate: options.importantDate ?? null,
+      workflowRun: options.workflowRun ?? null,
       expiresAt: options.expiresAt
         ? Timestamp.fromDate(options.expiresAt)
         : null,
@@ -412,6 +415,18 @@ export async function dateReminderAllowed(
     !!account &&
     !account.disabled &&
     roles.some((role) => reminderRoles[reminder.collection].includes(role))
+  );
+}
+// A workflow message is sent only while its run is not paused or cancelled and its workflow is active.
+export async function workflowMessageAllowed(
+  run: NonNullable<StoredMessage["workflowRun"]>,
+) {
+  const row = await db.doc(`workflowRuns/${run.id}`).get();
+  if (!row.exists || ["paused", "cancelled"].includes(row.get("status")))
+    return false;
+  return (
+    (await db.doc(`workflows/${row.get("workflowId")}`).get()).get("status") ===
+    "active"
   );
 }
 export async function deliveryAllowed(
@@ -608,6 +623,11 @@ export async function dispatchQueue(now = new Date()) {
           if (
             message.pastoralVisit &&
             !(await visitReminderAllowed(message.pastoralVisit, row.personId))
+          )
+            return false;
+          if (
+            message.workflowRun &&
+            !(await workflowMessageAllowed(message.workflowRun))
           )
             return false;
           if (
