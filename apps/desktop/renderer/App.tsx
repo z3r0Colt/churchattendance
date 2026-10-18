@@ -72,6 +72,7 @@ import { Serving } from "./chms/Serving";
 import { Care } from "./chms/Care";
 import { Shepherding } from "./chms/Shepherding";
 import { Mercy } from "./chms/Mercy";
+import { ImportantDates } from "./chms/ImportantDates";
 import { Kiosk } from "./chms/Kiosk";
 import { AdvancedReports } from "./chms/Reports";
 import { configureKiosk, enterKiosk } from "./data/chms";
@@ -99,6 +100,7 @@ type Page =
   | "care"
   | "shepherding"
   | "mercy"
+  | "dates"
   | "annual"
   | "portal"
   | "dashboard"
@@ -400,6 +402,14 @@ function Workspace({
                   : "Deacon tasks"}
               </Button>
             )}
+            {hasRole(roles, EDITOR_ROLES) && (
+              <Button
+                appearance={page === "dates" ? "primary" : "subtle"}
+                onClick={() => setPage("dates")}
+              >
+                Important dates
+              </Button>
+            )}
             {hasRole(roles, [...SESSION_ROLES, "deacon"]) && (
               <Button
                 appearance={page === "mercy" ? "primary" : "subtle"}
@@ -606,6 +616,9 @@ function Workspace({
         {page === "serving" && !volunteer && <Serving roles={roles} />}
         {page === "shepherding" && hasRole(roles, SESSION_ROLES) && (
           <Shepherding roles={roles} />
+        )}
+        {page === "dates" && hasRole(roles, EDITOR_ROLES) && (
+          <ImportantDates roles={roles} />
         )}
         {page === "mercy" && hasRole(roles, [...SESSION_ROLES, "deacon"]) && (
           <Mercy />

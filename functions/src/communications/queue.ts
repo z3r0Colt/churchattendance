@@ -15,7 +15,10 @@ import {
   mergeFields,
   normalizeEmail,
   normalizePhone,
+  nextReminder,
+  roleSchema,
   type Audience,
+  type ImportantDate,
   type Channel,
   type CommunicationSettings,
   type MessageInput,
@@ -55,6 +58,12 @@ export type StoredMessage = {
   } | null;
   // Session-only log entries addressed to deacons are rechecked against a live deacon role.
   recipientRole?: "deacon" | null;
+  importantDate?: {
+    collection: "importantDates" | "bereavementDates";
+    id: string;
+    occurrence: string;
+    remindUid: string;
+  } | null;
 };
 export const identityHash = (channel: Channel, address: string) =>
   createHash("sha256").update(`${channel}:${address}`).digest("hex");
@@ -177,6 +186,7 @@ export async function queueMessage(
     servingAssignment?: { id: string; revision: number };
     pastoralVisit?: StoredMessage["pastoralVisit"];
     recipientRole?: "deacon";
+    importantDate?: StoredMessage["importantDate"];
   } = {},
 ) {
   const settings = await getSettings();
@@ -283,6 +293,7 @@ export async function queueMessage(
       servingAssignment: options.servingAssignment ?? null,
       pastoralVisit: options.pastoralVisit ?? null,
       recipientRole: options.recipientRole ?? null,
+      importantDate: options.importantDate ?? null,
       expiresAt: options.expiresAt
         ? Timestamp.fromDate(options.expiresAt)
         : null,
@@ -330,7 +341,10 @@ export async function personHasRole(
   return false;
 }
 export const isSessionPerson = (personId: string, pastorOnly = false) =>
-  personHasRole(personId, pastorOnly ? ["pastor"] : ["pastor", "clerk", "elder"]);
+  personHasRole(
+    personId,
+    pastorOnly ? ["pastor"] : ["pastor", "clerk", "elder"],
+  );
 // A visit reminder is sent only for the current plan, to someone still assigned with a live role.
 export async function visitReminderAllowed(
   visit: NonNullable<StoredMessage["pastoralVisit"]>,
@@ -364,6 +378,41 @@ export async function visitReminderAllowed(
       return true;
   }
   return false;
+}
+export type DateCollection = "importantDates" | "bereavementDates";
+export const reminderRoles: Record<DateCollection, readonly string[]> = {
+  importantDates: ["admin", "pastor", "clerk", "elder", "deacon"],
+  bereavementDates: ["pastor", "clerk", "elder"],
+};
+// At dispatch the date must still exist, still lead to this occurrence and still name this recipient.
+export async function dateReminderAllowed(
+  reminder: NonNullable<StoredMessage["importantDate"]>,
+  personId: string,
+  today: string,
+) {
+  const [row, user] = await Promise.all([
+    db.doc(`${reminder.collection}/${reminder.id}`).get(),
+    db.doc(`users/${reminder.remindUid}`).get(),
+  ]);
+  if (!row.exists || row.get("remindUid") !== reminder.remindUid) return false;
+  if (
+    nextReminder(row.data() as ImportantDate, today)?.date !==
+    reminder.occurrence
+  )
+    return false;
+  if (user.get("personId") !== personId) return false;
+  const account = await getAuth()
+    .getUser(reminder.remindUid)
+    .catch(() => null);
+  const roles = roleSchema
+    .array()
+    .catch([])
+    .parse(account?.customClaims?.roles);
+  return (
+    !!account &&
+    !account.disabled &&
+    roles.some((role) => reminderRoles[reminder.collection].includes(role))
+  );
 }
 export async function deliveryAllowed(
   personId: string,
@@ -559,6 +608,17 @@ export async function dispatchQueue(now = new Date()) {
           if (
             message.pastoralVisit &&
             !(await visitReminderAllowed(message.pastoralVisit, row.personId))
+          )
+            return false;
+          if (
+            message.importantDate &&
+            !(await dateReminderAllowed(
+              message.importantDate,
+              row.personId,
+              DateTime.fromJSDate(now, {
+                zone: await getChurchZone(),
+              }).toISODate()!,
+            ))
           )
             return false;
           if (

@@ -111,6 +111,7 @@ beforeEach(async () => {
         "mercyNotes",
         "mercyTasks",
         "mercyVisits",
+        "bereavementDates",
       ].map((collection) =>
         setDoc(doc(db, `${collection}/private`), { body: "Private" }),
       ),
@@ -155,6 +156,7 @@ describe("Session boundary", () => {
     "mercyNotes",
     "mercyTasks",
     "mercyVisits",
+    "bereavementDates",
   ]) {
     it(`${collection} requires audited APIs even for Session and denies all direct writes`, async () => {
       for (const role of ["pastor", "clerk", "elder"])
@@ -631,6 +633,7 @@ describe("Phase 3 access", () => {
     "events/fellowship/rsvps/james",
     "serving/usher",
     "reportSettings/statistical",
+    "importantDates/anniversary",
   ]) {
     it(`${path} allows congregation readers and denies volunteer, anonymous and direct writes`, async () => {
       await env.withSecurityRulesDisabled((context) =>

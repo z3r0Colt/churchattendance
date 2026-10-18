@@ -91,6 +91,7 @@ const protectedFields: Record<string, string[]> = {
   mercyNotes: ["body"],
   mercyTasks: ["title"],
   mercyVisits: ["purpose", "cancelReason"],
+  bereavementDates: ["note"],
 };
 export const protectedFieldNames = (collection: string) =>
   protectedFields[collection] ?? [];

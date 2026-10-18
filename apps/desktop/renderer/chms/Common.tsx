@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import {
   Button,
   Checkbox,
@@ -123,12 +123,15 @@ export function RecordEditor({
   initial,
   save,
   close,
+  preview,
 }: {
   title: string;
   fields: EditorField[];
   initial: Record<string, unknown>;
   save: (value: Record<string, unknown>) => Promise<unknown>;
   close: () => void;
+  // Live consequences of the edit, shown before saving.
+  preview?: (value: Record<string, unknown>) => ReactNode;
 }) {
   const [value, setValue] = useState(initial);
   const [error, setError] = useState("");
@@ -256,6 +259,11 @@ export function RecordEditor({
                   )}
                 </div>
               ))}
+              {preview && (
+                <MessageBar intent="info" aria-live="polite">
+                  {preview(value)}
+                </MessageBar>
+              )}
               {error && <MessageBar intent="error">{error}</MessageBar>}
             </DialogContent>
             <DialogActions>

@@ -80,6 +80,10 @@ export async function chmsCall<T = unknown>(
       "saveMercyTask",
       "saveMercyVisit",
       "completeMercyVisit",
+      "saveImportantDate",
+      "saveBereavementDate",
+      "removeImportantDate",
+      "removeBereavementDate",
     ].includes(name)
   )
     window.dispatchEvent(new Event("private-records-changed"));

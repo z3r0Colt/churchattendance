@@ -383,6 +383,35 @@ export function CommunicationSettingsPanel({
           titles are never included.
         </p>
       </fieldset>
+      <fieldset className="member-picker">
+        <legend>Important date reminders</legend>
+        <Checkbox
+          label="Send important date reminders to the chosen staff member"
+          checked={draft.dateRemindersEnabled}
+          onChange={(_, value) =>
+            update("dateRemindersEnabled", value.checked === true)
+          }
+        />
+        <Field label="Reminder hour (church time)">
+          <Select
+            value={String(draft.dateReminderHour)}
+            onChange={(event) =>
+              update("dateReminderHour", Number(event.target.value))
+            }
+          >
+            {hours.map((hour) => (
+              <option key={hour.value} value={hour.value}>
+                {hour.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <p>
+          A reminder goes out once, on its reminder day, by email when email is
+          enabled and otherwise by text. It names the person and the day, never
+          the reason or any note. A day that has passed is never sent late.
+        </p>
+      </fieldset>
       {error && <MessageBar intent="error">{error}</MessageBar>}
       {notice && <MessageBar intent="success">{notice}</MessageBar>}
       {data.automationError && (

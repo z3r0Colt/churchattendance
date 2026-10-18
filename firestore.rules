@@ -84,6 +84,9 @@ service cloud.firestore {
     match /mercyNotes/{id} { allow read, write: if false; }
     match /mercyTasks/{id} { allow read, write: if false; }
     match /mercyVisits/{id} { allow read, write: if false; }
+    // Ordinary anniversaries are staff-readable. Bereavement dates are Session only through the audited API.
+    match /importantDates/{id} { allow read: if reader(); allow write: if false; }
+    match /bereavementDates/{id} { allow read, write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {

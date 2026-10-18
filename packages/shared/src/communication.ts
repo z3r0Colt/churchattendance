@@ -183,6 +183,9 @@ export const communicationSettingsSchema = z
     deaconDigestEnabled: z.boolean().default(false),
     deaconDigestHour: z.number().int().min(0).max(23).default(7),
     deaconDigestChannel: z.enum(["email", "sms", "both"]).default("email"),
+    // Important date reminders to the chosen staff member, at this church-local hour.
+    dateRemindersEnabled: z.boolean().default(false),
+    dateReminderHour: z.number().int().min(0).max(23).default(8),
   })
   .strict()
   .refine(

@@ -232,6 +232,12 @@ mercyNotes/{id}              householdId, requestId, date, encrypted{body}, auth
                              createdAt, revision, updatedAt, updatedBy   (mercy API; assigned deacons and the Pastor, Session once shared)
 mercyTasks/{id}              requestId, householdId, encrypted{title}, assignedToUid, dueDate, done, authorUid, createdAt,
                              revision, updatedAt, updatedBy   (mercy API; assigned deacons and the Pastor)
+importantDates/{id}          personId, kind (weddingAnniversary | baptismAnniversary | membershipAnniversary | other), label,
+                             date, endKind (never | year | count), endYear, endCount, remindDaysBefore, remindUid,
+                             createdAt, revision, updatedAt, updatedBy   (staff readers; editors write through the API)
+bereavementDates/{id}        personId, relatedPersonId, kind (deathAnniversary | lateSpouseBirthday | lateWeddingAnniversary |
+                             other), date, encrypted{note}, endKind, endYear, endCount, remindDaysBefore, remindUid,
+                             createdAt, revision, updatedAt, updatedBy   (Session API only)
 mercyVisits/{id}             householdId, requestId, start (Timestamp), durationMinutes, location, deaconUids[], officerUids[],
                              status (planned | completed | cancelled), encrypted{purpose, cancelReason}, completedAt,
                              completedBy, noteId, authorUid, createdAt, revision, updatedAt, updatedBy
@@ -269,7 +275,8 @@ smsInbox/{messageSid}        fromNumber, personIds[], body, receivedAt, read, co
 communicationSettings/church delivery flags, churchName, footer, bulletin time/recipient/folder settings,
                              weekly digest settings (absenceEnabled, absenceServiceTypeId, absenceWeeks,
                              digestChannel, digestWeekday, digestHour), dailySummaryEnabled, dailySummaryHour,
-                             deaconDigestEnabled, deaconDigestHour, deaconDigestChannel
+                             deaconDigestEnabled, deaconDigestHour, deaconDigestChannel, dateRemindersEnabled,
+                             dateReminderHour
                              (no credentials)
 communicationSuppressions/{addressHash} channel, blocked, source, updatedAt (server only)
 communicationBudgets/{bucket} count, at (server only)

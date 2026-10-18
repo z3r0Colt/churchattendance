@@ -43,6 +43,7 @@ export * from "./shepherding/geography.js";
 export * from "./shepherding/health.js";
 export * from "./mercy/ministry.js";
 export * from "./mercy/visits.js";
+export * from "./care/dates.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
@@ -344,6 +345,8 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "mercyNotes",
         "mercyTasks",
         "mercyVisits",
+        "importantDates",
+        "bereavementDates",
       ].includes(event.params.collection) ||
       !event.data
     )
@@ -381,6 +384,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "visitRounds",
         "householdLocations",
         "flockAssessments",
+        "bereavementDates",
       ].includes(event.params.collection)
         ? "session"
         : event.params.collection.startsWith("mercy")
