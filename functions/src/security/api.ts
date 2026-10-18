@@ -28,6 +28,7 @@ import {
   protectRecord,
   privateOptions,
   keyRing,
+  protectedFieldNames,
 } from "./encryption.js";
 import { isDeepStrictEqual } from "node:util";
 import { lockStaffAccount, finishStaffAccountChange } from "./account-lock.js";
@@ -276,23 +277,40 @@ export const getPrivateRecords = onCall(privateOptions, async (request) => {
       "session",
       row.ref.path,
     );
+  // Callable JSON cannot carry Timestamps, so moments leave as ISO strings.
+  const plain = (data: Record<string, unknown>) =>
+    Object.fromEntries(
+      Object.entries(data).map(([key, value]) => [
+        key,
+        value instanceof Timestamp ? value.toDate().toISOString() : value,
+      ]),
+    );
   return {
     rows: page.docs.map((row) => ({
-      ...(input.view === "report"
-        ? Object.fromEntries(
-            [
-              "personId",
-              "kind",
-              "date",
-              "dueDate",
-              "done",
-              "assignedToUid",
-              "revision",
-            ]
-              .filter((key) => key in row.data())
-              .map((key) => [key, row.get(key)]),
-          )
-        : openRecord(row.ref.path, row.data())),
+      ...plain(
+        input.view === "report"
+          ? Object.fromEntries(
+              [
+                "personId",
+                "kind",
+                "date",
+                "dueDate",
+                "done",
+                "assignedToUid",
+                "revision",
+                "householdId",
+                "start",
+                "durationMinutes",
+                "status",
+                "officerUids",
+                "roundId",
+                "completedAt",
+              ]
+                .filter((key) => key in row.data())
+                .map((key) => [key, row.get(key)]),
+            )
+          : openRecord(row.ref.path, row.data()),
+      ),
       id: row.id,
     })),
     next: page.size === 25 ? page.docs.at(-1)!.id : "",
@@ -322,14 +340,7 @@ export const migratePrivateRecords = onCall(privateOptions, async (request) => {
       const data = row.data()!;
       if (
         data.encrypted?.key === ring.active &&
-        ![
-          "body",
-          "title",
-          "before",
-          "after",
-          "disciplineFlag",
-          "disciplineHistory",
-        ].some((field) => field in data)
+        !protectedFieldNames(input.collection).some((field) => field in data)
       )
         return false;
       const plain = openRecord(row.ref.path, data),

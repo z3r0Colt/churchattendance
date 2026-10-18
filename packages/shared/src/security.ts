@@ -18,12 +18,18 @@ export const accountActionSchema = z
     action: z.enum(["disable", "enable", "revoke", "recover"]),
   })
   .strict();
-export const privateCollections = [
+// Collections whose protected fields are sealed with the private record key ring.
+export const encryptedCollections = [
   "careNotes",
   "followUps",
   "sessionPrivate",
   "diaconalTasks",
   "auditLog",
+  "pastoralVisits",
+] as const;
+export const privateCollections = [
+  ...encryptedCollections,
+  "visitRounds",
 ] as const;
 export const privatePageSchema = z
   .object({
@@ -36,6 +42,7 @@ export const privatePageSchema = z
   })
   .strict();
 export const migrationPageSchema = privatePageSchema.extend({
+  collection: z.enum(encryptedCollections),
   backupConfirmed: z.literal(true),
 });
 export const securityLogSchema = z

@@ -187,6 +187,8 @@ export function useCommunicationData(roles: Role[]) {
             [
               snapshot.get("bulletinError"),
               snapshot.get("absenceError"),
+              snapshot.get("servingError"),
+              snapshot.get("visitError"),
               snapshot.get("queueError"),
             ]
               .filter(Boolean)

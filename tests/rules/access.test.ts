@@ -96,10 +96,22 @@ beforeEach(async () => {
         present: {},
         lastAttendancePersonId: "",
       }),
-      ...["sessionPrivate", "careNotes", "followUps", "auditLog"].map(
-        (collection) =>
-          setDoc(doc(db, `${collection}/private`), { body: "Private" }),
+      ...[
+        "sessionPrivate",
+        "careNotes",
+        "followUps",
+        "auditLog",
+        "visitRounds",
+      ].map((collection) =>
+        setDoc(doc(db, `${collection}/private`), { body: "Private" }),
       ),
+      // The deacon is invited, which still grants no direct read of the visit.
+      setDoc(doc(db, "pastoralVisits/private"), {
+        householdId: "calder",
+        officerUids: ["elder"],
+        deaconUids: ["deacon"],
+        status: "planned",
+      }),
       setDoc(doc(db, "diaconalTasks/move"), {
         title: "Help with a move",
         assignedToUid: "deacon",
@@ -123,6 +135,8 @@ describe("Session boundary", () => {
     "careNotes",
     "followUps",
     "auditLog",
+    "pastoralVisits",
+    "visitRounds",
   ]) {
     it(`${collection} requires audited APIs even for Session and denies all direct writes`, async () => {
       for (const role of ["pastor", "clerk", "elder"])

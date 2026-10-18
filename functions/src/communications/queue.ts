@@ -48,6 +48,11 @@ export type StoredMessage = {
   dateLabel: string;
   expiresAt: Timestamp | null;
   servingAssignment?: { id: string; revision: number } | null;
+  pastoralVisit?: {
+    id: string;
+    revision: number;
+    audience: "officers" | "deacons";
+  } | null;
 };
 export const identityHash = (channel: Channel, address: string) =>
   createHash("sha256").update(`${channel}:${address}`).digest("hex");
@@ -168,6 +173,7 @@ export async function queueMessage(
     automatic?: boolean;
     expiresAt?: Date;
     servingAssignment?: { id: string; revision: number };
+    pastoralVisit?: StoredMessage["pastoralVisit"];
   } = {},
 ) {
   const settings = await getSettings();
@@ -272,6 +278,7 @@ export async function queueMessage(
       dateLabel: options.dateLabel ?? "",
       serviceTime,
       servingAssignment: options.servingAssignment ?? null,
+      pastoralVisit: options.pastoralVisit ?? null,
       expiresAt: options.expiresAt
         ? Timestamp.fromDate(options.expiresAt)
         : null,
@@ -316,6 +323,40 @@ export async function isSessionPerson(personId: string, pastorOnly = false) {
     } catch {
       /* A removed login cannot receive Session information. */
     }
+  }
+  return false;
+}
+// A visit reminder is sent only for the current plan, to someone still assigned with a live role.
+export async function visitReminderAllowed(
+  visit: NonNullable<StoredMessage["pastoralVisit"]>,
+  personId: string,
+) {
+  const [row, users] = await Promise.all([
+    db.doc(`pastoralVisits/${visit.id}`).get(),
+    db.collection("users").where("personId", "==", personId).get(),
+  ]);
+  if (
+    !row.exists ||
+    row.get("status") !== "planned" ||
+    row.get("revision") !== visit.revision
+  )
+    return false;
+  const field = visit.audience === "officers" ? "officerUids" : "deaconUids";
+  const roles =
+    visit.audience === "officers" ? ["pastor", "clerk", "elder"] : ["deacon"];
+  for (const user of users.docs) {
+    if (!(row.get(field) as string[]).includes(user.id)) continue;
+    const account = await getAuth()
+      .getUser(user.id)
+      .catch(() => null);
+    const granted: unknown = account?.customClaims?.roles;
+    if (
+      account &&
+      !account.disabled &&
+      Array.isArray(granted) &&
+      granted.some((role) => roles.includes(String(role)))
+    )
+      return true;
   }
   return false;
 }
@@ -510,6 +551,11 @@ export async function dispatchQueue(now = new Date()) {
             )
               return false;
           }
+          if (
+            message.pastoralVisit &&
+            !(await visitReminderAllowed(message.pastoralVisit, row.personId))
+          )
+            return false;
           if (
             message.expiresAt &&
             now.getTime() + Date.now() - started > message.expiresAt.toMillis()

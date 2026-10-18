@@ -20,6 +20,7 @@ import {
 } from "@sycamore/shared";
 import { db } from "../admin.js";
 import { processServingReminders } from "../chms.js";
+import { processVisitReminders } from "../shepherding/visits.js";
 import { parse, requireRoles } from "../access.js";
 import { emulatorMode, providerConfig } from "./environment.js";
 import { secretOptions } from "./webhooks.js";
@@ -381,6 +382,7 @@ export async function communicationTick(now = new Date()) {
     ["bulletin", processBulletins],
     ["absence", processAbsences],
     ["serving", processServingReminders],
+    ["visit", processVisitReminders],
   ] as const) {
     try {
       await task(now);

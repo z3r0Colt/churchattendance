@@ -37,6 +37,7 @@ export * from "./portal.js";
 export * from "./administration.js";
 export * from "./security/api.js";
 export * from "./security/passkeys.js";
+export * from "./shepherding/visits.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
@@ -327,6 +328,8 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "eventPublications",
         "directoryPreferences",
         "onlineSubmissions",
+        "pastoralVisits",
+        "visitRounds",
       ].includes(event.params.collection) ||
       !event.data
     )
@@ -355,9 +358,14 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
       uid || "system",
       "record.change",
       "success",
-      ["sessionPrivate", "careNotes", "followUps", "diaconalTasks"].includes(
-        event.params.collection,
-      )
+      [
+        "sessionPrivate",
+        "careNotes",
+        "followUps",
+        "diaconalTasks",
+        "pastoralVisits",
+        "visitRounds",
+      ].includes(event.params.collection)
         ? "session"
         : "security",
       `${event.params.collection}/${event.params.docId}`,

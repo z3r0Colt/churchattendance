@@ -58,7 +58,7 @@ Encryption tests cover tampering, wrong keys, rotation and interrupted migration
 
 ## Phase 8. Shepherding workspace
 
-Status is planned. Depends on Phase 7 security contracts.
+Status is in progress. Depends on Phase 7 security contracts. See [Phase 8 implementation](PHASE_8.md) for what is built.
 
 ### Visits and geography
 

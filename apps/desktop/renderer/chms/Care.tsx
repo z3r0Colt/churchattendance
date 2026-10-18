@@ -30,6 +30,7 @@ import {
   friendlyError,
   type EditorField,
 } from "./Common";
+import { useVisitLogistics } from "../data/shepherding";
 type Editing = {
   kind: "note" | "followUp" | "deacon" | "discipline";
   value: Record<string, unknown>;
@@ -37,6 +38,7 @@ type Editing = {
 export function Care({ roles }: { roles: Role[] }) {
   const session = hasRole(roles, SESSION_ROLES);
   const data = useCareData(roles);
+  const joint = useVisitLogistics(!session);
   const [tab, setTab] = useState(session ? "notes" : "deacon");
   const [person, setPerson] = useState("");
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -305,6 +307,37 @@ export function Care({ roles }: { roles: Role[] }) {
               session ? (index) => editTask("deacon", tasks[index]) : undefined
             }
           />
+          {!session && (
+            <section className="surface table-card communication-panel">
+              <div className="section-heading">
+                <span>Joint visits</span>
+              </div>
+              <p className="muted">
+                You see the time and place of visits you are invited to. Visit
+                purposes and records stay with the Session.
+              </p>
+              {joint.error && (
+                <MessageBar intent="error">{joint.error}</MessageBar>
+              )}
+              <Records
+                rows={joint.visits.map((row) => ({
+                  id: row.id,
+                  When: DateTime.fromISO(row.start)
+                    .setZone(joint.zone)
+                    .toFormat("LLL d, yyyy h:mm a"),
+                  Household: row.householdName,
+                  Where: row.location || row.address || "Ask the officer",
+                  With: row.officerNames.join(", "),
+                  Status:
+                    row.status === "planned"
+                      ? "Planned"
+                      : row.status === "completed"
+                        ? "Completed"
+                        : "Cancelled",
+                }))}
+              />
+            </section>
+          )}
           {!session &&
             tasks
               .filter((row) => !row.done)

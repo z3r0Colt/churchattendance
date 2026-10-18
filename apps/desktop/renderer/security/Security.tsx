@@ -17,7 +17,7 @@ import {
   accountActionSchema,
   rolesInputSchema,
   migrationPageSchema,
-  privateCollections,
+  encryptedCollections,
   securityLogSchema,
   type Role,
   type StaffAccount,
@@ -38,7 +38,7 @@ export function Security({ roles }: { roles: Role[] }) {
     [selected, setSelected] = useState<StaffAccount | null>(null),
     [backup, setBackup] = useState(false),
     [migration, setMigration] =
-      useState<(typeof privateCollections)[number]>("careNotes");
+      useState<(typeof encryptedCollections)[number]>("careNotes");
   const admin = roles.includes("admin"),
     session = hasRole(roles, SESSION_ROLES);
   async function run(action: () => Promise<unknown>) {
@@ -203,7 +203,7 @@ export function Security({ roles }: { roles: Role[] }) {
               value={migration}
               onChange={(e) => setMigration(e.target.value as typeof migration)}
             >
-              {privateCollections.map((name) => (
+              {encryptedCollections.map((name) => (
                 <option key={name}>{name}</option>
               ))}
             </Select>

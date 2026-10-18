@@ -60,6 +60,9 @@ export async function chmsCall<T = unknown>(
       "saveDiaconalTask",
       "completeDiaconalTask",
       "recordDiscipline",
+      "saveVisit",
+      "completeVisit",
+      "saveVisitRound",
     ].includes(name)
   )
     window.dispatchEvent(new Event("private-records-changed"));

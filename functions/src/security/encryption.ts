@@ -85,7 +85,10 @@ const protectedFields: Record<string, string[]> = {
   diaconalTasks: ["title"],
   sessionPrivate: ["disciplineFlag", "disciplineHistory"],
   auditLog: ["before", "after"],
+  pastoralVisits: ["purpose", "cancelReason"],
 };
+export const protectedFieldNames = (collection: string) =>
+  protectedFields[collection] ?? [];
 export function protectRecord(
   collection: string,
   path: string,

@@ -208,6 +208,11 @@ attendanceRoster/{personId}  id, firstName, lastName, preferredName, householdId
 careNotes/{noteId}           personId, authorUid, kind (note | visit), date, encrypted{body}, createdAt, revision, updatedAt, updatedBy    (Session API only)
 followUps/{taskId}           personId, encrypted{title}, assignedToUid, dueDate, done, revision, updatedAt, updatedBy  (Session API only)
 diaconalTasks/{taskId}       encrypted{title}, personId, assignedToUid, dueDate, done, revision, updatedAt, updatedBy   (Session and assigned deacon API)
+pastoralVisits/{visitId}     householdId, personIds[], roundId, followUpId, start (Timestamp), durationMinutes, location,
+                             officerUids[], deaconUids[], status (planned | completed | cancelled), reminderHours,
+                             encrypted{purpose, cancelReason}, completedAt, completedBy, careNoteId, reminderMessageId,
+                             revision, createdAt, authorUid, updatedAt, updatedBy   (Session API; invited deacons get logistics only)
+visitRounds/{roundId}        name, startDate, endDate, archived, revision, createdAt, updatedAt, updatedBy   (Session API only)
 
 households/{householdId}     name, address, homePhone, revision, updatedAt, updatedBy
 elderDistricts/{id}          name, elderPersonId, archived, revision, updatedAt, updatedBy
@@ -416,7 +421,7 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Private-record encryption, legacy migration and key rotation
 * Security dashboard with scoped authentication, read-access and change history
 
-**Phase 8, Shepherding workspace (approved, not implemented)**
+**Phase 8, Shepherding workspace (in progress; see docs/PHASE_8.md)**
 * Household visit scheduling, assignments, completion and officer workload
 * Congregation map, directions and ordered visit routes
 * Contact-gap detection, configurable absence alerts and consented shepherding digests
@@ -484,11 +489,15 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is the next implementation milestone. Phases 8 through 12 remain open. Existing live provisioning and Windows release work remain required.
+Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is in progress; household visits and workload are implemented, and contact gaps, digests, maps and flock health remain. Phases 9 through 12 remain open. Existing live provisioning and Windows release work remain required.
 
 ### Phase 7 implementation details
 
 See `docs/PHASE_7.md`. Staff functions check live Auth identities, role intersections, revocation and completed assurance. Rules use server-owned access and signed MFA or bounded assurance sessions. Account operations close access and serialize cross-service changes with pending locks. TOTP uses the provider enrollment/challenge flow; passkeys use verified WebAuthn assertions and a one-time system-browser desktop exchange. Direct private-document access is removed. Audited APIs decrypt application-encrypted fields only for the proper role and keep private content out of persistent attendance storage. Reports request only private visit/follow-up metadata. A one-time cache upgrade clears old private subscriptions. `sessionPrivate` now stores an envelope containing discipline flag/history rather than plaintext fields. The envelope has a version, key ID, IV, authentication tag and ciphertext bound to the document path. Security expiry moments use Timestamps; Auth cutoff fields are protocol epoch seconds. Account, read and change history is scoped, while platform Auth/console audit remains separate. Migration and rotation are resumable and require verified backup/recovery. This phase does not deploy or migrate a live church project.
+
+### Phase 8 implementation details
+
+See `docs/PHASE_8.md`. Visit plans and rounds are Session-only documents served by audited callables, with the visit purpose and cancellation reason sealed like note bodies. A plan is never contact; only completion counts, and completion is a separate one-time action allowed after the start time. It can create or link a Session visit record. Invited deacons receive only time, place, household and officer names. Visit reminders carry no household or purpose, use a revision-bound message ID and are rechecked at dispatch against the current plan, status and the recipient's live role.
 
 ### Phase 5 implementation details
 
