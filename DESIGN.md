@@ -234,3 +234,53 @@ Sections for Church (name, address, time zone), Service types, Elder districts, 
 ## Phase 6 report workspace
 
 Reports provides a report selector and shared date, service type, historical membership and current district filters. Detail, source and review grids each export their visible rows. Main report workbooks include Summary, Detail and Data sheets with a chart. Historical unknowns display explicit review text. Session-enriched shepherding and visitor reports carry a lock badge in the screen and a Session only title in exports. Matrix PDFs repeat names across sections of at most six meeting columns. Dashboard tiles open the corresponding filtered report, while the initial staff screen remains Attendance.
+
+## Approved Phase 7 through Phase 12 screens
+
+These are future screen requirements, not descriptions of implemented UI. Scope and acceptance criteria live in [Expanded feature requirements](docs/FEATURE_EXPANSION.md).
+
+### Security and accounts
+
+Sign-in supports authenticator enrollment/challenges and passkeys, with a clear recovery path. Enrollment is completed before staff data is loaded. The existing booth account stays limited to names and attendance. Account setup shows granted roles and the effect of disabling an account. Role changes cannot grant the acting administrator access to Session records.
+
+Settings adds Security, Accounts and Recovery. Security shows login activity, denied actions and permitted record-access events. A non-Session administrator sees security metadata, never care-note bodies, discipline details or the existing Session-only before/after audit values. Session viewers can inspect their permitted record history. Empty or delayed log coverage is stated plainly. No screen calls an account protected merely because a factor is enrolled.
+
+### Shepherding
+
+The Session workspace adds Contact gaps, Visits and Flock health tabs. Contact gaps show the last recorded qualifying contact, the source and the applicable threshold. Unknown history is shown as unknown. Visits can be scheduled by household, assigned to officers and marked complete without creating a visit note before the visit occurred. Workload totals link to the underlying appointments.
+
+The map has an equivalent household list. Addresses without verified coordinates appear in a review list. Directions and routes require an explicit action before sending locations to an external service. No private care text appears in a map marker or a directions link.
+
+Health indicators show the recorded facts and any Session-entered assessment separately. Status never relies on color alone. Assessments show the author and review date and cannot be treated as an automatic spiritual judgment.
+
+### Workflows and important dates
+
+A workflow has a readable step list alongside its visual editor. Triggers, waits, approvals and actions can be edited with a keyboard. A preview names the affected people and proposed messages before activation. Runs show what happened, what is due and any blocked step. Pausing stops future actions and clearly identifies already dispatched work.
+
+Important dates distinguish ordinary household anniversaries from private bereavement reminders. Bereavement details remain Session only. Editing a date shows the effect on outstanding reminders. Reminder messages contain no private narrative by default.
+
+### Diaconal care
+
+Deacons receive a separate Mercy ministry workspace showing their assigned households, requests and encrypted notes. The workspace carries its own confidentiality label. Existing Session pastoral tabs remain unavailable to deacons. Joint visit views show only shared scheduling details; Session and deacon notes remain separate. Any authorized sharing action identifies its audience before saving.
+
+### Member self-service
+
+My details adds contact editing and photo management. Directory sharing remains a separate choice with all new fields private by default. Saving a new address does not subscribe the member to messages. Authentication email changes require verified account handling rather than silently changing the sign-in identity.
+
+Request care explains who receives the request before submission. Prayer/pastoral requests and practical-help requests have distinct destinations. Members can view their own request state without seeing officer notes. Email-link completion gives a plain retry path for expired or already-used links.
+
+### Calendar
+
+The public calendar shows only explicitly published occurrences. A member or staff subscription screen describes its exact audience and has a Revoke link action. Private subscriptions never contain care appointments. Reminder setup shows recipients, channels and send times in the church time zone, with opt-outs visible in the preview.
+
+### Officers, communion and data tools
+
+Person Membership adds officer history with ordination, installation and term dates. Officer and quorum reports show their calculation date, policy and included/excluded people. Communion approval changes are Session actions. Participation entry distinguishes admission from attendance and keeps in-person and online marks distinct.
+
+Households adds relationship editing and an accessible family list alongside the family tree. Private/deceased relationships have explicit visibility choices. Import uses Upload, Map columns, Review and Commit steps. The review distinguishes new records, proposed changes, duplicates and errors. No import writes occur before Commit, and results show each row's outcome.
+
+### Staff web layout
+
+The staff web app provides the same permitted jobs on narrow screens. Navigation uses a labeled menu, grids have readable card or horizontally scrollable alternatives, and touch targets are at least 48px on attendance. A phone attendance view keeps service selection and sync state visible. Session confidentiality labels stay visible in mobile layouts.
+
+Native save/print actions have browser equivalents. Unsupported offline actions are identified before editing. Signing out or switching accounts clears private in-memory content and prevents the next account from seeing the previous user's cached records. Phone and desktop permission checks use the same server contracts.

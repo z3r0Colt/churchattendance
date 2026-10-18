@@ -2,6 +2,10 @@
 
 Attendance and communication for the Windows desktop app described in `PLAN.md` and `DESIGN.md`.
 
+## Approved expansion
+
+All ten feature areas from the October 18 TendFlock comparison are now in scope. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) maps them to Phases 7 through 12 with acceptance criteria. This is a roadmap update, not a runtime implementation. Phase 7 begins with staff MFA/passkeys, private-record encryption and account/security administration. Shepherding and the other approved features follow. The implemented baseline remains Phase 6; live provisioning and release checks below still apply.
+
 ## Run locally
 
 Install Node 22 and Java 21 or newer. From the repository root run `npm install`, then `npm run dev`. Firebase emulators start locally, fictional people are seeded, and Electron opens. The seed script refuses to run without emulator endpoints.

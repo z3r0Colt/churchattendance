@@ -1,6 +1,8 @@
 # Church Attendance & Management (Windows) Plan
 
-A Windows desktop program for Sycamore Reformed Presbyterian Church (sycamorerpc.org). It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and copies the useful parts of Tithely ChMS (people, households, groups, events, check-in, email and text messaging). Giving and tithing are left out on purpose.
+A Windows desktop program with member and staff web access for Sycamore Reformed Presbyterian Church (sycamorerpc.org). It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and supports church administration and shepherding. Giving and tithing are left out on purpose.
+
+Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records the complete coverage, dependencies and acceptance criteria. Those phases are planned, not implemented. Phase 1 through Phase 6 implementation notes below still describe the current code.
 
 ## 1. Goals
 
@@ -45,8 +47,9 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Households with head, spouse, children, shared address
 * Search, filter, saved lists ("All adherents who missed 4 weeks")
 * Merge duplicates
-* Fast entry form for adding a whole household at once (there is no existing data to import)
-* CSV/XLSX import kept as a later nice to have
+* Fast entry form for adding a whole household at once
+* CSV/XLSX import with column mapping, preview, duplicate review and validation before committing a batch (Phase 11)
+* Family relationship links beyond shared households, with privacy controls (Phase 11)
 * Timeline per person showing attendance, messages sent, notes, status changes
 
 ### 3.2 Attendance
@@ -57,6 +60,8 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Visitor quick add right on the attendance screen, so visitors are counted by name too
 * Optional **self check-in kiosk mode** (tablet or second monitor, search by last name or phone)
 * Absence alerts, for example "flag anyone absent 3 Lord's Days in a row" sent to their shepherding elder
+* Configurable absence thresholds, consented email/SMS elder digests and contact-gap detection (Phase 8)
+* Separate named communion participation and in-person/online worship attendance, with historical reports (Phase 11)
 
 ### 3.3 Groups
 * Small groups, Sabbath School classes, choir, committees, Diaconate, Session
@@ -67,6 +72,7 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Church calendar with recurring events
 * Event registration and RSVP list
 * Volunteer / serving schedule (nursery, ushers, psalm leaders, meal teams) with reminder texts
+* Explicitly public calendar listings, revocable calendar subscriptions and configurable event reminders (Phase 10)
 
 ### 3.5 Communication (email and text)
 * Compose to a person, household, group, status, or saved list
@@ -83,6 +89,11 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Pastoral notes, visit log, and discipline records are visible to the **Session only** (Pastor, Clerk, and Elders). No one else can open them, including Deacons and Admins who are not on Session
 * Follow-up tasks assigned to an elder
 * Diaconal task list (meals, rides, help with a move). The Session creates a task with only what the deacon needs to know, and deacons see their own tasks without any Session notes
+* Household visit planning, officer assignments, visit workload, congregation maps and route planning (Phase 8)
+* Configurable flock health indicators and Session-entered assessments, with reasons and review dates (Phase 8)
+* Visual workflows for visitor follow-up, member onboarding and care, including anniversary and bereavement reminders (Phase 9)
+* Separate deacon mercy notes, household assignments, joint visits, practical-help requests and consented daily digests (Phase 9). These require a new privacy boundary and do not grant access to Session records
+* Member care/prayer requests with an explicit confidential destination (Phase 10)
 
 ### 3.7 Reports & Exports
 Every report follows the same layout so it is easy to read. The XLSX file opens to a **Summary** sheet with the totals and a chart, then a **Detail** sheet, then a **Data** sheet with the raw rows for anyone who wants to sort and filter. Every report also exports to CSV and prints as a Letter PDF with a summary and legible detail pages for the Session meeting packet. Large matrices span multiple pages.
@@ -117,10 +128,21 @@ A yearly overview with average attendance per service by month, a 12 month trend
 * All traffic encrypted, passwords handled by Firebase Authentication, auto lock after idle
 * Audit log of who changed what
 * Automatic daily backup kept 30 days, plus an Export Everything button for a local copy
+* Required staff MFA, passkey sign-in and account recovery, with server-enforced access checks (Phase 7)
+* Additional encryption for private note bodies and discipline details, with key rotation and migration (Phase 7)
+* Security dashboard with privacy-scoped login, access and change history, plus staff account/role administration (Phase 7)
 
-### 3.9 Optional later
-* Member portal / phone app for directory and RSVP (phase 4, can reuse the same Firebase project)
-* Online forms (visitor card, event sign up)
+### 3.9 Member and staff web access
+* Member directory and personal RSVP, plus visitor/event forms (implemented in Phase 4)
+* Passwordless member email links, self-service contact/photo editing and care requests (Phase 10)
+* Responsive staff attendance and all permitted management workflows on phones (Phase 12)
+* Desktop offline attendance remains supported alongside web access
+
+### 3.10 Officer administration
+* Officer ordination, installation, terms, rotation and end-of-service records (Phase 11)
+* Quorum reports with explicit meeting rules and an inspectable historical electorate (Phase 11)
+* Officer-eligibility and communion-approved lists based on recorded facts and Session decisions (Phase 11)
+* No automatic admission to office or the Lord's Table
 
 ## 4. Technical Design
 
@@ -131,7 +153,7 @@ The app is a Windows desktop program built with Electron, backed by Google Fireb
 |---|---|---|
 | Desktop app | Electron with React and TypeScript, built with Vite | Installs like any Windows program, and Firebase's best SDK (JavaScript) runs in it |
 | UI look | Fluent UI React v9 | Matches Windows 10 and 11 |
-| Sign in | Firebase Authentication (email and password, optional two step for Admin and Pastor), roles stored as custom claims | Each person has their own login on any PC |
+| Sign in | Firebase Authentication with roles stored as custom claims; required staff MFA and passkeys planned in Phase 7, member email links in Phase 10 | Each person has their own account; current code uses email/password |
 | Database | Cloud Firestore | Shared live data, real time updates to every PC |
 | Offline | Firestore persistent local cache (IndexedDB) | Booth PC keeps working with no internet and syncs on its own |
 | Access control | Firestore Security Rules checked against the user's role | Locks data down on Google's side, not just in the app |
@@ -363,9 +385,6 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Optional self check-in kiosk
 * Annual statistical report, congregational meeting summary, photo directory PDF
 
-**Later, if wanted**
-* CSV/XLSX import
-
 **Phase 4, Optional online pieces**
 * Member portal or phone app for directory and RSVP
 * Online forms (visitor card, event sign up)
@@ -382,6 +401,45 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Attendance matrix, shepherding, visitor follow-up and membership roll
 * Charted report workbooks and readable matrix PDF sections
 * Dashboard attendance links, birthdays and serving gaps, with private Session follow-ups
+
+**Phase 7, Security and account administration (approved, not implemented)**
+* Required staff MFA and passkeys, enrollment, recovery, revocation and secure desktop sign-in
+* Staff account and role setup without self-escalation or access to Session records by non-Session administrators
+* Private-record encryption, legacy migration and key rotation
+* Security dashboard with scoped authentication, read-access and change history
+
+**Phase 8, Shepherding workspace (approved, not implemented)**
+* Household visit scheduling, assignments, completion and officer workload
+* Congregation map, directions and ordered visit routes
+* Contact-gap detection, configurable absence alerts and consented shepherding digests
+* Explainable flock health indicators and Session-reviewed assessments
+
+**Phase 9, Care workflows and diaconal ministry (approved, not implemented)**
+* Versioned visual workflows with triggers, delays, tasks, approvals and consented messages
+* Visitor follow-up and member onboarding templates
+* Important dates, recurring anniversary reminders and bereavement care
+* Separate deacon notes, household assignments, joint visits and practical-help request processing
+* Privacy-scoped daily care digests
+
+**Phase 10, Member self-service and calendar (approved, not implemented)**
+* Passwordless email-link access without granting staff permissions
+* Member contact/photo editing with existing privacy and consent boundaries
+* Confidential prayer/care requests and practical-help requests routed to permitted officers
+* Public calendar, private revocable calendar subscriptions and automatic event reminders
+
+**Phase 11, Church records and data tools (approved, not implemented)**
+* Officer terms, ordination/installation history, rotation and eligibility lists
+* Historical quorum reports and Session-maintained communion-approved lists
+* Named communion participation and separate in-person/online worship attendance
+* Family relationship links and anniversary records
+* Previewed CSV/XLSX imports with duplicate review and auditable batches
+
+**Phase 12, Staff mobile access and release (approved, not implemented)**
+* Full permitted staff workflows in a responsive web app, including phone attendance
+* Shared validation and report logic without exposing native Electron APIs to the web
+* Live MFA/passkey, provider and calendar delivery checks, managed backup/restore verification and signed Windows release checks
+
+See [Expanded feature requirements](docs/FEATURE_EXPANSION.md) for the ten-area coverage table and the release criteria for each phase. The existing single-church Firebase project stays the deployment boundary. This extension does not add multi-church hosting or financial features.
 
 ## 7. Running Costs (estimate for a 150 person church)
 | Item | Cost |
@@ -400,7 +458,7 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 2. Children are marked on the roll with their household. No labels.
 3. Every service is taken name by name.
 4. Pastoral notes and discipline are visible to the Session only.
-5. No existing data to import. People are entered by hand.
+5. People can be entered by hand. Validated CSV/XLSX import is also approved for Phase 11.
 6. Email goes through the church's Microsoft 365, which still needs a mailbox set up.
 7. Reports follow the layout in section 3.7.
 
@@ -418,7 +476,7 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-Approve this plan (with any changes), and Phase 1 development starts with the Firebase project, the Electron app scaffold, security rules, and the roll call screen.
+The expanded scope is approved. Phase 7 is the next implementation milestone. Complete the security foundation before adding the new private care surfaces. Phases 7 through 12 remain open until their implementation and acceptance checks pass. Existing live provisioning and Windows release work remain required.
 
 ### Phase 5 implementation details
 
