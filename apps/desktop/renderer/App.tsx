@@ -38,6 +38,7 @@ import {
   canMarkAttendance,
   churchDate,
   EDITOR_ROLES,
+  SESSION_ROLES,
   filterRoster,
   hasRole,
   isOnRoll,
@@ -64,8 +65,27 @@ import { Bulletin } from "./communications/Bulletin";
 import { CommunicationSettingsPanel } from "./communications/Settings";
 import { useUnreadSms } from "./data/communications";
 
+import { Groups } from "./chms/Groups";
+import { Calendar } from "./chms/Calendar";
+import { Serving } from "./chms/Serving";
+import { Care } from "./chms/Care";
+import { Kiosk } from "./chms/Kiosk";
+import { AdvancedReports } from "./chms/Reports";
+import { configureKiosk, enterKiosk } from "./data/chms";
+
 type AttendanceData = ReturnType<typeof useAttendanceData>;
-type Page = "attendance" | "people" | "reports" | "settings" | "messages" | "bulletin";
+type Page =
+  | "attendance"
+  | "people"
+  | "reports"
+  | "settings"
+  | "messages"
+  | "bulletin"
+  | "groups"
+  | "calendar"
+  | "serving"
+  | "care"
+  | "annual";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
   pastor: "Pastor",
@@ -103,6 +123,8 @@ export function App() {
         <main className="center">
           <Spinner label="Opening Sycamore RPC" />
         </main>
+      ) : authSession.kiosk ? (
+        <Kiosk />
       ) : !authSession.user ? (
         <SignIn />
       ) : (
@@ -196,6 +218,8 @@ function Workspace({
 }) {
   const data = useAttendanceData();
   const [page, setPage] = useState<Page>("attendance");
+  const [messageGroup, setMessageGroup] = useState("");
+  const [kioskPin, setKioskPin] = useState("");
   const [visitor, setVisitor] = useState(false);
   const [household, setHousehold] = useState(false);
   const [selectedType, setSelectedType] = useState("");
@@ -307,7 +331,62 @@ function Workspace({
         >
           Attendance
         </Button>
-        {editor && <><Button appearance={page === "messages" ? "primary" : "subtle"} onClick={() => setPage("messages")}>Messages {unreadTexts > 0 ? `(${unreadTexts})` : ""}</Button><Button appearance={page === "bulletin" ? "primary" : "subtle"} onClick={() => setPage("bulletin")}>Bulletin</Button></>}
+        {editor && (
+          <>
+            <Button
+              appearance={page === "messages" ? "primary" : "subtle"}
+              onClick={() => setPage("messages")}
+            >
+              Messages {unreadTexts > 0 ? `(${unreadTexts})` : ""}
+            </Button>
+            <Button
+              appearance={page === "bulletin" ? "primary" : "subtle"}
+              onClick={() => setPage("bulletin")}
+            >
+              Bulletin
+            </Button>
+          </>
+        )}
+        {!volunteer && (
+          <>
+            <Button
+              appearance={page === "groups" ? "primary" : "subtle"}
+              onClick={() => setPage("groups")}
+            >
+              Groups
+            </Button>
+            <Button
+              appearance={page === "calendar" ? "primary" : "subtle"}
+              onClick={() => setPage("calendar")}
+            >
+              Calendar
+            </Button>
+            <Button
+              appearance={page === "serving" ? "primary" : "subtle"}
+              onClick={() => setPage("serving")}
+            >
+              Serving
+            </Button>
+            {hasRole(roles, [...SESSION_ROLES, "deacon"]) && (
+              <Button
+                appearance={page === "care" ? "primary" : "subtle"}
+                onClick={() => setPage("care")}
+              >
+                {hasRole(roles, SESSION_ROLES)
+                  ? "Pastoral care · Session only"
+                  : "Deacon tasks"}
+              </Button>
+            )}
+            {hasRole(roles, [...EDITOR_ROLES, "readOnly"]) && (
+              <Button
+                appearance={page === "annual" ? "primary" : "subtle"}
+                onClick={() => setPage("annual")}
+              >
+                Annual reports
+              </Button>
+            )}
+          </>
+        )}
         {!volunteer && (
           <>
             <Button
@@ -334,7 +413,7 @@ function Workspace({
           </>
         )}
         <div className="nav-bottom">
-          Church management<small>Phase 2 · Development</small>
+          Church management<small>Phase 3 · Development</small>
         </div>
       </nav>
       <main className="content">
@@ -441,7 +520,31 @@ function Workspace({
           <People data={data} editor={editor} add={() => setHousehold(true)} />
         )}
         {page === "reports" && <Reports data={data} />}
-        {page === "messages" && editor && <Messages roles={roles} />}
+        {page === "groups" && !volunteer && (
+          <Groups
+            roles={roles}
+            message={(id) => {
+              setMessageGroup(id);
+              setPage("messages");
+            }}
+          />
+        )}
+        {page === "calendar" && !volunteer && <Calendar roles={roles} />}
+        {page === "serving" && !volunteer && <Serving roles={roles} />}
+        {page === "care" && hasRole(roles, [...SESSION_ROLES, "deacon"]) && (
+          <Care roles={roles} />
+        )}
+        {page === "annual" && hasRole(roles, [...EDITOR_ROLES, "readOnly"]) && (
+          <AdvancedReports roles={roles} />
+        )}
+        {page === "messages" && editor && (
+          <Messages
+            roles={roles}
+            initialAudience={
+              messageGroup ? { kind: "group", ids: [messageGroup] } : undefined
+            }
+          />
+        )}
         {page === "bulletin" && editor && <Bulletin roles={roles} />}
         {page === "settings" && (
           <>
@@ -472,11 +575,75 @@ function Workspace({
               <p>
                 Church time zone <strong>{data.timeZone}</strong>
               </p>
-              <p>
-                Service types and roles are managed through setup.
-              </p>
+              <p>Service types and roles are managed through setup.</p>
             </section>
-            {editor && <CommunicationSettingsPanel roles={roles} serviceTypes={data.types} />}
+            {editor && (
+              <CommunicationSettingsPanel
+                roles={roles}
+                serviceTypes={data.types}
+              />
+            )}
+            {hasRole(roles, ["admin", "pastor"]) && (
+              <section className="surface communication-panel">
+                <Subtitle2>Optional household kiosk</Subtitle2>
+                <p>
+                  Open a service in Attendance first. Starting the kiosk signs
+                  out staff and clears this PC's cached records. Close other app
+                  windows first. Kiosk searches require a connection.
+                </p>
+                <Field label="Kiosk exit PIN, 6 to 12 digits">
+                  <Input
+                    type="password"
+                    value={kioskPin}
+                    onChange={(_, row) => setKioskPin(row.value)}
+                  />
+                </Field>
+                <div className="actions">
+                  <Button
+                    onClick={() =>
+                      void configureKiosk({ enabled: true, pin: kioskPin })
+                        .then(() =>
+                          data.setError(
+                            "Kiosk enabled. Keep the exit PIN with the Administrator or Pastor.",
+                          ),
+                        )
+                        .catch(() =>
+                          data.setError(
+                            "The kiosk setting could not be saved. Use a PIN of 6 to 12 digits.",
+                          ),
+                        )
+                    }
+                  >
+                    Enable kiosk and set PIN
+                  </Button>
+                  <Button
+                    onClick={() =>
+                      void configureKiosk({ enabled: false, pin: kioskPin })
+                        .then(() => data.setError("Kiosk disabled."))
+                        .catch(() =>
+                          data.setError(
+                            "The kiosk setting could not be saved.",
+                          ),
+                        )
+                    }
+                  >
+                    Disable kiosks
+                  </Button>
+                  <Button
+                    disabled={!service}
+                    onClick={() =>
+                      void enterKiosk(service!.id).catch(() =>
+                        data.setError(
+                          "The kiosk could not open. Close other app windows and restart the app before trying again.",
+                        ),
+                      )
+                    }
+                  >
+                    Start kiosk for open service
+                  </Button>
+                </div>
+              </section>
+            )}
           </>
         )}
       </main>

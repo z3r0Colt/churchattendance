@@ -47,6 +47,7 @@ export type StoredMessage = {
   serviceTime: string;
   dateLabel: string;
   expiresAt: Timestamp | null;
+  servingAssignment?: { id: string; revision: number } | null;
 };
 export const identityHash = (channel: Channel, address: string) =>
   createHash("sha256").update(`${channel}:${address}`).digest("hex");
@@ -166,6 +167,7 @@ export async function queueMessage(
     serviceTime?: string;
     automatic?: boolean;
     expiresAt?: Date;
+    servingAssignment?: { id: string; revision: number };
   } = {},
 ) {
   const settings = await getSettings();
@@ -269,6 +271,7 @@ export async function queueMessage(
       source: options.source ?? "compose",
       dateLabel: options.dateLabel ?? "",
       serviceTime,
+      servingAssignment: options.servingAssignment ?? null,
       expiresAt: options.expiresAt
         ? Timestamp.fromDate(options.expiresAt)
         : null,
@@ -494,6 +497,19 @@ export async function dispatchQueue(now = new Date()) {
       let outcome: { status: string; providerId: string; error: string };
       try {
         const authorize = async () => {
+          if (message.servingAssignment) {
+            const assignment = await db
+              .doc(`serving/${message.servingAssignment.id}`)
+              .get();
+            if (
+              !assignment.exists ||
+              assignment.get("cancelled") ||
+              assignment.get("revision") !==
+                message.servingAssignment.revision ||
+              assignment.get("personId") !== row.personId
+            )
+              return false;
+          }
           if (
             message.expiresAt &&
             now.getTime() + Date.now() - started > message.expiresAt.toMillis()

@@ -7,7 +7,10 @@ export default defineConfig({
   base: "./",
   plugins: [react()],
   resolve: { preserveSymlinks: true },
-  optimizeDeps: { esbuildOptions: { preserveSymlinks: true } },
+  optimizeDeps: {
+    exclude: ["@sycamore/shared"],
+    esbuildOptions: { preserveSymlinks: true },
+  },
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
   build: { outDir: "../dist/renderer", emptyOutDir: true },
 });

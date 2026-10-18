@@ -176,16 +176,16 @@ people/{personId}
   photoPath, householdId, membershipStatus, elderDistrictId, smsOptIn, emailOptIn,
   isDeceased, customFields{}, updatedAt, updatedBy, firstVisitDate (optional, visitor quick add)
   membershipEvents/{id}   date, fromStatus, toStatus, method, otherChurch, reason
-  sacraments/{id}         type (baptism | profession), date, place, officiant
+  sacraments/{id}         type (baptism | profession), date, category (infant | adult for baptism), place, officiant, revision
   offices/{id}            role (pastor | elder | deacon), ordainedOn, installedOn, endedOn
 
-sessionPrivate/{personId}    disciplineFlag, disciplineHistory[]     (Session only)
+sessionPrivate/{personId}    disciplineFlag, disciplineHistory[], revision, updatedAt, updatedBy     (Session only)
 attendanceRoster/{personId}  id, firstName, lastName, preferredName, householdId,
                              householdName, membershipStatus, isDeceased
                              (server-maintained names-only roll for attendance volunteers)
-careNotes/{noteId}           personId, authorUid, body, createdAt    (Session only)
-followUps/{taskId}           personId, assignedToUid, dueDate, done  (Session only)
-diaconalTasks/{taskId}       title, personId, assignedToUid, dueDate, done   (Session and assigned deacon)
+careNotes/{noteId}           personId, authorUid, kind (note | visit), date, body, createdAt, revision, updatedAt, updatedBy    (Session only)
+followUps/{taskId}           personId, title, assignedToUid, dueDate, done, revision, updatedAt, updatedBy  (Session only)
+diaconalTasks/{taskId}       title, personId, assignedToUid, dueDate, done, revision, updatedAt, updatedBy   (Session and assigned deacon)
 
 households/{householdId}     name, address, homePhone
 elderDistricts/{id}          name, elderPersonId
@@ -195,15 +195,22 @@ services/{serviceId}
   serviceTypeId, date, notes, lastAttendancePersonId
   present { personId: { at, method (roll | kiosk), byUid } }
 
-groups/{groupId}             name, type, leaderPersonId, memberIds[]
-  meetings/{meetingId}       date, present{}
-events/{eventId}             title, start, end, recurrence, location
-  rsvps/{personId}           status
-serving/{scheduleId}         role, date, personId
+groups/{groupId}             name, type, leaderPersonId, memberIds[], schedule, archived, revision, updatedAt, updatedBy
+  meetings/{meetingId}       date, present{}, updatedAt, updatedBy
+events/{eventId}             title, start/end (Timestamp), recurrence (none | weekly | monthly), interval, until,
+                             location, capacity, cancelled, revision, rsvpVersion, updatedAt, updatedBy
+  rsvps/{date_personId}      eventId, date, personId, status (yes | maybe | no), updatedAt, updatedBy
+serving/{scheduleId}         role, date, time, personId, location, reminderHours, cancelled, revision,
+                             reminderMessageId, updatedAt, updatedBy
+servingSlots/{person_date_time} assignmentId (server-only concurrency lock)
+reportSettings/statistical   labels{}
+kioskConfiguration/church    enabled, salt, hash (server only)
+kioskDevices/{uid}           serviceId, createdBy, expiresAt, requests, minute, exitFailures, ended (server only)
+kioskSearches/{token}        uid, serviceId, personIds[], expiresAt (server only)
 
 messages/{messageId}         channel (email | sms | both), subject, body, audience, scheduledFor,
                              status, createdAt, createdByUid, selectedPersonIds[], sessionOnly,
-                             attachments[], activeCount, totals{}, source, dateLabel, serviceTime, expiresAt
+                             attachments[], activeCount, totals{}, source, dateLabel, serviceTime, expiresAt, servingAssignment { id, revision }
   recipients/{personId_channel} personId, channel, address, status, providerId, error,
                                attemptKey, startedAt, updatedAt
 messageTemplates/{id}       name, channel, subject, body, updatedBy, updatedAt
@@ -217,7 +224,7 @@ consentEvents/{id}           personId, channel, optedIn, source, actor, at
 bulletins/{lordsDayDate}     week, file { path, name, generation, size, source, sourceModifiedAt, sourceKey },
                              status, messageId, previewMessageId, publicUrl, preparingAt, updatedAt
 bulletinLinks/{token}        path, generation, week, createdAt (server only)
-automationStatus/church     bulletinError, absenceError, queueError, checkedAt
+automationStatus/church     bulletinError, absenceError, servingError, queueError, checkedAt
 
 users/{uid}                  personId, displayName, roles[]
 auditLog/{id}                uid, collection, docId, action, before, after, at   (written only by Functions)
@@ -226,7 +233,7 @@ settings/church              name, address, service defaults, message footer
 
 Attendance for a service is one document with a `present` map. A full year of three services a week is only about 150 documents, so reports are fast and cheap. The booth and a kiosk can check people in at the same moment without clashing, because each check mark updates its own field.
 
-Implementation clarification, Phase 1 foundation: volunteers read `attendanceRoster`, never `people` or the full household records. People and household writes run through validated callable Functions, which update the roster in the same transaction or batch. Client roll-call writes change one person's field per write; household marking issues separate field updates. Creating a service uses a transaction while online, and an existing cached service works offline. Membership changes and their history entries are atomic. Roles use an array custom claim, `roles`, so a Pastor can also be an Admin. Only a Session administrator can grant or remove Session roles, and administrators cannot change their own roles. Audit records are Session-only because their before/after values may contain sensitive information. Pastoral client writes are disabled until validated care Functions are added in Phase 3.
+Implementation clarification, Phase 1 foundation: volunteers read `attendanceRoster`, never `people` or the full household records. People and household writes run through validated callable Functions, which update the roster in the same transaction or batch. Client roll-call writes change one person's field per write; household marking issues separate field updates. Creating a service uses a transaction while online, and an existing cached service works offline. Membership changes and their history entries are atomic. Roles use an array custom claim, `roles`, so a Pastor can also be an Admin. Only a Session administrator can grant or remove Session roles, and administrators cannot change their own roles. Audit records are Session-only because their before/after values may contain sensitive information. Pastoral clients use validated Session-only care Functions. Direct private-document writes remain disabled.
 
 Each roll-call update also writes `lastAttendancePersonId`. Rules constrain the changed map keys to that one ID and validate its entry. This is a validation hint, not an attendance record or a lock. Firestore Rules sets cannot be indexed, so this hint allows strict entry validation without replacing the `present` map. Simultaneous PCs still update independent person fields.
 
@@ -290,6 +297,15 @@ Messages and recipients are created through validated callable Functions. All co
 Cloud Scheduler runs the queue and automation every minute. Recipient claims and rate budgets are transactional. Email attempts are capped at 20 per minute and 9,000 per UTC day. A queue entry can contain up to 400 email/text recipient records. The server rechecks consent, suppression, contact identity and active membership immediately before sending. Unknown results and interrupted attempts require provider review instead of automatic retries. Twilio callbacks are signed and tied to a specific attempt. Microsoft acceptance is shown separately from confirmed SMS delivery.
 
 The bulletin uses one deterministic message ID per Lord's Day. New PDF versions receive distinct preview IDs. Storage generation pinning prevents a changed file from replacing a queued attachment. Shareable bulletin download links are off by default and are issued only when explicitly enabled for bulletin texting. An email unsubscribe GET shows a confirmation page; only a signed-token POST changes consent. The setup guide documents real Microsoft/Twilio configuration, large-attachment mailbox limitations and live checks that cannot be replaced by emulators.
+
+### 4.12 Phase 3 implementation details
+Groups, event series, serving assignments and care forms use revision checks to reject stale forms. Group attendance changes one person's map field per write. RSVPs belong to a dated occurrence. Capacity checks serialize on the event document, and serving conflicts use server-only slot locks. Event instants are Firestore Timestamps; recurrence is evaluated in the church time zone. Weekly and monthly series have an inclusive final date no more than two years after the start. A monthly meeting on the 31st skips shorter months.
+
+The existing scheduler queues consented serving reminders once per assignment revision. A changed or cancelled assignment invalidates its old pending reminder, and reminder delivery expires at the serving time. Pastoral notes, visits, follow-ups and discipline records remain Session-only, including against an Admin without Session. Only Session may create diaconal tasks. An assigned Deacon may complete their task, with a revision increment, and sees no private care records. Audit triggers record root care changes, group meeting changes, event responses and sacrament records in the Session-only audit collection.
+
+The optional kiosk uses a separate custom-token identity with no direct Firestore or Storage access. An Admin or Pastor opens it for one existing service. Starting signs out staff and clears local Firestore persistence. Exact surname or full-phone lookup returns only household names and checked-in state, with a two-minute single-use capability for those people. Device sessions expire after four hours, requests are throttled, and five wrong exit PIN attempts lock that device. Exiting returns to staff sign-in and does not grant staff access. PINs are salted and hashed on the server. Kiosk search needs a connection; the existing staff roll call retains offline support.
+
+Annual statistics reconstruct membership from recorded history, count explicit infant/adult baptisms, and flag missing or inconsistent records. The meeting summary contains twelve months per service type. Missing service records do not become zero-attendance services. The directory includes active member and adherent households, and photos are embedded in the PDF rather than published. Report XLSX files have Summary, Detail and Data sheets and an attendance chart. PDF templates are isolated from the staff app; Windows release verification remains a separate deployment check.
 
 ## 5. Screens
 

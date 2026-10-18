@@ -68,6 +68,11 @@ app.whenReady().then(async () => {
     await writeFile(result.filePath, "\uFEFF" + value, "utf8");
     return true;
   });
+  ipcMain.handle("set-kiosk-mode", (event, enabled: unknown) => {
+    trusted(event);
+    if (typeof enabled !== "boolean") throw new Error("Invalid kiosk mode");
+    window!.setFullScreen(enabled);
+  });
   ipcMain.handle("preview-pdf", async (event, value: unknown) => {
     trusted(event);
     if (
@@ -118,6 +123,69 @@ app.whenReady().then(async () => {
     await preview.loadFile(file);
     return true;
   });
+  ipcMain.handle(
+    "save-report-pdf",
+    async (event, title: unknown, html: unknown) => {
+      trusted(event);
+      if (
+        typeof title !== "string" ||
+        title.length > 150 ||
+        typeof html !== "string" ||
+        html.length > 20_000_000
+      )
+        throw new Error("Invalid report");
+      const result = await dialog.showSaveDialog(window!, {
+        defaultPath: title.replace(/[^A-Za-z0-9-]/g, "-") + ".pdf",
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+      if (result.canceled || !result.filePath) return false;
+      const report = new BrowserWindow({
+        show: false,
+        webPreferences: {
+          partition: `report-${randomUUID()}`,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+          webSecurity: true,
+          javascript: false,
+        },
+      });
+      report.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+      report.webContents.on("will-navigate", (event) => event.preventDefault());
+      report.webContents.session.setPermissionRequestHandler(
+        (_contents, _permission, callback) => callback(false),
+      );
+      report.webContents.session.webRequest.onBeforeRequest(
+        {
+          urls: [
+            "http://*/*",
+            "https://*/*",
+            "ws://*/*",
+            "wss://*/*",
+            "file://*/*",
+          ],
+        },
+        (_details, callback) => callback({ cancel: true }),
+      );
+      try {
+        await report.loadURL(
+          `data:text/html;base64,${Buffer.from(html).toString("base64")}`,
+        );
+        const bytes = await report.webContents.printToPDF({
+          pageSize: "Letter",
+          printBackground: true,
+          displayHeaderFooter: true,
+          headerTemplate: "<span></span>",
+          footerTemplate:
+            '<div style="font-size:9px;width:100%;text-align:center"><span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+        });
+        await writeFile(result.filePath, bytes);
+      } finally {
+        report.destroy();
+      }
+      return true;
+    },
+  );
   ipcMain.handle("print-report", async (event) => {
     trusted(event);
     const result = await dialog.showSaveDialog(window!, {

@@ -57,7 +57,7 @@ service cloud.firestore {
     match /diaconalTasks/{id} {
       allow read: if session() || (roles().hasAny(['deacon']) && resource.data.assignedToUid == request.auth.uid);
       allow update: if roles().hasAny(['deacon']) && resource.data.assignedToUid == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done']) && request.resource.data.done == true;
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'revision']) && request.resource.data.done == true && request.resource.data.revision == resource.data.get('revision', 0) + 1;
       allow create, delete: if false;
     }
     match /auditLog/{id} { allow read: if session(); allow write: if false; }
@@ -75,7 +75,16 @@ service cloud.firestore {
     match /automationStatus/{id} { allow read: if communicator() && id == 'church'; allow write: if false; }
     match /bulletins/{id} { allow read: if communicator(); allow write: if false; }
     match /elderDistricts/{id} { allow read: if reader(); allow write: if false; }
-    match /groups/{id} { allow read: if reader(); allow write: if false; }
+    match /groups/{id} {
+      allow read: if reader(); allow write: if false;
+      match /meetings/{date} { allow read: if reader(); allow write: if false; }
+    }
+    match /events/{id} {
+      allow read: if reader(); allow write: if false;
+      match /rsvps/{personId} { allow read: if reader(); allow write: if false; }
+    }
+    match /serving/{id} { allow read: if reader(); allow write: if false; }
+    match /reportSettings/{id} { allow read: if reader(); allow write: if false; }
     match /consentEvents/{id} { allow read: if communicator(); allow write: if false; }
     match /{document=**} { allow read, write: if false; }
   }

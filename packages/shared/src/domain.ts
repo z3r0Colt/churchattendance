@@ -48,6 +48,7 @@ const personFieldsSchema = z
     email: z.union([z.email(), z.literal("")]).default(""),
     mobilePhone: z.string().max(40).default(""),
     birthDate: z.union([dateSchema, z.literal("")]).default(""),
+    photoPath: z.string().regex(/^photos\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+$/).optional(),
     emailOptIn: z.boolean().default(false),
     smsOptIn: z.boolean().default(false),
     isDeceased: z.boolean().default(false),

@@ -60,7 +60,13 @@ function messageError(error: unknown) {
     ? error.message
     : "The change could not be saved. Check the fields and your connection.";
 }
-export function Messages({ roles }: { roles: Role[] }) {
+export function Messages({
+  roles,
+  initialAudience,
+}: {
+  roles: Role[];
+  initialAudience?: Audience;
+}) {
   const data = useCommunicationData(roles);
   const [tab, setTab] = useState("compose");
   const [notice, setNotice] = useState("");
@@ -115,6 +121,7 @@ export function Messages({ roles }: { roles: Role[] }) {
       </TabList>
       {tab === "compose" && (
         <Composer
+          initialAudience={initialAudience}
           data={data}
           onQueued={() => {
             setNotice(
@@ -271,12 +278,22 @@ function PersonHistory({
     </section>
   );
 }
-function Composer({ data, onQueued }: { data: Data; onQueued: () => void }) {
+function Composer({
+  data,
+  onQueued,
+  initialAudience,
+}: {
+  data: Data;
+  onQueued: () => void;
+  initialAudience?: Audience;
+}) {
   const [channel, setChannel] = useState<"email" | "sms" | "both">("email");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [kind, setKind] = useState<Audience["kind"]>("all");
-  const [ids, setIds] = useState<string[]>([]);
+  const [kind, setKind] = useState<Audience["kind"]>(
+    initialAudience?.kind || "all",
+  );
+  const [ids, setIds] = useState<string[]>(initialAudience?.ids || []);
   const [scheduled, setScheduled] = useState("");
   const [preview, setPreview] = useState<PreviewView | null>(null);
   const [busy, setBusy] = useState(false);

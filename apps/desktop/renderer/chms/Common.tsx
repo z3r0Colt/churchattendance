@@ -1,0 +1,274 @@
+import { useState, type FormEvent } from "react";
+import {
+  Button,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Field,
+  Input,
+  MessageBar,
+  Select,
+  Textarea,
+} from "@fluentui/react-components";
+import { ExportButton } from "../components/ExportButton";
+import type { ReportRow } from "@sycamore/shared";
+export type Choice = { id: string; name: string };
+export type EditorField = {
+  key: string;
+  label: string;
+  kind?:
+    | "date"
+    | "time"
+    | "datetime-local"
+    | "number"
+    | "textarea"
+    | "checkbox"
+    | "multi"
+    | "select";
+  options?: Choice[];
+  required?: boolean;
+};
+export function friendlyError(error: unknown) {
+  return error instanceof Error && !error.message.startsWith("[")
+    ? error.message
+    : "The record could not be saved. Check the fields and your connection.";
+}
+export function Picker({
+  label,
+  value,
+  choices,
+  onChange,
+  empty = "Choose",
+}: {
+  label: string;
+  value: string;
+  choices: Choice[];
+  onChange: (value: string) => void;
+  empty?: string;
+}) {
+  return (
+    <Field label={label}>
+      <Select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">{empty}</option>
+        {choices.map((row) => (
+          <option key={row.id} value={row.id}>
+            {row.name}
+          </option>
+        ))}
+      </Select>
+    </Field>
+  );
+}
+export function Records({
+  rows,
+  choose,
+}: {
+  rows: ReportRow[];
+  choose?: (index: number) => void;
+}) {
+  const keys = Object.keys(rows[0] || {}).filter((key) => key !== "id");
+  return (
+    <section className="surface table-card communication-panel">
+      <div className="section-heading">
+        <span>
+          {rows.length} record{rows.length === 1 ? "" : "s"}
+        </span>
+        <ExportButton rows={rows} />
+      </div>
+      {!rows.length ? (
+        <p>No records match this view.</p>
+      ) : (
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                {keys.map((key) => (
+                  <th key={key}>{key}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={String(row.id ?? index)}>
+                  {keys.map((key, column) => (
+                    <td key={key}>
+                      {column === 0 && choose ? (
+                        <Button
+                          appearance="transparent"
+                          onClick={() => choose(index)}
+                        >
+                          {row[key]}
+                        </Button>
+                      ) : (
+                        row[key]
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+export function RecordEditor({
+  title,
+  fields,
+  initial,
+  save,
+  close,
+}: {
+  title: string;
+  fields: EditorField[];
+  initial: Record<string, unknown>;
+  save: (value: Record<string, unknown>) => Promise<unknown>;
+  close: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const update = (key: string, next: unknown) =>
+    setValue((before) => ({ ...before, [key]: next }));
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await save(
+        Object.fromEntries([
+          ...["id", "expectedRevision"]
+            .filter((key) => key in initial)
+            .map((key) => [key, initial[key]]),
+          ...fields.map((field) => [
+            field.key,
+            value[field.key] ??
+              (field.kind === "checkbox"
+                ? false
+                : field.kind === "multi"
+                  ? []
+                  : ""),
+          ]),
+        ]),
+      );
+      close();
+    } catch (error) {
+      setError(friendlyError(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog
+      open
+      onOpenChange={(_, data) => {
+        if (!data.open && !busy) close();
+      }}
+    >
+      <DialogSurface className="record-dialog">
+        <form onSubmit={submit}>
+          <DialogBody>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogContent>
+              {fields.map((field) => (
+                <div key={field.key}>
+                  {field.kind === "checkbox" ? (
+                    <Checkbox
+                      label={field.label}
+                      checked={!!value[field.key]}
+                      onChange={(_, data) =>
+                        update(field.key, data.checked === true)
+                      }
+                    />
+                  ) : field.kind === "multi" ? (
+                    <fieldset className="member-picker">
+                      <legend>{field.label}</legend>
+                      {field.options?.map((option) => (
+                        <Checkbox
+                          key={option.id}
+                          label={option.name}
+                          checked={
+                            Array.isArray(value[field.key]) &&
+                            (value[field.key] as string[]).includes(option.id)
+                          }
+                          onChange={(_, data) =>
+                            update(
+                              field.key,
+                              data.checked
+                                ? [
+                                    ...new Set([
+                                      ...((value[field.key] as string[]) || []),
+                                      option.id,
+                                    ]),
+                                  ]
+                                : ((value[field.key] as string[]) || []).filter(
+                                    (id) => id !== option.id,
+                                  ),
+                            )
+                          }
+                        />
+                      ))}
+                    </fieldset>
+                  ) : (
+                    <Field label={field.label} required={field.required}>
+                      {field.kind === "select" ? (
+                        <Select
+                          value={String(value[field.key] ?? "")}
+                          onChange={(event) =>
+                            update(field.key, event.target.value)
+                          }
+                        >
+                          <option value="">Choose</option>
+                          {field.options?.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.name}
+                            </option>
+                          ))}
+                        </Select>
+                      ) : field.kind === "textarea" ? (
+                        <Textarea
+                          rows={5}
+                          required={field.required}
+                          value={String(value[field.key] ?? "")}
+                          onChange={(_, data) => update(field.key, data.value)}
+                        />
+                      ) : (
+                        <Input
+                          required={field.required}
+                          type={field.kind || "text"}
+                          value={String(value[field.key] ?? "")}
+                          onChange={(_, data) =>
+                            update(
+                              field.key,
+                              field.kind === "number"
+                                ? Number(data.value)
+                                : data.value,
+                            )
+                          }
+                        />
+                      )}
+                    </Field>
+                  )}
+                </div>
+              ))}
+              {error && <MessageBar intent="error">{error}</MessageBar>}
+            </DialogContent>
+            <DialogActions>
+              <Button disabled={busy} onClick={close}>
+                Cancel
+              </Button>
+              <Button appearance="primary" type="submit" disabled={busy}>
+                {busy ? "Saving" : "Save"}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </form>
+      </DialogSurface>
+    </Dialog>
+  );
+}

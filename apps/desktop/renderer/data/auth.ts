@@ -15,18 +15,19 @@ export function useAuth() {
     loading: boolean;
     user: User | null;
     roles: Role[];
-  }>({ loading: true, user: null, roles: [] });
+    kiosk: boolean;
+  }>({ loading: true, user: null, roles: [], kiosk: false });
   useEffect(
     () =>
       onIdTokenChanged(auth, async (user) => {
         if (!user) {
-          setState({ loading: false, user: null, roles: [] });
+          setState({ loading: false, user: null, roles: [], kiosk: false });
           return;
         }
         const token = await user.getIdTokenResult();
         if (auth.currentUser?.uid !== user.uid) return;
         const roles = roleSchema.array().catch([]).parse(token.claims.roles);
-        setState({ loading: false, user, roles });
+        setState({ loading: false, user, roles, kiosk: token.claims.kiosk === true });
       }),
     [],
   );

@@ -264,7 +264,8 @@ describe("deacon task isolation", () => {
       getDoc(doc(auth("admin").firestore(), "diaconalTasks/move")),
     );
     await assertFails(updateDoc(task, { assignedToUid: "otherDeacon" }));
-    await assertSucceeds(updateDoc(task, { done: true }));
+    await assertFails(updateDoc(task, { done: true }));
+    await assertSucceeds(updateDoc(task, { done: true, revision: 1 }));
     await assertFails(updateDoc(task, { done: false }));
   });
 });
@@ -480,5 +481,87 @@ describe("communication access", () => {
     await assertFails(
       getBytes(ref(env.unauthenticatedContext().storage(), path)),
     );
+  });
+});
+
+describe("Phase 3 access", () => {
+  for (const path of [
+    "groups/choir/meetings/2027-01-03",
+    "events/fellowship",
+    "events/fellowship/rsvps/james",
+    "serving/usher",
+    "reportSettings/statistical",
+  ]) {
+    it(`${path} allows congregation readers and denies volunteer, anonymous and direct writes`, async () => {
+      await env.withSecurityRulesDisabled((context) =>
+        setDoc(doc(context.firestore(), path), { title: "Fictional record" }),
+      );
+      for (const role of [
+        "admin",
+        "pastor",
+        "clerk",
+        "elder",
+        "deacon",
+        "readOnly",
+      ])
+        await assertSucceeds(getDoc(doc(auth(role).firestore(), path)));
+      await assertFails(
+        getDoc(doc(auth("attendanceVolunteer").firestore(), path)),
+      );
+      await assertFails(
+        getDoc(doc(env.unauthenticatedContext().firestore(), path)),
+      );
+      await assertFails(
+        setDoc(doc(auth("pastor").firestore(), path), { forged: true }),
+      );
+    });
+  }
+  it("gives a kiosk identity no direct access to congregation, staff, private or kiosk documents", async () => {
+    const kiosk = env
+      .authenticatedContext("kiosk-device", { kiosk: true })
+      .firestore();
+    for (const path of [
+      "people/alex",
+      "attendanceRoster/alex",
+      "households/ash",
+      "services/am_2026-11-01",
+      "groups/choir",
+      "events/meeting",
+      "serving/usher",
+      "sessionPrivate/private",
+      "careNotes/private",
+      "followUps/private",
+      "diaconalTasks/move",
+      "kioskDevices/kiosk-device",
+      "kioskConfiguration/church",
+      "kioskSearches/token",
+      "servingSlots/slot",
+    ]) {
+      await assertFails(getDoc(doc(kiosk, path)));
+      await assertFails(setDoc(doc(kiosk, path), { forged: true }));
+    }
+  });
+  it("keeps kiosk PIN hashes, search capabilities and assignment locks server-only", async () => {
+    for (const collection of [
+      "kioskDevices",
+      "kioskConfiguration",
+      "kioskSearches",
+      "servingSlots",
+    ]) {
+      await env.withSecurityRulesDisabled((context) =>
+        setDoc(doc(context.firestore(), `${collection}/private`), {
+          hash: "not-a-real-hash",
+        }),
+      );
+      for (const role of ["admin", "pastor", "deacon"])
+        await assertFails(
+          getDoc(doc(auth(role).firestore(), `${collection}/private`)),
+        );
+      await assertFails(
+        setDoc(doc(auth("admin").firestore(), `${collection}/private`), {
+          forged: true,
+        }),
+      );
+    }
   });
 });

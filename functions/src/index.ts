@@ -20,6 +20,9 @@ import {
 import { db } from "./admin.js";
 import { parse, requireRoles } from "./access.js";
 export * from "./communications/api.js";
+export * from "./chms.js";
+export * from "./kiosk.js";
+export * from "./chms-audit.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = requireRoles(request, EDITOR_ROLES);
@@ -189,6 +192,11 @@ export const addVisitor = onCall(async (request) => {
 export const setUserRoles = onCall(async (request) => {
   const actor = requireRoles(request, ["admin"]);
   const input = parse(rolesInputSchema, request.data);
+  if (input.uid.startsWith("kiosk_"))
+    throw new HttpsError(
+      "invalid-argument",
+      "Kiosk devices cannot receive staff roles.",
+    );
   const user = await getAuth().getUser(input.uid);
   const current = z.array(roleSchema).catch([]).parse(user.customClaims?.roles);
   const changedSession = SESSION_ROLES.some(
@@ -238,6 +246,9 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "careNotes",
         "followUps",
         "diaconalTasks",
+        "groups",
+        "events",
+        "serving",
       ].includes(event.params.collection) ||
       !event.data
     )

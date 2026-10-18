@@ -9,25 +9,26 @@
     "build": "vite build --config vite.config.ts && node build.mjs"
   },
   "dependencies": {
-    "@sycamore/shared": "0.1.0",
     "@fluentui/react-components": "^9.74.9",
     "@fluentui/react-icons": "^2.0.300",
-    "firebase": "^13.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "@sycamore/shared": "0.1.0",
+    "chart.js": "^4.5.1",
     "electron-updater": "^6.6.2",
     "exceljs": "^4.4.0",
-    "papaparse": "^5.5.3"
+    "firebase": "^13.0.0",
+    "papaparse": "^5.5.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@types/papaparse": "^5.3.16",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
-    "vite": "^7.1.10",
-    "esbuild": "^0.25.11",
     "electron": "^44.9.0",
     "electron-builder": "^26.0.12",
-    "@types/papaparse": "^5.3.16"
+    "esbuild": "^0.25.11",
+    "vite": "^7.1.10"
   },
   "build": {
     "appId": "org.sycamorerpc.attendance",

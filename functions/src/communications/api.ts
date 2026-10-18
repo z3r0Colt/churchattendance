@@ -19,6 +19,7 @@ import {
   type Role,
 } from "@sycamore/shared";
 import { db } from "../admin.js";
+import { processServingReminders } from "../chms.js";
 import { parse, requireRoles } from "../access.js";
 import { emulatorMode, providerConfig } from "./environment.js";
 import { secretOptions } from "./webhooks.js";
@@ -379,6 +380,7 @@ export async function communicationTick(now = new Date()) {
   for (const [name, task] of [
     ["bulletin", processBulletins],
     ["absence", processAbsences],
+    ["serving", processServingReminders],
   ] as const) {
     try {
       await task(now);
@@ -389,15 +391,13 @@ export async function communicationTick(now = new Date()) {
           { merge: true },
         );
     } catch {
-      await db
-        .doc("automationStatus/church")
-        .set(
-          {
-            [`${name}Error`]: `The ${name} job needs attention. Check settings and provider access.`,
-            checkedAt: Timestamp.now(),
-          },
-          { merge: true },
-        );
+      await db.doc("automationStatus/church").set(
+        {
+          [`${name}Error`]: `The ${name} job needs attention. Check settings and provider access.`,
+          checkedAt: Timestamp.now(),
+        },
+        { merge: true },
+      );
     }
   }
   try {
@@ -406,15 +406,13 @@ export async function communicationTick(now = new Date()) {
       .doc("automationStatus/church")
       .set({ queueError: "" }, { merge: true });
   } catch {
-    await db
-      .doc("automationStatus/church")
-      .set(
-        {
-          queueError:
-            "The delivery queue needs attention. Check provider credentials and permissions.",
-        },
-        { merge: true },
-      );
+    await db.doc("automationStatus/church").set(
+      {
+        queueError:
+          "The delivery queue needs attention. Check provider credentials and permissions.",
+      },
+      { merge: true },
+    );
   }
 }
 export const scheduledCommunications = onSchedule(
