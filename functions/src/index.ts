@@ -38,6 +38,7 @@ export * from "./administration.js";
 export * from "./security/api.js";
 export * from "./security/passkeys.js";
 export * from "./shepherding/visits.js";
+export * from "./shepherding/contact.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
@@ -330,6 +331,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "onlineSubmissions",
         "pastoralVisits",
         "visitRounds",
+        "shepherdingSettings",
       ].includes(event.params.collection) ||
       !event.data
     )

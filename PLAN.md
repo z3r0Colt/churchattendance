@@ -205,7 +205,7 @@ sessionPrivate/{personId}    encrypted{disciplineFlag, disciplineHistory[]}, rev
 attendanceRoster/{personId}  id, firstName, lastName, preferredName, householdId,
                              householdName, membershipStatus, isDeceased
                              (server-maintained names-only roll for attendance volunteers)
-careNotes/{noteId}           personId, authorUid, kind (note | visit), date, encrypted{body}, createdAt, revision, updatedAt, updatedBy    (Session API only)
+careNotes/{noteId}           personId, authorUid, kind (note | visit | call | conversation), visitId, date, encrypted{body}, createdAt, revision, updatedAt, updatedBy    (Session API only)
 followUps/{taskId}           personId, encrypted{title}, assignedToUid, dueDate, done, revision, updatedAt, updatedBy  (Session API only)
 diaconalTasks/{taskId}       encrypted{title}, personId, assignedToUid, dueDate, done, revision, updatedAt, updatedBy   (Session and assigned deacon API)
 pastoralVisits/{visitId}     householdId, personIds[], roundId, followUpId, start (Timestamp), durationMinutes, location,
@@ -213,6 +213,8 @@ pastoralVisits/{visitId}     householdId, personIds[], roundId, followUpId, star
                              encrypted{purpose, cancelReason}, completedAt, completedBy, careNoteId, reminderMessageId,
                              revision, createdAt, authorUid, updatedAt, updatedBy   (Session API; invited deacons get logistics only)
 visitRounds/{roundId}        name, startDate, endDate, archived, revision, createdAt, updatedAt, updatedBy   (Session API only)
+shepherdingSettings/church   historyStart, defaultContactDays, districtContactDays{}, trackedStatuses[],
+                             countPersonalMessages, revision, updatedAt, updatedBy   (Session API only)
 
 households/{householdId}     name, address, homePhone, revision, updatedAt, updatedBy
 elderDistricts/{id}          name, elderPersonId, archived, revision, updatedAt, updatedBy
@@ -489,7 +491,7 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is in progress; household visits and workload are implemented, and contact gaps, digests, maps and flock health remain. Phases 9 through 12 remain open. Existing live provisioning and Windows release work remain required.
+Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is in progress; household visits, workload and contact gaps are implemented, and digests, maps and flock health remain. Phases 9 through 12 remain open. Existing live provisioning and Windows release work remain required.
 
 ### Phase 7 implementation details
 
@@ -497,7 +499,7 @@ See `docs/PHASE_7.md`. Staff functions check live Auth identities, role intersec
 
 ### Phase 8 implementation details
 
-See `docs/PHASE_8.md`. Visit plans and rounds are Session-only documents served by audited callables, with the visit purpose and cancellation reason sealed like note bodies. A plan is never contact; only completion counts, and completion is a separate one-time action allowed after the start time. It can create or link a Session visit record. Invited deacons receive only time, place, household and officer names. Visit reminders carry no household or purpose, use a revision-bound message ID and are rechecked at dispatch against the current plan, status and the recipient's live role.
+See `docs/PHASE_8.md`. Visit plans and rounds are Session-only documents served by audited callables, with the visit purpose and cancellation reason sealed like note bodies. A plan is never contact; only completion counts, and completion is a separate one-time action allowed after the start time. It can create or link a Session visit record. Invited deacons receive only time, place, household and officer names. Visit reminders carry no household or purpose, use a revision-bound message ID and are rechecked at dispatch against the current plan, status and the recipient's live role. Contact gaps combine completed visits, recorded visits, calls and conversations, text replies and, by policy, personal messages from a Session officer to three or fewer people that were delivered (text) or accepted (email). Notes, plans, bulletins, group messages and failed or waiting messages are not contact. A person without contact stays unknown until complete records cover their threshold. The contact API returns dates and sources only.
 
 ### Phase 5 implementation details
 

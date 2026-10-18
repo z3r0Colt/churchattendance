@@ -46,6 +46,7 @@ import {
   friendlyError,
   type EditorField,
 } from "./Common";
+import { ContactGaps } from "./ContactGaps";
 
 const stateLabels: Record<VisitState, string> = {
   upcoming: "Upcoming",
@@ -218,7 +219,8 @@ export function Shepherding({ roles }: { roles: Role[] }) {
             <LockClosedRegular /> Shepherding
           </Title3>
           <p>
-            Session only. Plan household visits and see each officer's work.
+            Session only. Plan household visits, see each officer's work and
+            find people who have not been contacted.
           </p>
         </div>
       </div>
@@ -238,7 +240,9 @@ export function Shepherding({ roles }: { roles: Role[] }) {
         <Tab value="visits">Visits</Tab>
         <Tab value="workload">Workload</Tab>
         <Tab value="rounds">Visit rounds</Tab>
+        <Tab value="contact">Contact gaps</Tab>
       </TabList>
+      {tab === "contact" && <ContactGaps data={data} />}
       {tab === "visits" && (
         <>
           <div className="report-filters">

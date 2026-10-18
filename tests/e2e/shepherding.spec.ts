@@ -6,7 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { Timestamp, getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { DateTime } from "luxon";
 if (
@@ -74,6 +74,8 @@ test.beforeEach(async () => {
     "messages",
     "emulatorDeliveries",
     "communicationBudgets",
+    "shepherdingSettings",
+    "smsInbox",
   ])
     await db.recursiveDelete(db.collection(name));
   await db
@@ -350,6 +352,192 @@ test("plans a household visit in a round, shows workload and completes it from t
   await expect(page.getByText(/Visited 1 of \d+ households/)).toBeVisible();
   await page.screenshot({
     path: "test-results/phase8-visit-round.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+});
+
+const daysAgo = (days: number) =>
+  DateTime.now()
+    .setZone("America/Indiana/Indianapolis")
+    .minus({ days })
+    .toISODate()!;
+async function seedMessage(
+  id: string,
+  message: Record<string, unknown>,
+  recipients: Record<string, Record<string, unknown>>,
+) {
+  await db.doc(`messages/${id}`).set({
+    source: "compose",
+    audience: { kind: "people", ids: [] },
+    createdByUid: "p8-elder",
+    sessionOnly: false,
+    ...message,
+  });
+  for (const [recipient, row] of Object.entries(recipients))
+    await db.doc(`messages/${id}/recipients/${recipient}`).set({
+      updatedAt: Timestamp.fromMillis(Date.now() - 2 * 86_400_000),
+      ...row,
+    });
+}
+test("counts only personal contact and returns no message or note text", async ({
+  request,
+}) => {
+  expect((await call(request, "getContactHistory", {})).policy).toBeNull();
+  await call(request, "saveContactPolicy", {
+    historyStart: daysAgo(10),
+    defaultContactDays: 30,
+  });
+  const text = (personIds: string[]) => ({
+    selectedPersonIds: personIds,
+    audience: { kind: "people", ids: personIds },
+  });
+  await seedMessage("p8-personal", text(["ruth"]), {
+    ruth_sms: { personId: "ruth", channel: "sms", status: "delivered" },
+  });
+  await seedMessage("p8-failed", text(["john"]), {
+    john_sms: { personId: "john", channel: "sms", status: "failed" },
+  });
+  await seedMessage("p8-queued", text(["john"]), {
+    john_email: { personId: "john", channel: "email", status: "pending" },
+  });
+  await seedMessage(
+    "p8-bulletin",
+    { ...text(["john"]), source: "bulletin", audience: { kind: "all" } },
+    { john_email: { personId: "john", channel: "email", status: "accepted" } },
+  );
+  await seedMessage(
+    "p8-broadcast",
+    {
+      selectedPersonIds: ["john", "mary", "eli", "grace"],
+      audience: { kind: "status", ids: ["adherent"] },
+    },
+    { john_sms: { personId: "john", channel: "sms", status: "delivered" } },
+  );
+  await seedMessage(
+    "p8-admin-note",
+    { ...text(["mary"]), createdByUid: "p8-admin" },
+    { mary_sms: { personId: "mary", channel: "sms", status: "delivered" } },
+  );
+  await db.doc("smsInbox/SMp8reply").set({
+    personIds: ["mary"],
+    body: "Fictional reply, thank you",
+    receivedAt: Timestamp.now(),
+    consentCommand: false,
+  });
+  await db.doc("smsInbox/SMp8help").set({
+    personIds: ["john"],
+    body: "HELP",
+    receivedAt: Timestamp.now(),
+    consentCommand: false,
+  });
+  await call(request, "saveCareNote", {
+    id: "p8-note-only",
+    expectedRevision: 0,
+    personId: "john",
+    kind: "note",
+    date: daysAgo(1),
+    body: "Fictional private observation",
+  });
+  await call(request, "saveCareNote", {
+    id: "p8-call",
+    expectedRevision: 0,
+    personId: "james",
+    kind: "call",
+    date: daysAgo(3),
+    body: "Fictional phone call",
+  });
+  await call(request, "saveVisit", visit);
+  await call(request, "completeVisit", {
+    id: "p8-visit",
+    expectedRevision: 1,
+    record: { kind: "none" },
+  });
+  const history = await call(request, "getContactHistory", {});
+  const sources = (personId: string) =>
+    history.events
+      .filter((row: { personId: string }) => row.personId === personId)
+      .map((row: { source: string }) => row.source)
+      .sort();
+  expect(sources("ruth")).toEqual(["personalText", "visit"]);
+  expect(sources("mary")).toEqual(["textReply"]);
+  expect(sources("john")).toEqual([]);
+  expect(sources("james")).toEqual(["call", "visit"]);
+  expect(sources("grace")).toEqual(["visit"]);
+  const body = JSON.stringify(history);
+  for (const secret of [
+    "Fictional reply",
+    "Fictional private observation",
+    "Fictional phone call",
+    "Fictional purpose",
+  ])
+    expect(body).not.toContain(secret);
+  for (const account of ["p8-admin", "p8-deacon"]) {
+    await call(request, "getContactHistory", {}, 403, account);
+    await call(
+      request,
+      "saveContactPolicy",
+      { historyStart: daysAgo(10) },
+      403,
+      account,
+    );
+  }
+  await call(request, "saveContactPolicy", { historyStart: daysAgo(10) }, 409);
+  await call(
+    request,
+    "saveContactPolicy",
+    {
+      expectedRevision: 1,
+      historyStart: daysAgo(10),
+      districtContactDays: { "no-such-district": 30 },
+    },
+    400,
+  );
+});
+test("shows unknown history until records cover the rule, then a known gap with its rule", async ({
+  page,
+  request,
+}) => {
+  await call(request, "saveContactPolicy", {
+    historyStart: daysAgo(10),
+    defaultContactDays: 30,
+  });
+  await call(request, "saveCareNote", {
+    id: "p8-recent-call",
+    expectedRevision: 0,
+    personId: "mary",
+    kind: "conversation",
+    date: daysAgo(2),
+    body: "Fictional conversation",
+  });
+  await login(page);
+  await page
+    .getByRole("button", { name: "Shepherding · Session only", exact: true })
+    .click();
+  await page.getByRole("tab", { name: "Contact gaps" }).click();
+  const john = page.getByRole("row", { name: /John Baker/ });
+  await expect(john).toContainText("Unknown");
+  await expect(john).toContainText("Records begin");
+  await expect(page.getByRole("row", { name: /Mary Baker/ })).toContainText(
+    "Conversation",
+  );
+  await expect(page.getByRole("row", { name: /Mary Baker/ })).toContainText(
+    "Current",
+  );
+  await page.getByRole("button", { name: "Contact policy" }).click();
+  await page.getByLabel("Contact records are complete from").fill(daysAgo(45));
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(john).toContainText("Contact gap");
+  await expect(john).toContainText("Church policy: 30 days");
+  await expect(john).toContainText("15 days past due");
+  await page.getByRole("button", { name: "John Baker" }).click();
+  await expect(page.getByText(/measured from/)).toBeVisible();
+  await page.getByRole("button", { name: "Record contact" }).click();
+  await page.getByLabel("Session only record").fill("Fictional call");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(john).toContainText("Current");
+  await page.screenshot({
+    path: "test-results/phase8-contact-gaps.png",
     fullPage: true,
     animations: "disabled",
   });

@@ -74,6 +74,7 @@ service cloud.firestore {
     // Visit plans, including invited deacons' logistics, are served only by audited callables.
     match /pastoralVisits/{id} { allow read, write: if false; }
     match /visitRounds/{id} { allow read, write: if false; }
+    match /shepherdingSettings/{id} { allow read, write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {

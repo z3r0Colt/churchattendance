@@ -84,8 +84,10 @@ export function Care({ roles }: { roles: Role[] }) {
       label: "Record type",
       kind: "select",
       options: [
-        { id: "note", name: "Pastoral note" },
+        { id: "note", name: "Pastoral note (not contact)" },
         { id: "visit", name: "Visit" },
+        { id: "call", name: "Phone call" },
+        { id: "conversation", name: "Conversation" },
       ],
     },
     { key: "date", label: "Date", kind: "date", required: true },

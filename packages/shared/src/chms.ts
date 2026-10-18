@@ -172,7 +172,8 @@ export const careNoteSchema = z
   .object({
     ...revision,
     personId: idSchema,
-    kind: z.enum(["note", "visit"]),
+    // Visits, calls and conversations are contact; a note is not.
+    kind: z.enum(["note", "visit", "call", "conversation"]),
     date: dateSchema,
     body: z.string().trim().min(1).max(10000),
   })
