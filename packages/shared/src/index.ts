@@ -3,3 +3,4 @@ export * from "./communication.js";
 export * from "./chms.js";
 export * from "./portal.js";
 export * from "./administration.js";
+export * from "./attendance-reports.js";

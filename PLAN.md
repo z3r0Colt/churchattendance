@@ -85,7 +85,7 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Diaconal task list (meals, rides, help with a move). The Session creates a task with only what the deacon needs to know, and deacons see their own tasks without any Session notes
 
 ### 3.7 Reports & Exports
-Every report follows the same layout so it is easy to read. The XLSX file opens to a **Summary** sheet with the totals and a chart, then a **Detail** sheet, then a **Data** sheet with the raw rows for anyone who wants to sort and filter. Every report also exports to CSV and prints as a one page PDF for the Session meeting packet.
+Every report follows the same layout so it is easy to read. The XLSX file opens to a **Summary** sheet with the totals and a chart, then a **Detail** sheet, then a **Data** sheet with the raw rows for anyone who wants to sort and filter. Every report also exports to CSV and prints as a Letter PDF with a summary and legible detail pages for the Session meeting packet. Large matrices span multiple pages.
 
 **Weekly Attendance Summary**
 One row per service for the week. Columns show communicant members, baptized members, non-resident members, adherents, visitors, and the total. It also shows the 4 week average and the same week last year so the trend is plain at a glance.
@@ -377,6 +377,12 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Permission-aware administrative archive with explicit exclusions
 * Live provisioning, managed backups and native Windows release checks remain separate
 
+**Phase 6, Attendance reports and dashboard**
+* Historical attendance categories with explicit review records
+* Attendance matrix, shepherding, visitor follow-up and membership roll
+* Charted report workbooks and readable matrix PDF sections
+* Dashboard attendance links, birthdays and serving gaps, with private Session follow-ups
+
 ## 7. Running Costs (estimate for a 150 person church)
 | Item | Cost |
 |---|---|
@@ -417,3 +423,7 @@ Approve this plan (with any changes), and Phase 1 development starts with the Fi
 ### Phase 5 implementation details
 
 See `docs/PHASE_5.md` for workflows and archive semantics. Setup forms use document revisions; profile forms compare original values only for changed fields. Household renames update the names-only roster atomically. Membership and deceased-flag changes require matching history, and a death records Former and Deceased together. Setup writes are validated callable Functions and are audited. Initial legacy records without revisions are treated as revision zero. District archival preserves existing person assignments. The archive API checks live Auth administrator/Session roles on every page and never exposes arbitrary collections. No backup, hosting deployment or installer publication is performed by this milestone.
+
+### Phase 6 implementation details
+
+See `docs/PHASE_6.md` for exact report definitions. Attendance reports use membership status at each service date, preserve unclassified marks, and never use current status to fill missing history. Matrix eligibility follows recorded roll entry/removal. Percentages and averages use recorded meetings only. Absence streaks use distinct recorded Lord's Day dates. The prior average covers 28 preceding days and the year comparison preserves weekday at 52 weeks. Districts and contact details are current. Only Session receives current follow-up counts and dated visit information, with private exports labelled. The dashboard uses the same report math and links its attendance tiles to filtered reports. This phase adds no document collections and no new client writes.

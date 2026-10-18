@@ -128,11 +128,11 @@ test("exports only the filtered report to an Excel workbook with three sheets", 
     "Detail",
     "Data",
   ]);
-  expect(workbook.getWorksheet("Data")!.getRow(2).getCell(1).value).toBe(
+  expect(workbook.getWorksheet("Data")!.getRow(4).getCell(1).value).toBe(
     "2026-11-01",
   );
   expect(workbook.getWorksheet("Data")!.views[0]).toMatchObject({
     state: "frozen",
-    ySplit: 1,
+    ySplit: 3,
   });
 });

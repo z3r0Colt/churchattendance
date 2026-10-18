@@ -30,7 +30,6 @@ import {
   DismissRegular,
   PeopleRegular,
   PersonRegular,
-  PrintRegular,
   SettingsRegular,
   WeatherMoonRegular,
 } from "@fluentui/react-icons";
@@ -59,7 +58,6 @@ import {
   useAttendanceData,
 } from "./data/attendance";
 import { darkTheme, lightTheme } from "./theme/brand";
-import { ExportButton as ExportCsv } from "./components/ExportButton";
 import { Messages } from "./communications/Messages";
 import { Bulletin } from "./communications/Bulletin";
 import { CommunicationSettingsPanel } from "./communications/Settings";
@@ -76,6 +74,12 @@ import { Kiosk } from "./chms/Kiosk";
 import { AdvancedReports } from "./chms/Reports";
 import { configureKiosk, enterKiosk } from "./data/chms";
 
+import {
+  AttendanceReports,
+  type ReportRequest,
+} from "./chms/AttendanceReports";
+import { Dashboard } from "./chms/Dashboard";
+
 type AttendanceData = ReturnType<typeof useAttendanceData>;
 type Page =
   | "attendance"
@@ -89,7 +93,8 @@ type Page =
   | "serving"
   | "care"
   | "annual"
-  | "portal";
+  | "portal"
+  | "dashboard";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
   pastor: "Pastor",
@@ -222,6 +227,9 @@ function Workspace({
 }) {
   const data = useAttendanceData();
   const [page, setPage] = useState<Page>("attendance");
+  const [reportRequest, setReportRequest] = useState<
+    ReportRequest | undefined
+  >();
   const [messageGroup, setMessageGroup] = useState("");
   const [kioskPin, setKioskPin] = useState("");
   const [visitor, setVisitor] = useState(false);
@@ -328,6 +336,14 @@ function Workspace({
       </header>
       <nav aria-label="Main navigation" className="sidebar">
         <span className="nav-label">CONGREGATION</span>
+        {!volunteer && (
+          <Button
+            appearance={page === "dashboard" ? "primary" : "subtle"}
+            onClick={() => setPage("dashboard")}
+          >
+            Dashboard
+          </Button>
+        )}
         <Button
           icon={<CheckmarkCircleRegular />}
           appearance={page === "attendance" ? "primary" : "subtle"}
@@ -411,7 +427,10 @@ function Workspace({
             <Button
               icon={<ArrowDownloadRegular />}
               appearance={page === "reports" ? "primary" : "subtle"}
-              onClick={() => setPage("reports")}
+              onClick={() => {
+                setReportRequest(undefined);
+                setPage("reports");
+              }}
             >
               Reports
             </Button>
@@ -425,7 +444,7 @@ function Workspace({
           </>
         )}
         <div className="nav-bottom">
-          Church management<small>Phase 5 · Development</small>
+          Church management<small>Phase 6 · Development</small>
         </div>
       </nav>
       <main className="content">
@@ -536,7 +555,24 @@ function Workspace({
             add={() => setHousehold(true)}
           />
         )}
-        {page === "reports" && <Reports data={data} />}
+        {page === "reports" && !volunteer && (
+          <AttendanceReports
+            roles={roles}
+            timeZone={data.timeZone}
+            initial={reportRequest}
+          />
+        )}
+        {page === "dashboard" && !volunteer && (
+          <Dashboard
+            roles={roles}
+            timeZone={data.timeZone}
+            report={(request) => {
+              setReportRequest(request);
+              setPage("reports");
+            }}
+            open={setPage}
+          />
+        )}
         {page === "portal" && hasRole(roles, EDITOR_ROLES) && (
           <PortalAdministration roles={roles} />
         )}
@@ -937,104 +973,6 @@ function RollCall({
         <span>Visitors {counts.visitor}</span>
         <span className="muted">Children counted in families</span>
       </footer>
-    </>
-  );
-}
-function Reports({ data }: { data: AttendanceData }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const rows = data.services
-    .filter(
-      (service) =>
-        (!from || service.date >= from) && (!to || service.date <= to),
-    )
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .map((service) => {
-      const counts = attendanceCounts(data.people, service);
-      return {
-        Date: service.date,
-        Service:
-          data.types.find((type) => type.id === service.serviceTypeId)?.name ||
-          service.serviceTypeId,
-        Communicant: counts.communicant,
-        Baptized: counts.baptized,
-        "Non-resident": counts.nonResident,
-        Adherents: counts.adherent,
-        Visitors: counts.visitor,
-        Total: counts.total,
-      };
-    });
-  return (
-    <>
-      <div className="print-heading">Sycamore Reformed Presbyterian Church</div>
-      <div className="page-heading">
-        <div>
-          <Title3 as="h1">Attendance summary</Title3>
-          <p>
-            Name by name totals for each service. Membership categories reflect
-            the current roll.
-          </p>
-        </div>
-        <div className="actions">
-          <ExportCsv rows={rows} />
-          <Button
-            icon={<PrintRegular />}
-            onClick={() =>
-              void (
-                window.desktop?.printReport() ?? Promise.resolve(window.print())
-              )
-            }
-          >
-            Print / PDF
-          </Button>
-        </div>
-      </div>
-      <div className="service-bar surface">
-        <Field label="From">
-          <Input
-            type="date"
-            value={from}
-            onChange={(_, value) => setFrom(value.value)}
-          />
-        </Field>
-        <Field label="Through">
-          <Input
-            type="date"
-            value={to}
-            onChange={(_, value) => setTo(value.value)}
-          />
-        </Field>
-      </div>
-      <section className="surface table-card">
-        <table>
-          <thead>
-            <tr>
-              {[
-                "Date",
-                "Service",
-                "Communicant",
-                "Baptized",
-                "Non-resident",
-                "Adherents",
-                "Visitors",
-                "Total",
-              ].map((label) => (
-                <th key={label}>{label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={`${row.Date}${row.Service}`}>
-                {Object.values(row).map((value, index) => (
-                  <td key={index}>{value}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!rows.length && <p>No services in this date range.</p>}
-      </section>
     </>
   );
 }

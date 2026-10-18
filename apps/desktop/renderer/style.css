@@ -443,3 +443,10 @@ th {
 .kiosk-welcome { font-size:32px;padding:64px 0;text-align:center;color:#2F6B4F; }
 .sidebar { overflow-y:auto; }
 @media print { .report-filters,.actions,.fui-TabList { display:none!important; } }
+
+.dashboard-grid,.report-metrics { display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin:20px 0; }
+.dashboard-tile.fui-Button { display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:20px;text-align:left;min-height:160px; }
+.dashboard-tile strong,.report-metrics strong { display:block;font-size:28px;line-height:1.3;color:var(--colorBrandForeground1);font-variant-numeric:tabular-nums; }
+.report-metrics .surface { padding:20px; }
+.dashboard-columns { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px; }
+@media (max-width:1199px) { .dashboard-columns { grid-template-columns:1fr; } }

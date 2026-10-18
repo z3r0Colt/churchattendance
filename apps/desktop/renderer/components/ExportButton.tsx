@@ -10,11 +10,21 @@ import {
 } from "@fluentui/react-components";
 import { ArrowDownloadRegular } from "@fluentui/react-icons";
 import { exportCsv, exportXlsx, type ExportRow } from "../data/export";
-export function ExportButton({ rows }: { rows: ExportRow[] }) {
+export function ExportButton({
+  rows,
+  onXlsx,
+}: {
+  rows: ExportRow[];
+  onXlsx?: () => Promise<unknown>;
+}) {
   const [error, setError] = useState(false);
   async function save(format: "csv" | "xlsx") {
     try {
-      await (format === "csv" ? exportCsv(rows) : exportXlsx(rows));
+      await (format === "csv"
+        ? exportCsv(rows)
+        : onXlsx
+          ? onXlsx()
+          : exportXlsx(rows));
     } catch {
       setError(true);
     }

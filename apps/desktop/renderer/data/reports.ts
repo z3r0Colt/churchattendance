@@ -6,9 +6,21 @@ import {
   CategoryScale,
   LinearScale,
   Legend,
+  LineController,
+  LineElement,
+  PointElement,
 } from "chart.js";
 import { directoryPhoto } from "./chms";
-Chart.register(BarController, BarElement, CategoryScale, LinearScale, Legend);
+Chart.register(
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Legend,
+  LineController,
+  LineElement,
+  PointElement,
+);
 export const escapeHtml = (value: unknown) =>
   String(value ?? "").replace(
     /[&<>"']/g,
@@ -19,21 +31,25 @@ export const escapeHtml = (value: unknown) =>
   );
 export function reportChart(
   labels: string[],
-  values: number[],
+  values: (number | null)[],
   canvas?: HTMLCanvasElement,
+  label = "Average attendance",
+  kind: "bar" | "line" = "bar",
 ) {
   const element = canvas || document.createElement("canvas");
   element.width = 900;
   element.height = 280;
   const chart = new Chart(element, {
-    type: "bar",
+    type: kind,
     data: {
       labels,
       datasets: [
         {
-          label: "Average attendance",
+          label,
           data: values,
           backgroundColor: "#2F6B4F",
+          borderColor: "#2F6B4F",
+          borderWidth: 2,
         },
       ],
     },

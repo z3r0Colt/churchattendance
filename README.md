@@ -21,7 +21,7 @@ Local accounts, both using password `LocalDemo123!`
 * Names-only attendance roster, household roll call, search, Enter/Space/arrow shortcuts, live totals, household clear with Undo, collapsed non-resident list.
 * Firestore IndexedDB persistence and field-level roll-call updates. Starting a service requires a connection; marking a cached service works offline.
 * Visitor quick add and household entry through validated Functions. Consent defaults off. Atomic membership history on household creation and membership changes. The person update API takes only changed fields.
-* A basic service attendance summary with date filters, CSV/XLSX export and desktop PDF output. Workbooks have Summary, Detail and Data sheets. Categories use current membership status. Historical category reconstruction and full report layouts are still pending.
+* Historical attendance reports with date, service type, membership and district filters. Reports include a summary, matrix, shepherding, visitor follow-up and membership roll. XLSX files use Summary, Detail and Data sheets, and PDF templates support readable multi-page reports. Missing history is flagged.
 * Default-deny Firestore and Storage rules, Session isolation, assigned Deacon task completion, a server-owned audit trail, emulator tests and browser workflow tests.
 
 Private Session documents cannot be written directly by clients. Validated care-editing Functions serve the Phase 3 pastoral screens. Audit logs are Session-only because before/after values can contain private records.
@@ -40,7 +40,7 @@ Functions bundle shared schemas into their output so deployment does not depend 
 
 ## Remaining Phase 1 work
 
-Staff account/role setup screens, full attendance reports with charts and historical membership categories, managed backup provisioning, signed installer/release testing, offline restart recovery, and update publishing remain. Phase 5 adds person editing, membership history, elder districts, church/service setup and a scoped document archive. The archive has explicit exclusions and does not replace managed backups. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
+Staff account/role setup screens, managed backup provisioning, signed installer/release testing, offline restart recovery, and update publishing remain. Phase 5 adds person editing, membership history, elder districts, church/service setup and a scoped document archive. The archive has explicit exclusions and does not replace managed backups. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
 
 ## Phase 2 communication
 
@@ -67,3 +67,7 @@ Use npm run dev:portal for the fictional local demo, or read [Phase 4 setup](doc
 People now includes editable profiles, membership timelines, person attendance, household editing and adding people to existing households. Settings adds church, service type and elder district setup. Administrative exports use paginated, allowlisted data with Session records restricted to Session administrators.
 
 Read [Phase 5 workflows](docs/PHASE_5.md) for permissions, stale-edit checks, archive format and exclusions, and remaining production/release work.
+
+## Phase 6 attendance reports and dashboard
+
+Reports now reconstructs categories from dated membership history and flags unclassified marks. The dashboard links attendance tiles to filtered reports and keeps private follow-up information within the Session. Read [Phase 6 workflows](docs/PHASE_6.md) for report definitions, export layouts and limits.

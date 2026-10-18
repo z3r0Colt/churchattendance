@@ -60,17 +60,22 @@ export function useCollection<T>(
   filterValue = "",
 ) {
   const [rows, setRows] = useState<T[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     setRows([]);
     setError("");
-    if (!name) return;
+    setLoaded(false);
+    if (!name) {
+      setLoaded(true);
+      return;
+    }
     const source = filterField
       ? query(collection(db, name), where(filterField, "==", filterValue))
       : collection(db, name);
     return onSnapshot(
       source,
-      (snapshot) =>
+      (snapshot) => {
         setRows(
           snapshot.docs.map(
             (row) =>
@@ -85,14 +90,16 @@ export function useCollection<T>(
                   : {}),
               }) as T,
           ),
-        ),
+        );
+        setLoaded(true);
+      },
       () =>
         setError(
           "These records could not be loaded. Check your connection and role.",
         ),
     );
   }, [name, filterField, filterValue]);
-  return { rows, error };
+  return { rows, error, loaded };
 }
 export function usePublicChms() {
   const people = useCollection<Person>("people"),
@@ -205,15 +212,25 @@ export function useReportData() {
     return () => {
       active = false;
     };
-  }, [reload]);
+  }, [reload, people.rows]);
   return {
     ...records,
     people: people.rows,
     households: households.rows,
     services: services.rows,
     types: types.rows,
-    loaded,
-    error: error || people.error || households.error || services.error,
+    loaded:
+      loaded &&
+      people.loaded &&
+      households.loaded &&
+      services.loaded &&
+      types.loaded,
+    error:
+      error ||
+      people.error ||
+      households.error ||
+      services.error ||
+      types.error,
     refresh: () => setReload((value) => value + 1),
   };
 }

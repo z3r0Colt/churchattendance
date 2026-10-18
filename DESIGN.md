@@ -230,3 +230,7 @@ Sections for Church (name, address, time zone), Service types, Elder districts, 
 * Short, plain, warm. Write "Saved" instead of "Your changes have been saved successfully!"
 * Say Lord's Day, Session, elder, adherent, and visitor. Never say "guest", "member ID", or "customer".
 * No exclamation marks, emoji, or jokes in system text.
+
+## Phase 6 report workspace
+
+Reports provides a report selector and shared date, service type, historical membership and current district filters. Detail, source and review grids each export their visible rows. Main report workbooks include Summary, Detail and Data sheets with a chart. Historical unknowns display explicit review text. Session-enriched shepherding and visitor reports carry a lock badge in the screen and a Session only title in exports. Matrix PDFs repeat names across sections of at most six meeting columns. Dashboard tiles open the corresponding filtered report, while the initial staff screen remains Attendance.

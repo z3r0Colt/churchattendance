@@ -405,7 +405,7 @@ export const getCareAssignees = onCall(async (request) => {
   return rows.filter(Boolean);
 });
 export const getReportingRecords = onCall(async (request) => {
-  requireRoles(request, [...EDITOR_ROLES, "readOnly"]);
+  requireRoles(request, [...EDITOR_ROLES, "deacon", "readOnly"]);
   const [history, sacraments] = await Promise.all([
     db.collectionGroup("membershipEvents").get(),
     db.collectionGroup("sacraments").get(),
