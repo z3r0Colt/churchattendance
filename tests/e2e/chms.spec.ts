@@ -442,6 +442,14 @@ test("starts the kiosk through Settings, checks a household in, and exits to sta
 }) => {
   await call(request, "configureKiosk", { enabled: true, pin: "718294" });
   await login(page);
+  // The default service follows the current church time, so read which one is open.
+  const serviceId = `${
+    (await page
+      .getByRole("combobox", { name: "Service", exact: true })
+      .textContent())!.includes("Evening")
+      ? "pm"
+      : "am"
+  }_2027-03-14`;
   await page.getByLabel("Service date").fill("2027-03-14");
   const start = page.getByRole("button", {
     name: "Start roll call",
@@ -480,9 +488,7 @@ test("starts the kiosk through Settings, checks a household in, and exits to sta
   await expect(page.getByRole("status")).toContainText("You are checked in");
   await expect
     .poll(async () =>
-      (await db.doc("services/am_2027-03-14").get()).get(
-        "present.james.method",
-      ),
+      (await db.doc(`services/${serviceId}`).get()).get("present.james.method"),
     )
     .toBe("kiosk");
   await page.getByRole("button", { name: "Exit kiosk", exact: true }).click();
