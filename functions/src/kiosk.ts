@@ -17,7 +17,7 @@ import {
 import { db } from "./admin.js";
 import { parse, requireRoles } from "./access.js";
 export const configureKiosk = onCall(async (request) => {
-  requireRoles(request, ["admin", "pastor"]);
+  await requireRoles(request, ["admin", "pastor"]);
   const input = parse(kioskSetupSchema, request.data);
   const salt = randomBytes(16).toString("hex");
   await db.doc("kioskConfiguration/church").set({
@@ -28,7 +28,7 @@ export const configureKiosk = onCall(async (request) => {
   return { saved: true };
 });
 export const startKiosk = onCall(async (request) => {
-  const actor = requireRoles(request, ["admin", "pastor"]);
+  const actor = await requireRoles(request, ["admin", "pastor"]);
   const input = parse(kioskStartSchema, request.data);
   const [settings, service] = await Promise.all([
     db.doc("kioskConfiguration/church").get(),

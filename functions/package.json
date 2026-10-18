@@ -11,6 +11,7 @@
     "build": "node build.mjs"
   },
   "dependencies": {
+    "@simplewebauthn/server": "^13.2.2",
     "firebase-admin": "^13.5.0",
     "firebase-functions": "^6.6.0",
     "twilio": "^5.10.0"

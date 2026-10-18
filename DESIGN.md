@@ -237,9 +237,11 @@ Reports provides a report selector and shared date, service type, historical mem
 
 ## Approved Phase 7 through Phase 12 screens
 
-These are future screen requirements, not descriptions of implemented UI. Scope and acceptance criteria live in [Expanded feature requirements](docs/FEATURE_EXPANSION.md).
+Phase 7 security screens are implemented as described in `docs/PHASE_7.md`; their live deployment checks remain open. Phase 8 through Phase 12 screens below remain future requirements. Scope and acceptance criteria live in [Expanded feature requirements](docs/FEATURE_EXPANSION.md).
 
 ### Security and accounts
+
+Account security is available to every staff role for their own sign-in/passkeys. Staff account management is administrator-only. History is administrator/Session-only and the Session scope remains hidden from non-Session administrators. The volunteer gains only their own account-security controls alongside the names-only attendance screen. Authentication setup is shown before the staff workspace mounts.
 
 Sign-in supports authenticator enrollment/challenges and passkeys, with a clear recovery path. Enrollment is completed before staff data is loaded. The existing booth account stays limited to names and attendance. Account setup shows granted roles and the effect of disabling an account. Role changes cannot grant the acting administrator access to Session records.
 

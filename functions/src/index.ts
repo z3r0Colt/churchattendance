@@ -18,16 +18,28 @@ import {
 } from "@sycamore/shared";
 
 import { db } from "./admin.js";
-import { parse, requireRoles } from "./access.js";
+import { parse, requireRoles, requireRecent } from "./access.js";
+import {
+  protectRecord,
+  privateKeys,
+  privateOptions,
+} from "./security/encryption.js";
+import { securityEvent } from "./security/audit.js";
+import {
+  lockStaffAccount,
+  finishStaffAccountChange,
+} from "./security/account-lock.js";
 export * from "./communications/api.js";
 export * from "./chms.js";
 export * from "./kiosk.js";
 export * from "./chms-audit.js";
 export * from "./portal.js";
 export * from "./administration.js";
+export * from "./security/api.js";
+export * from "./security/passkeys.js";
 
 export const createHousehold = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(createHouseholdSchema, request.data);
   const household = db.collection("households").doc();
   const batch = db.batch();
@@ -63,7 +75,7 @@ export const createHousehold = onCall(async (request) => {
 });
 
 export const savePerson = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(savePersonSchema, request.data);
   if (
     ["email", "mobilePhone", "emailOptIn", "smsOptIn"].some(
@@ -162,7 +174,7 @@ export const savePerson = onCall(async (request) => {
 });
 
 export const addVisitor = onCall(async (request) => {
-  const actor = requireRoles(request, [
+  const actor = await requireRoles(request, [
     ...EDITOR_ROLES,
     "deacon",
     "attendanceVolunteer",
@@ -233,8 +245,9 @@ export const addVisitor = onCall(async (request) => {
   return { id: person.id };
 });
 
-export const setUserRoles = onCall(async (request) => {
-  const actor = requireRoles(request, ["admin"]);
+export const setUserRoles = onCall(privateOptions, async (request) => {
+  const actor = await requireRoles(request, ["admin"]);
+  requireRecent(request);
   const input = parse(rolesInputSchema, request.data);
   if (input.uid.startsWith("kiosk_"))
     throw new HttpsError(
@@ -256,6 +269,8 @@ export const setUserRoles = onCall(async (request) => {
       "failed-precondition",
       "Another administrator must change your roles.",
     );
+  await lockStaffAccount(input.uid, current, input.roles);
+  await getAuth().revokeRefreshTokens(input.uid);
   await getAuth().setCustomUserClaims(input.uid, {
     ...user.customClaims,
     roles: input.roles,
@@ -267,21 +282,32 @@ export const setUserRoles = onCall(async (request) => {
       { displayName: user.displayName ?? "", roles: input.roles },
       { merge: true },
     );
-  await db.collection("auditLog").add({
-    uid: actor.uid,
-    collection: "users",
-    docId: input.uid,
-    action: "roles",
-    before: current,
-    after: input.roles,
-    at: FieldValue.serverTimestamp(),
-  });
+  const roleAudit = db.collection("auditLog").doc();
+  await roleAudit.set(
+    protectRecord("auditLog", roleAudit.path, {
+      uid: actor.uid,
+      collection: "users",
+      docId: input.uid,
+      action: "roles",
+      before: current,
+      after: input.roles,
+      at: FieldValue.serverTimestamp(),
+    }),
+  );
+  await securityEvent(
+    actor.uid,
+    "account.roles",
+    "success",
+    "security",
+    input.uid,
+  );
+  await finishStaffAccountChange(input.uid);
   return { updated: true };
 });
 
 // Event IDs make redelivery idempotent. Sensitive before/after data stays in a Session-only audit collection.
 export const auditChanges = onDocumentWrittenWithAuthContext(
-  "{collection}/{docId}",
+  { document: "{collection}/{docId}", secrets: [privateKeys] },
   async (event) => {
     if (
       ![
@@ -314,14 +340,27 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
     await db
       .collection("auditLog")
       .doc(event.id)
-      .set({
-        uid,
-        collection: event.params.collection,
-        docId: event.params.docId,
-        action: !before ? "create" : !after ? "delete" : "update",
-        before,
-        after,
-        at: Timestamp.fromDate(new Date(event.time)),
-      });
+      .set(
+        protectRecord("auditLog", `auditLog/${event.id}`, {
+          uid,
+          collection: event.params.collection,
+          docId: event.params.docId,
+          action: !before ? "create" : !after ? "delete" : "update",
+          before,
+          after,
+          at: Timestamp.fromDate(new Date(event.time)),
+        }),
+      );
+    await securityEvent(
+      uid || "system",
+      "record.change",
+      "success",
+      ["sessionPrivate", "careNotes", "followUps", "diaconalTasks"].includes(
+        event.params.collection,
+      )
+        ? "session"
+        : "security",
+      `${event.params.collection}/${event.params.docId}`,
+    );
   },
 );

@@ -1,7 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function roles() { return request.auth != null ? request.auth.token.get('roles', []) : []; }
+    function staff() {
+      let a = get(/databases/$(database)/documents/staffAccess/$(request.auth.uid)).data;
+      let f = request.auth.token.get('firebase', {});
+      let sid = request.auth.token.get('passkeySession', '');
+      return request.auth != null && request.auth.token.get('email_verified', false) && a.enabled == true && a.get('locked', false) == false &&
+        request.auth.token.auth_time >= a.validAfter &&
+        (f.get('sign_in_second_factor', '') in ['totp', 'phone'] ||
+          (sid.matches('^[a-f0-9]{64}$') &&
+            get(/databases/$(database)/documents/staffSessions/$(sid)).data.uid == request.auth.uid &&
+            get(/databases/$(database)/documents/staffSessions/$(sid)).data.validAfter == a.validAfter &&
+            get(/databases/$(database)/documents/staffSessions/$(sid)).data.expiresAt > request.time));
+    }
+    function roles() { return request.auth != null && staff() ? get(/databases/$(database)/documents/staffAccess/$(request.auth.uid)).data.roles : []; }
     function session() { return roles().hasAny(['pastor', 'clerk', 'elder']); }
     function editor() { return roles().hasAny(['admin', 'pastor', 'clerk', 'elder']); }
     function reader() { return roles().hasAny(['admin', 'pastor', 'clerk', 'elder', 'deacon', 'readOnly']); }
@@ -51,18 +63,16 @@ service cloud.firestore {
       allow update: if attendanceWriter() && validService() && validAttendanceUpdate();
       allow delete: if false;
     }
-    match /sessionPrivate/{id} { allow read: if session(); allow write: if false; }
-    match /careNotes/{id} { allow read: if session(); allow write: if false; }
-    match /followUps/{id} { allow read: if session(); allow write: if false; }
+    // Private records are decrypted only by audited callable APIs and never cached here.
+    match /sessionPrivate/{id} { allow read, write: if false; }
+    match /careNotes/{id} { allow read, write: if false; }
+    match /followUps/{id} { allow read, write: if false; }
     match /diaconalTasks/{id} {
-      allow read: if session() || (roles().hasAny(['deacon']) && resource.data.assignedToUid == request.auth.uid);
-      allow update: if roles().hasAny(['deacon']) && resource.data.assignedToUid == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'revision']) && request.resource.data.done == true && request.resource.data.revision == resource.data.get('revision', 0) + 1;
-      allow create, delete: if false;
+      allow read, write: if false;
     }
-    match /auditLog/{id} { allow read: if session(); allow write: if false; }
+    match /auditLog/{id} { allow read, write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
-    match /users/{uid} { allow read: if request.auth != null && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
+    match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {
       allow read: if visibleMessage(resource.data);
       allow write: if false;

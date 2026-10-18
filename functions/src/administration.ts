@@ -24,6 +24,8 @@ import {
 } from "@sycamore/shared";
 import { db } from "./admin.js";
 import { parse, requireRoles } from "./access.js";
+import { privateOptions, openRecord } from "./security/encryption.js";
+import { securityEvent } from "./security/audit.js";
 import { getAuth } from "firebase-admin/auth";
 
 const SETUP_ROLES = ["admin", "pastor"] as const;
@@ -41,7 +43,7 @@ const metadata = (uid: string, revision: number) => ({
 });
 
 export const saveChurchSettings = onCall(async (request) => {
-  const actor = requireRoles(request, SETUP_ROLES);
+  const actor = await requireRoles(request, SETUP_ROLES);
   const input = parse(saveChurchSettingsSchema, request.data);
   await db.runTransaction(async (tx) => {
     const ref = db.doc("settings/church"),
@@ -63,7 +65,7 @@ export const saveChurchSettings = onCall(async (request) => {
   return { saved: true };
 });
 export const saveServiceType = onCall(async (request) => {
-  const actor = requireRoles(request, SETUP_ROLES);
+  const actor = await requireRoles(request, SETUP_ROLES);
   const { id, expectedRevision, ...data } = parse(
     saveServiceTypeSchema,
     request.data,
@@ -81,7 +83,7 @@ export const saveServiceType = onCall(async (request) => {
   return { id };
 });
 export const saveElderDistrict = onCall(async (request) => {
-  const actor = requireRoles(request, SETUP_ROLES);
+  const actor = await requireRoles(request, SETUP_ROLES);
   const { id, expectedRevision, ...data } = parse(
     saveDistrictSchema,
     request.data,
@@ -112,7 +114,7 @@ export const saveElderDistrict = onCall(async (request) => {
   return { id };
 });
 export const saveHousehold = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const { id, expectedRevision, ...data } = parse(
     saveHouseholdSchema,
     request.data,
@@ -141,7 +143,7 @@ export const saveHousehold = onCall(async (request) => {
   return { id };
 });
 export const addPerson = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(addPersonSchema, request.data),
     person = db.collection("people").doc();
   if (input.person.emailOptIn || input.person.smsOptIn)
@@ -205,8 +207,8 @@ function serializable(value: unknown): unknown {
     );
   return value;
 }
-export const exportDataPage = onCall(async (request) => {
-  const actor = requireRoles(request, ["admin"]);
+export const exportDataPage = onCall(privateOptions, async (request) => {
+  const actor = await requireRoles(request, ["admin"]);
   const user = await getAuth().getUser(actor.uid);
   const liveRoles = roleSchema
     .array()
@@ -266,7 +268,20 @@ export const exportDataPage = onCall(async (request) => {
     lastPath = "";
   for (const row of page.docs) {
     if (exportPathAllowed(input.collection, row.ref.path)) {
-      const data = serializable(row.data());
+      const isPrivate = (
+        privateExportCollections as readonly string[]
+      ).includes(input.collection);
+      if (isPrivate)
+        await securityEvent(
+          actor.uid,
+          "private.export",
+          "success",
+          "session",
+          row.ref.path,
+        );
+      const data = serializable(
+        isPrivate ? openRecord(row.ref.path, row.data()) : row.data(),
+      );
       const size = Buffer.byteLength(JSON.stringify(data), "utf8");
       if (size > 4_000_000)
         throw new HttpsError(

@@ -25,6 +25,11 @@ import {
 import { db } from "./admin.js";
 import { parse, requireRoles } from "./access.js";
 import {
+  openRecord,
+  protectRecord,
+  privateOptions,
+} from "./security/encryption.js";
+import {
   getChurchZone,
   getSettings,
   queueMessage,
@@ -32,7 +37,7 @@ import {
 
 const organizers = [...EDITOR_ROLES, "deacon"] as const;
 export const saveReportLabels = onCall(async (request) => {
-  requireRoles(request, EDITOR_ROLES);
+  await requireRoles(request, EDITOR_ROLES);
   const labels = parse(reportLabelsSchema, request.data);
   await db.doc("reportSettings/statistical").set({ labels });
   return { saved: true };
@@ -79,10 +84,18 @@ async function save<T extends { id: string; expectedRevision: number }>(
         "aborted",
         "This record changed. Reopen it before saving.",
       );
+    const privateRecord = ["careNotes", "followUps", "diaconalTasks"].includes(
+      collection,
+    );
     transaction.set(
       ref,
       {
-        ...data,
+        ...protectRecord(collection, ref.path, {
+          ...(privateRecord && before.exists
+            ? openRecord(ref.path, before.data()!)
+            : {}),
+          ...data,
+        }),
         revision: expectedRevision + 1,
         updatedBy: uid,
         updatedAt: Timestamp.now(),
@@ -90,13 +103,13 @@ async function save<T extends { id: string; expectedRevision: number }>(
           ? { createdAt: Timestamp.now(), authorUid: uid }
           : {}),
       },
-      { merge: true },
+      { merge: !privateRecord },
     );
   });
   return { id };
 }
 export const saveGroup = onCall(async (request) => {
-  const actor = requireRoles(request, organizers);
+  const actor = await requireRoles(request, organizers);
   const input = parse(groupSchema, request.data);
   await Promise.all(
     [...new Set([input.leaderPersonId, ...input.memberIds])].map(activePerson),
@@ -108,7 +121,7 @@ export const saveGroup = onCall(async (request) => {
   );
 });
 export const markGroupAttendance = onCall(async (request) => {
-  const actor = requireRoles(request, organizers);
+  const actor = await requireRoles(request, organizers);
   const input = parse(groupMarkSchema, request.data);
   const ref = db.doc(`groups/${input.groupId}/meetings/${input.date}`);
   await db.runTransaction(async (transaction) => {
@@ -144,7 +157,7 @@ export const markGroupAttendance = onCall(async (request) => {
   return { saved: true };
 });
 export const saveChurchEvent = onCall(async (request) => {
-  const actor = requireRoles(request, organizers);
+  const actor = await requireRoles(request, organizers);
   const input = parse(eventSchema, request.data);
   const zone = await getChurchZone();
   const start = DateTime.fromISO(input.start).setZone(zone);
@@ -168,7 +181,7 @@ export const saveChurchEvent = onCall(async (request) => {
   );
 });
 export const recordRsvp = onCall(async (request) => {
-  const actor = requireRoles(request, organizers);
+  const actor = await requireRoles(request, organizers);
   const input = parse(rsvpSchema, request.data);
   const ref = db.doc(`events/${input.eventId}`);
   const zone = await getChurchZone();
@@ -217,7 +230,7 @@ export const recordRsvp = onCall(async (request) => {
   return { saved: true };
 });
 export const saveServingAssignment = onCall(async (request) => {
-  const actor = requireRoles(request, organizers);
+  const actor = await requireRoles(request, organizers);
   const input = parse(servingSchema, request.data);
   await activePerson(input.personId);
   const ref = db.doc(`serving/${input.id}`);
@@ -300,14 +313,14 @@ export const saveServingAssignment = onCall(async (request) => {
   });
   return { id: input.id };
 });
-export const saveCareNote = onCall(async (request) => {
-  const actor = requireRoles(request, SESSION_ROLES);
+export const saveCareNote = onCall(privateOptions, async (request) => {
+  const actor = await requireRoles(request, SESSION_ROLES);
   const input = parse(careNoteSchema, request.data);
   await activePerson(input.personId);
   return save("careNotes", input, actor.uid);
 });
-export const saveFollowUp = onCall(async (request) => {
-  const actor = requireRoles(request, SESSION_ROLES);
+export const saveFollowUp = onCall(privateOptions, async (request) => {
+  const actor = await requireRoles(request, SESSION_ROLES);
   const input = parse(followUpSchema, request.data);
   await Promise.all([
     activePerson(input.personId),
@@ -315,8 +328,8 @@ export const saveFollowUp = onCall(async (request) => {
   ]);
   return save("followUps", input, actor.uid);
 });
-export const saveDiaconalTask = onCall(async (request) => {
-  const actor = requireRoles(request, SESSION_ROLES);
+export const saveDiaconalTask = onCall(privateOptions, async (request) => {
+  const actor = await requireRoles(request, SESSION_ROLES);
   const input = parse(diaconalTaskSchema, request.data);
   await Promise.all([
     activePerson(input.personId),
@@ -325,7 +338,7 @@ export const saveDiaconalTask = onCall(async (request) => {
   return save("diaconalTasks", input, actor.uid);
 });
 export const completeDiaconalTask = onCall(async (request) => {
-  const actor = requireRoles(request, [...SESSION_ROLES, "deacon"]);
+  const actor = await requireRoles(request, [...SESSION_ROLES, "deacon"]);
   const { id } = parse(taskCompleteSchema, request.data);
   const ref = db.doc(`diaconalTasks/${id}`);
   await db.runTransaction(async (transaction) => {
@@ -348,8 +361,8 @@ export const completeDiaconalTask = onCall(async (request) => {
   });
   return { done: true };
 });
-export const recordDiscipline = onCall(async (request) => {
-  const actor = requireRoles(request, SESSION_ROLES);
+export const recordDiscipline = onCall(privateOptions, async (request) => {
+  const actor = await requireRoles(request, SESSION_ROLES);
   const input = parse(disciplineSchema, request.data);
   await activePerson(input.personId);
   const ref = db.doc(`sessionPrivate/${input.personId}`);
@@ -360,33 +373,39 @@ export const recordDiscipline = onCall(async (request) => {
         "aborted",
         "The private record changed. Reopen it before saving.",
       );
+    const plain = openRecord(ref.path, before.data() || {});
+    const history = Array.isArray(plain.disciplineHistory)
+      ? plain.disciplineHistory
+      : [];
     transaction.set(
       ref,
-      {
+      protectRecord("sessionPrivate", ref.path, {
         disciplineFlag: input.disciplineFlag,
-        disciplineHistory: FieldValue.arrayUnion({
-          date: input.date,
-          entry: input.entry,
-          byUid: actor.uid,
-          flag: input.disciplineFlag,
-        }),
+        disciplineHistory: [
+          ...history,
+          {
+            date: input.date,
+            entry: input.entry,
+            byUid: actor.uid,
+            flag: input.disciplineFlag,
+          },
+        ],
         revision: input.expectedRevision + 1,
         updatedBy: actor.uid,
         updatedAt: Timestamp.now(),
-      },
-      { merge: true },
+      }),
     );
   });
   return { saved: true };
 });
 export const saveSacrament = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(sacramentSchema, request.data);
   await activePerson(input.personId);
   return save(`people/${input.personId}/sacraments`, input, actor.uid);
 });
 export const getCareAssignees = onCall(async (request) => {
-  requireRoles(request, SESSION_ROLES);
+  await requireRoles(request, SESSION_ROLES);
   const users = await db.collection("users").get();
   const rows = await Promise.all(
     users.docs.map(async (row) => {
@@ -405,7 +424,7 @@ export const getCareAssignees = onCall(async (request) => {
   return rows.filter(Boolean);
 });
 export const getReportingRecords = onCall(async (request) => {
-  requireRoles(request, [...EDITOR_ROLES, "deacon", "readOnly"]);
+  await requireRoles(request, [...EDITOR_ROLES, "deacon", "readOnly"]);
   const [history, sacraments] = await Promise.all([
     db.collectionGroup("membershipEvents").get(),
     db.collectionGroup("sacraments").get(),

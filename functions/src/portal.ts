@@ -95,7 +95,7 @@ async function member(request: CallableRequest) {
   };
 }
 export const setPortalAccess = onCall(async (request) => {
-  const actor = requireRoles(request, ["admin", "pastor"]);
+  const actor = await requireRoles(request, ["admin", "pastor"]);
   const input = parse(portalAccessSchema, request.data);
   if (input.uid.startsWith("kiosk_"))
     throw new HttpsError(
@@ -141,7 +141,7 @@ export const setPortalAccess = onCall(async (request) => {
   return { saved: true };
 });
 export const publishPortalEvent = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(eventPublicationSchema, request.data);
   await db.runTransaction(async (transaction) => {
     const ref = db.doc(`eventPublications/${input.eventId}`);
@@ -433,7 +433,7 @@ export const submitOnlineForm = onCall(
   },
 );
 export const reviewOnlineSubmission = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(reviewSubmissionSchema, request.data);
   const zone = await getChurchZone();
   const ref = db.doc(`onlineSubmissions/${input.id}`);

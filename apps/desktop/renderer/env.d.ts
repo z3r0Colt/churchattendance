@@ -1,5 +1,6 @@
 interface Window {
   desktop?: {
+    openStaffSecurity(id: string, challenge: string): Promise<void>;
     setKioskMode(enabled: boolean): Promise<void>;
     saveReportPdf(title: string, html: string): Promise<boolean>;
     saveCsv(csv: string): Promise<boolean>;

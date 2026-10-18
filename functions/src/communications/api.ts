@@ -70,7 +70,7 @@ async function allowedMessage(id: string, roles: Role[]) {
   return ref;
 }
 export const previewMessage = onCall(async (request) => {
-  requireRoles(request, EDITOR_ROLES);
+  await requireRoles(request, EDITOR_ROLES);
   const input = parse(messageInputSchema, request.data);
   const result = await recipientPreview(input.audience, input.channel);
   return {
@@ -84,7 +84,7 @@ export const previewMessage = onCall(async (request) => {
   };
 });
 export const createMessage = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(messageInputSchema, request.data);
   if (
     input.scheduledFor &&
@@ -96,7 +96,7 @@ export const createMessage = onCall(async (request) => {
   });
 });
 export const sendTestMessage = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(messageInputSchema, request.data);
   const own = await db.doc(`users/${actor.uid}`).get();
   let personId = own.get("personId") as string | undefined;
@@ -130,7 +130,7 @@ export const sendTestMessage = onCall(async (request) => {
   );
 });
 export const cancelMessage = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const { id } = parse(actionIdSchema, request.data);
   const ref = await allowedMessage(id, actor.roles);
   await db.runTransaction(async (transaction) => {
@@ -158,7 +158,7 @@ export const cancelMessage = onCall(async (request) => {
   return { cancelled: true };
 });
 export const retryFailedMessage = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const { id } = parse(actionIdSchema, request.data);
   const ref = await allowedMessage(id, actor.roles);
   await db.runTransaction(async (transaction) => {
@@ -196,7 +196,7 @@ export const retryFailedMessage = onCall(async (request) => {
   return { queued: true };
 });
 export const saveMessageTemplate = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(templateInputSchema, request.data);
   await db
     .doc(`messageTemplates/${input.id}`)
@@ -204,7 +204,7 @@ export const saveMessageTemplate = onCall(async (request) => {
   return { id: input.id };
 });
 export const saveAudience = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(savedAudienceSchema, request.data);
   await db
     .doc(`savedAudiences/${input.id}`)
@@ -212,13 +212,13 @@ export const saveAudience = onCall(async (request) => {
   return { id: input.id };
 });
 export const markSmsRead = onCall(async (request) => {
-  requireRoles(request, EDITOR_ROLES);
+  await requireRoles(request, EDITOR_ROLES);
   const { id } = parse(actionIdSchema, request.data);
   await db.doc(`smsInbox/${id}`).update({ read: true });
   return { read: true };
 });
 export const recordContactConsent = onCall(async (request) => {
-  const actor = requireRoles(request, EDITOR_ROLES);
+  const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(contactConsentSchema, request.data);
   let phone: string;
   try {
@@ -294,7 +294,7 @@ export const recordContactConsent = onCall(async (request) => {
 export const saveCommunicationSettings = onCall(
   secretOptions,
   async (request) => {
-    requireRoles(request, ["admin", "pastor"]);
+    await requireRoles(request, ["admin", "pastor"]);
     const input = parse(communicationSettingsSchema, request.data);
     const config = providerConfig();
     if (
@@ -320,7 +320,7 @@ export const saveCommunicationSettings = onCall(
   },
 );
 export const communicationStatus = onCall(secretOptions, async (request) => {
-  requireRoles(request, EDITOR_ROLES);
+  await requireRoles(request, EDITOR_ROLES);
   let email = false;
   let sms = false;
   try {
@@ -338,7 +338,7 @@ export const communicationStatus = onCall(secretOptions, async (request) => {
   };
 });
 export const registerBulletinFile = onCall(secretOptions, async (request) => {
-  requireRoles(request, EDITOR_ROLES);
+  await requireRoles(request, EDITOR_ROLES);
   const input = parse(bulletinFileSchema, request.data);
   if (!input.path.startsWith(`bulletins/${input.week}/`))
     throw new HttpsError(
@@ -354,7 +354,7 @@ export const registerBulletinFile = onCall(secretOptions, async (request) => {
   return { registered: true };
 });
 export const bulletinAction = onCall(secretOptions, async (request) => {
-  requireRoles(request, EDITOR_ROLES);
+  await requireRoles(request, EDITOR_ROLES);
   const input = parse(bulletinActionSchema, request.data);
   if (input.action === "send")
     await sendBulletin(input.week, true, input.confirmedRecipientCount);
@@ -431,7 +431,7 @@ export const scheduledCommunications = onSchedule(
 export const runLocalCommunicationTick = onCall(
   { timeoutSeconds: 120 },
   async (request) => {
-    requireRoles(request, ["admin"]);
+    await requireRoles(request, ["admin"]);
     if (!emulatorMode())
       throw new HttpsError(
         "failed-precondition",

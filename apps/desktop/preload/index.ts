@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("desktop", {
+  openStaffSecurity: (id: string, challenge: string): Promise<void> => ipcRenderer.invoke("open-staff-security", id, challenge),
   setKioskMode: (enabled: boolean): Promise<void> =>
     ipcRenderer.invoke("set-kiosk-mode", enabled),
   saveReportPdf: (title: string, html: string): Promise<boolean> =>

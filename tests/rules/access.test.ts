@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { deleteObject, getBytes, ref, uploadBytes } from "firebase/storage";
 let env: RulesTestEnvironment;
@@ -22,7 +23,16 @@ const mark = (uid: string) => ({
   byUid: uid,
 });
 const auth = (role: string, uid = role) =>
-  env.authenticatedContext(uid, { roles: [role] });
+  env.authenticatedContext(uid, {
+    roles: [role],
+    email_verified: true,
+    auth_time: Math.floor(Date.now() / 1000),
+    firebase: {
+      ...{ sign_in_second_factor: "totp" },
+      sign_in_provider: "password",
+      identities: {},
+    },
+  });
 beforeAll(async () => {
   env = await initializeTestEnvironment({
     projectId: "demo-sycamore",
@@ -38,6 +48,20 @@ beforeEach(async () => {
   await env.clearStorage();
   await env.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
+    for (const role of [
+      "pastor",
+      "clerk",
+      "elder",
+      "admin",
+      "deacon",
+      "attendanceVolunteer",
+      "readOnly",
+    ])
+      await setDoc(doc(db, `staffAccess/${role}`), {
+        enabled: true,
+        roles: [role],
+        validAfter: 0,
+      });
     await Promise.all([
       setDoc(doc(db, "people/alex"), {
         firstName: "Alex",
@@ -100,9 +124,9 @@ describe("Session boundary", () => {
     "followUps",
     "auditLog",
   ]) {
-    it(`${collection} allows Session readers and denies Admin, Deacon, volunteer and anonymous`, async () => {
+    it(`${collection} requires audited APIs even for Session and denies all direct writes`, async () => {
       for (const role of ["pastor", "clerk", "elder"])
-        await assertSucceeds(
+        await assertFails(
           getDoc(doc(auth(role).firestore(), `${collection}/private`)),
         );
       for (const role of ["admin", "deacon", "attendanceVolunteer", "readOnly"])
@@ -126,6 +150,90 @@ describe("Session boundary", () => {
   }
 });
 describe("roll call and identity", () => {
+  it("denies first-factor-only, unverified, revoked and forged assurance access", async () => {
+    const unassured = env.authenticatedContext("elder", {
+      roles: ["elder"],
+      email_verified: true,
+      assured: true,
+      auth_time: Math.floor(Date.now() / 1000),
+    });
+    await assertFails(getDoc(doc(unassured.firestore(), "people/alex")));
+    await assertFails(
+      getBytes(ref(unassured.storage(), "photos/alex/avatar.png")),
+    );
+    const unverified = env.authenticatedContext("elder", {
+      roles: ["elder"],
+      auth_time: Math.floor(Date.now() / 1000),
+      email_verified: false,
+      firebase: {
+        ...{ sign_in_second_factor: "totp" },
+        sign_in_provider: "password",
+      },
+    });
+    await assertFails(getDoc(doc(unverified.firestore(), "people/alex")));
+    await env.withSecurityRulesDisabled((context) =>
+      setDoc(doc(context.firestore(), "staffAccess/elder"), {
+        enabled: false,
+        roles: ["elder"],
+        validAfter: 0,
+      }),
+    );
+    await assertFails(getDoc(doc(auth("elder").firestore(), "people/alex")));
+    await assertFails(
+      getBytes(ref(auth("elder").storage(), "photos/alex/avatar.png")),
+    );
+  });
+  it("binds custom-token assurance to a live server session and denies security-document access", async () => {
+    const nonce = "a".repeat(64),
+      token = {
+        roles: ["elder"],
+        email_verified: true,
+        auth_time: Math.floor(Date.now() / 1000),
+        passkeySession: nonce,
+      };
+    const context = env.authenticatedContext("elder", token);
+    await assertFails(getDoc(doc(context.firestore(), "people/alex")));
+    await env.withSecurityRulesDisabled((context) =>
+      setDoc(doc(context.firestore(), `staffSessions/${nonce}`), {
+        uid: "elder",
+        validAfter: 0,
+        expiresAt: Timestamp.fromMillis(Date.now() + 60_000),
+      }),
+    );
+    await assertSucceeds(getDoc(doc(context.firestore(), "people/alex")));
+    await assertSucceeds(
+      getBytes(ref(context.storage(), "photos/alex/avatar.png")),
+    );
+    for (const path of [
+      "staffAccess/elder",
+      `staffSessions/${nonce}`,
+      "staffCredentials/key",
+      "securityEvents/entry",
+      "securityChallenges/challenge",
+      "desktopHandoffs/token",
+    ]) {
+      await assertFails(getDoc(doc(context.firestore(), path)));
+      await assertFails(
+        setDoc(doc(context.firestore(), path), { enabled: true }),
+      );
+    }
+    await env.withSecurityRulesDisabled((context) =>
+      setDoc(doc(context.firestore(), `staffSessions/${nonce}`), {
+        uid: "another",
+        validAfter: 0,
+        expiresAt: Timestamp.fromMillis(Date.now() + 60_000),
+      }),
+    );
+    await assertFails(getDoc(doc(context.firestore(), "people/alex")));
+    await env.withSecurityRulesDisabled((context) =>
+      setDoc(doc(context.firestore(), `staffSessions/${nonce}`), {
+        uid: "elder",
+        validAfter: 0,
+        expiresAt: Timestamp.fromMillis(Date.now() - 1000),
+      }),
+    );
+    await assertFails(getDoc(doc(context.firestore(), "people/alex")));
+  });
   it("volunteers read names but cannot read contacts, households or membership history", async () => {
     const db = auth("attendanceVolunteer").firestore();
     await assertSucceeds(getDoc(doc(db, "attendanceRoster/alex")));
@@ -248,11 +356,11 @@ describe("roll call and identity", () => {
   });
 });
 describe("deacon task isolation", () => {
-  it("allows only the assigned Deacon to read and complete a task without reassigning it", async () => {
+  it("requires the audited task API for every Deacon and Session reader", async () => {
     const db = auth("deacon").firestore();
     const task = doc(db, "diaconalTasks/move");
-    await assertSucceeds(getDoc(task));
-    await assertSucceeds(
+    await assertFails(getDoc(task));
+    await assertFails(
       getDoc(doc(auth("elder").firestore(), "diaconalTasks/move")),
     );
     await assertFails(
@@ -265,7 +373,7 @@ describe("deacon task isolation", () => {
     );
     await assertFails(updateDoc(task, { assignedToUid: "otherDeacon" }));
     await assertFails(updateDoc(task, { done: true }));
-    await assertSucceeds(updateDoc(task, { done: true, revision: 1 }));
+    await assertFails(updateDoc(task, { done: true, revision: 1 }));
     await assertFails(updateDoc(task, { done: false }));
   });
 });

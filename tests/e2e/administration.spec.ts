@@ -1,3 +1,4 @@
+import { grantTestStaff } from "./staff-fixture";
 import {
   expect,
   test,
@@ -66,7 +67,7 @@ test.beforeAll(async ({ request }) => {
         password: "LocalDemo123!",
       }),
     );
-    await auth.setCustomUserClaims(uid, { roles: [...roles] });
+    await grantTestStaff(uid, roles);
     tokens[uid] = await token(request, `${uid}@example.test`);
   }
 });
@@ -415,7 +416,7 @@ test("paginates administrative exports, preserves timestamps and blocks private 
   });
   expect(JSON.stringify(privatePage)).toContain("Private example");
   try {
-    await auth.setCustomUserClaims("phase5-admin", { roles: ["readOnly"] });
+    await grantTestStaff("phase5-admin", ["readOnly"]);
     await call(
       request,
       "exportDataPage",
@@ -423,7 +424,7 @@ test("paginates administrative exports, preserves timestamps and blocks private 
       403,
       "phase5-admin",
     );
-    await auth.setCustomUserClaims("phase5-admin", { roles: ["admin"] });
+    await grantTestStaff("phase5-admin", ["admin"]);
     await auth.updateUser("phase5-admin", { disabled: true });
     await call(
       request,
@@ -433,7 +434,7 @@ test("paginates administrative exports, preserves timestamps and blocks private 
       "phase5-admin",
     );
   } finally {
-    await auth.setCustomUserClaims("phase5-admin", { roles: ["admin"] });
+    await grantTestStaff("phase5-admin", ["admin"]);
     await auth.updateUser("phase5-admin", { disabled: false });
   }
 });

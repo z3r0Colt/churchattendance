@@ -1,3 +1,4 @@
+import { grantTestStaff } from "./staff-fixture";
 import {
   expect,
   test,
@@ -45,7 +46,7 @@ test.beforeAll(async ({ request }) => {
         password: "LocalDemo123!",
       }),
     );
-    await auth.setCustomUserClaims(uid, { roles: [...roles] });
+    await grantTestStaff(uid, roles);
     tokens[uid] = await token(request, `${uid}@example.test`);
   }
   tokens.volunteer = await token(request, "volunteer@example.test");

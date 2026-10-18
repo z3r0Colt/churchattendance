@@ -4,7 +4,7 @@ Attendance and communication for the Windows desktop app described in `PLAN.md` 
 
 ## Approved expansion
 
-All ten feature areas from the October 18 TendFlock comparison are now in scope. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) maps them to Phases 7 through 12 with acceptance criteria. This is a roadmap update, not a runtime implementation. Phase 7 begins with staff MFA/passkeys, private-record encryption and account/security administration. Shepherding and the other approved features follow. The implemented baseline remains Phase 6; live provisioning and release checks below still apply.
+All ten feature areas from the October 18 TendFlock comparison are in scope. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) maps them to Phases 7 through 12. Phase 7 implements staff MFA/passkey access, encrypted private records and account/security administration. Read [Phase 7 setup](docs/PHASE_7.md) before staging or deployment. Shepherding and the other approved features remain planned. Live configuration and release checks below still apply.
 
 ## Run locally
 
@@ -28,7 +28,7 @@ Local accounts, both using password `LocalDemo123!`
 * Historical attendance reports with date, service type, membership and district filters. Reports include a summary, matrix, shepherding, visitor follow-up and membership roll. XLSX files use Summary, Detail and Data sheets, and PDF templates support readable multi-page reports. Missing history is flagged.
 * Default-deny Firestore and Storage rules, Session isolation, assigned Deacon task completion, a server-owned audit trail, emulator tests and browser workflow tests.
 
-Private Session documents cannot be written directly by clients. Validated care-editing Functions serve the Phase 3 pastoral screens. Audit logs are Session-only because before/after values can contain private records.
+Private records cannot be read or written directly by clients, even by Session. Audited callable APIs serve the pastoral screens and assigned deacon tasks. Protected fields and audit before/after values are encrypted server-side. Private data remains in component memory and is excluded from the attendance cache. Audit content remains Session-only.
 
 ## Checks
 
@@ -38,13 +38,13 @@ Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run t
 
 No live Firebase project is created or deployed by this milestone. Create the church-owned project with Firestore, email/password Authentication and Storage, and enable billing before deploying Functions. Copy `.env.example` to `.env`, set `VITE_USE_EMULATORS=false`, and fill the public Firebase web config. Never place service-account keys or provider secrets in the renderer.
 
-The first administrator must be bootstrapped through a trusted Admin SDK environment with `roles: ['pastor', 'admin']` in custom claims. No account may grant itself roles. Only a Session administrator can grant or remove Session roles. Other accounts are provisioned in Firebase Authentication before roles are assigned through `setUserRoles`. An Admin or Pastor can now configure church settings, service types and elder districts in Settings. The church settings include an IANA `timeZone`. The emulator seed is not a production provisioning tool.
+The first administrator must be bootstrapped through a trusted Admin SDK environment with `roles: ['pastor', 'admin']` in custom claims, verified email and the Phase 7 MFA setup. No account may grant itself roles. Only a Session administrator can grant or remove Session roles. After bootstrap, Account security can create other staff accounts and manage roles without sending an invitation email. An Admin or Pastor can configure church settings, service types and elder districts in Settings. The church settings include an IANA `timeZone`. The emulator seed is not a production provisioning tool.
 
 Functions bundle shared schemas into their output so deployment does not depend on a private npm registry. Build before deployment, then deploy using an explicit project ID. This foundation has not been reviewed for production use with real church records.
 
 ## Remaining Phase 1 work
 
-Staff account/role setup screens, managed backup provisioning, signed installer/release testing, offline restart recovery, and update publishing remain. Phase 5 adds person editing, membership history, elder districts, church/service setup and a scoped document archive. The archive has explicit exclusions and does not replace managed backups. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
+Managed backup provisioning, signed installer/release testing, offline restart recovery and update publishing remain. Phase 7 adds staff account/role setup and security screens; live Identity Platform, origin, key and recovery configuration still require staging verification. Phase 5 adds person editing, membership history, elder districts, church/service setup and a scoped document archive. The archive has explicit exclusions and does not replace managed backups. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
 
 ## Phase 2 communication
 
@@ -75,3 +75,7 @@ Read [Phase 5 workflows](docs/PHASE_5.md) for permissions, stale-edit checks, ar
 ## Phase 6 attendance reports and dashboard
 
 Reports now reconstructs categories from dated membership history and flags unclassified marks. The dashboard links attendance tiles to filtered reports and keeps private follow-up information within the Session. Read [Phase 6 workflows](docs/PHASE_6.md) for report definitions, export layouts and limits.
+
+## Phase 7 security and accounts
+
+Staff access now requires verified email and completed MFA or a server-verified passkey session. Account security provides staff setup, role changes, revocation/recovery, scoped access history and Session-administrator encryption migration. The separate portal security page supports passkey registration/sign-in and a one-time browser approval for the desktop. The local seed uses guarded synthetic assurance for fictional accounts; it is not a live MFA demonstration. Read [Phase 7 setup and limits](docs/PHASE_7.md) for staging and rollout requirements.

@@ -50,8 +50,8 @@ import {
   type RosterPerson,
   type Service,
 } from "@sycamore/shared";
-import { useAuth, signIn, signOutUser } from "./data/auth";
-import { configured } from "./data/firebase";
+import { useAuth, signOutUser } from "./data/auth";
+import { configured, auth } from "./data/firebase";
 import {
   addVisitor,
   createHousehold,
@@ -79,6 +79,9 @@ import {
   type ReportRequest,
 } from "./chms/AttendanceReports";
 import { Dashboard } from "./chms/Dashboard";
+import { StaffPasswordForm, StaffEnrollment } from "./security/Factors";
+import { Security } from "./security/Security";
+import { browserStaffSignIn } from "./data/security";
 
 type AttendanceData = ReturnType<typeof useAttendanceData>;
 type Page =
@@ -94,7 +97,8 @@ type Page =
   | "care"
   | "annual"
   | "portal"
-  | "dashboard";
+  | "dashboard"
+  | "security";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
   pastor: "Pastor",
@@ -128,6 +132,9 @@ export function App() {
       className="app"
       data-theme={dark ? "dark" : "light"}
     >
+      {authSession.error && (
+        <MessageBar intent="error">{authSession.error}</MessageBar>
+      )}
       {authSession.loading ? (
         <main className="center">
           <Spinner label="Opening Sycamore RPC" />
@@ -136,6 +143,11 @@ export function App() {
         <Kiosk />
       ) : !authSession.user ? (
         <SignIn />
+      ) : !authSession.assured ? (
+        <StaffEnrollment
+          auth={auth}
+          refresh={() => void auth.currentUser?.getIdToken(true)}
+        />
       ) : (
         <Workspace
           key={`${authSession.user.uid}-${authSession.roles.join(",")}`}
@@ -153,64 +165,43 @@ export function App() {
   );
 }
 function SignIn() {
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [keep, setKeep] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setBusy(true);
-    setError("");
-    try {
-      await signIn(
-        String(form.get("email")),
-        String(form.get("password")),
-        keep,
-      );
-    } catch {
-      setError("Sign-in failed. Check your email, password, and connection.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [busy, setBusy] = useState(false);
   return (
     <main className="center">
-      <form className="signin surface" onSubmit={submit}>
+      <section className="signin surface">
         <div className="wordmark">SYCAMORE RPC</div>
         <Title3>Welcome back</Title3>
         <p>Sign in to care for the congregation.</p>
         {!configured && (
           <MessageBar intent="warning">
-            Firebase setup is needed before this app can connect. See the setup
-            guide.
+            Firebase setup is needed before this app can connect.
           </MessageBar>
         )}
-        <Field label="Email" required>
-          <Input name="email" type="email" autoComplete="username" required />
-        </Field>
-        <Field label="Password" required>
-          <Input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        </Field>
-        <Checkbox
-          checked={keep}
-          onChange={(_, data) => setKeep(data.checked === true)}
-          label="Keep this PC signed in"
-        />
-        {error && <MessageBar intent="error">{error}</MessageBar>}
+        <StaffPasswordForm auth={auth} />
         <Button
-          appearance="primary"
-          type="submit"
           disabled={busy || !configured}
+          onClick={() => {
+            setBusy(true);
+            setError("");
+            void browserStaffSignIn(setNotice)
+              .catch((cause) =>
+                setError(
+                  cause instanceof Error
+                    ? cause.message
+                    : "Browser sign-in failed.",
+                ),
+              )
+              .finally(() => setBusy(false));
+          }}
         >
-          {busy ? "Signing in" : "Sign in"}
+          Sign in with browser or passkey
         </Button>
+        {notice && <MessageBar intent="info">{notice}</MessageBar>}
+        {error && <MessageBar intent="error">{error}</MessageBar>}
         <small>Sycamore Reformed Presbyterian Church</small>
-      </form>
+      </section>
     </main>
   );
 }
@@ -443,6 +434,12 @@ function Workspace({
             </Button>
           </>
         )}
+        <Button
+          appearance={page === "security" ? "primary" : "subtle"}
+          onClick={() => setPage("security")}
+        >
+          Account security
+        </Button>
         <div className="nav-bottom">
           Church management<small>Phase 6 · Development</small>
         </div>
@@ -602,6 +599,7 @@ function Workspace({
           />
         )}
         {page === "bulletin" && editor && <Bulletin roles={roles} />}
+        {page === "security" && <Security roles={roles} />}
         {page === "settings" && (
           <>
             <div className="page-heading">

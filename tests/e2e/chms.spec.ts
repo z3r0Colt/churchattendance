@@ -1,3 +1,4 @@
+import { grantTestStaff } from "./staff-fixture";
 import {
   expect,
   test,
@@ -61,7 +62,7 @@ test.beforeAll(async ({ request }) => {
         displayName: id,
       }),
     );
-    await auth.setCustomUserClaims(user.uid, { roles: [...roles] });
+    await grantTestStaff(user.uid, roles);
     await db.doc(`users/${id}`).set({
       displayName: id,
       roles: [...roles],

@@ -57,7 +57,7 @@ Before every commit run `npm run lint`, `npm run typecheck` and `npm test`. If y
 
 ## Security and privacy rules (never break these)
 
-1. **Session only data.** `sessionPrivate`, `careNotes` and `followUps` may be read or written only by users whose role is Pastor, Clerk or Elder. An Admin who is not on Session cannot read them. Deacons may only read and complete `diaconalTasks` assigned to them. Every rule change needs a passing test proving both the allow and the deny cases.
+1. **Session only data.** `sessionPrivate`, `careNotes` and `followUps` may be accessed only by users whose role is Pastor, Clerk or Elder, through audited callable APIs. Direct client reads/writes are denied even for Session. An Admin who is not on Session cannot read them. Deacons may only read and complete `diaconalTasks` assigned to them through those APIs. Every permission change needs passing allow/deny tests.
 2. **Locking is per document.** Firestore rules cannot hide a single field, so never put sensitive data on `people/{id}`. Put it in a Session only collection.
 3. **No secrets on the client.** Twilio, Microsoft Graph and any other credentials live only in Secret Manager and are used only by Cloud Functions. The Firebase web config is public by design and may ship in the app.
 4. **Electron hardening.** Keep `contextIsolation: true`, `nodeIntegration: false` and `sandbox: true`. The renderer talks to the OS only through named functions in `preload`. Never expose `ipcRenderer` or `require` directly. Do not load remote content into app windows.
@@ -65,6 +65,8 @@ Before every commit run `npm run lint`, `npm run typecheck` and `npm test`. If y
 6. **No real people in code.** Tests, fixtures, seed data and screenshots use made up names only. Never commit an export of real church data.
 7. **Opt-outs are absolute.** Never send an email or text to a person whose `emailOptIn` or `smsOptIn` is false, including the bulletin. STOP replies must flip `smsOptIn` to false.
 8. **Twilio webhooks** must verify the `X-Twilio-Signature` header before doing anything.
+9. **Staff assurance.** Every staff role requires verified email and completed native MFA or a server-verified, unexpired passkey session. Use the async `requireRoles` guard, not token roles alone. Staff access, assurance sessions, credentials, challenges, handoffs and security logs are server-owned. Administrative revocation closes `staffAccess` before Auth changes. Preserve pending operation locks on partial failure.
+10. **Private encryption.** Protected private fields and audit before/after values use the server key ring and authenticated document-path binding. Bind `PRIVATE_RECORD_KEYS` to each encryption/decryption consumer. Private reads never enter the persistent attendance cache or ordinary logs. Never add a plaintext or direct-read fallback to fix a failed key lookup.
 
 ## Domain terms
 
@@ -84,6 +86,7 @@ Use these words in code, UI text and docs.
 * Attendance lives on `services/{serviceId}.present.{personId}`. Mark present with `updateDoc` on that one field path and unmark with `deleteField()`. Never rewrite the whole `present` map, because that breaks offline merging between the booth and the kiosk.
 * Edits to people send only the changed fields with `updateDoc`. Never `setDoc` a whole person from a form.
 * Store dates as ISO `YYYY-MM-DD` strings for calendar dates (birthdays, service dates) and Firestore `Timestamp` for moments (check-in time, sent time). The church time zone setting (`settings/church.timeZone`) decides what "Saturday 6:00 PM" means. Never use the PC's local zone in Functions.
+* Security expiration/audit moments also use Firestore Timestamps. `validAfter` and handoff `authTime` are explicitly Auth-protocol epoch-second cutoffs for comparison with the signed `auth_time` claim. They are not church calendar dates.
 * Membership status changes always create a `membershipEvents` document in the same batch.
 
 ## Code conventions
@@ -102,6 +105,7 @@ Use these words in code, UI text and docs.
 * Every Firestore and Storage rule gets allow and deny tests in `tests/rules/`, including Admin without Session denied from Session data.
 * Functions are tested against the emulators with Twilio and Graph faked behind their provider interfaces. Tests never call real Twilio or Microsoft.
 * Offline behavior for roll call (mark while offline, reconnect, data syncs) has a Playwright test.
+* Local staff fixtures require both Auth and Firestore emulators and create synthetic server-owned assurance. They are not a real MFA flow and must never be bundled into deployed code. WebAuthn verification must be tested with actual signatures, not a permissive production mock.
 * Never skip, disable or delete a failing test to get green. Fix the cause.
 
 ## Git

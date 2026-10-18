@@ -1,7 +1,8 @@
 // This script intentionally refuses to touch a live Firebase project.
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { createHash } from "node:crypto";
 if (
   !process.env.FIRESTORE_EMULATOR_HOST ||
   !process.env.FIREBASE_AUTH_EMULATOR_HOST
@@ -27,7 +28,11 @@ for (const [uid, email, roles] of [
       displayName: uid === "demo-pastor" ? "James Calder" : "Alex Booth",
     });
   }
-  await auth.setCustomUserClaims(uid, { roles });
+  const sessionId = createHash("sha256").update(`fictional-staff-fixture:${uid}`).digest("hex");
+  await auth.updateUser(uid, { emailVerified: true });
+  await auth.setCustomUserClaims(uid, { roles, passkeySession: sessionId });
+  await db.doc(`staffAccess/${uid}`).set({ enabled: true, roles, validAfter: 0 });
+  await db.doc(`staffSessions/${sessionId}`).set({ uid, validAfter: 0, expiresAt: Timestamp.fromMillis(Date.now() + 86_400_000) });
   await db
     .doc(`users/${uid}`)
     .set({

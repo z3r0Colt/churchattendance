@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  shell,
   type IpcMainInvokeEvent,
 } from "electron";
 import { autoUpdater } from "electron-updater";
@@ -12,6 +13,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 let window: BrowserWindow | null = null;
+declare const __STAFF_AUTH_ORIGIN__: string;
 function trusted(event: IpcMainInvokeEvent) {
   if (
     !window ||
@@ -36,6 +38,15 @@ app.whenReady().then(async () => {
     },
   });
   window.removeMenu();
+  ipcMain.handle("open-staff-security", async (event, id: unknown, challenge: unknown) => {
+    trusted(event);
+    if (typeof id !== "string" || typeof challenge !== "string" || !/^[a-f0-9]{64}$/.test(id) || !/^[a-f0-9]{64}$/.test(challenge)) throw new Error("Invalid sign-in request");
+    const origin = app.isPackaged ? __STAFF_AUTH_ORIGIN__ : "http://localhost:5174";
+    const url = new URL("/staff-security", origin);
+    if (app.isPackaged && (url.protocol !== "https:" || url.hostname.endsWith(".invalid"))) throw new Error("Configure the staff security origin before building the installer");
+    url.hash = new URLSearchParams({ id, challenge }).toString();
+    await shell.openExternal(url.href);
+  });
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.session.setPermissionRequestHandler(

@@ -7,12 +7,13 @@ import {
   type CareNote,
 } from "@sycamore/shared";
 import { useCollection, useReportData } from "./chms";
+import { usePrivateRecords } from "./private";
 export function useAttendanceReports(roles: Role[]) {
   const data = useReportData(),
     session = hasRole(roles, SESSION_ROLES);
   const districts = useCollection<ElderDistrict>("elderDistricts");
-  const followUps = useCollection<FollowUp>(session ? "followUps" : "");
-  const notes = useCollection<CareNote>(session ? "careNotes" : "");
+  const followUps = usePrivateRecords<FollowUp>("followUps", session, "report");
+  const notes = usePrivateRecords<CareNote>("careNotes", session, "report");
   return {
     ...data,
     districts: districts.rows,

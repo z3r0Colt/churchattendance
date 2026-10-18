@@ -37,6 +37,7 @@ import {
   type PortalEvent,
 } from "./data";
 import "./style.css";
+import { StaffSecurity } from "./StaffSecurity";
 function App() {
   const session = usePortalAuth();
   const [tab, setTab] = useState("events");
@@ -609,6 +610,6 @@ function Sharing({
 }
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    {location.pathname === "/staff-security" ? <StaffSecurity /> : <App />}
   </StrictMode>,
 );

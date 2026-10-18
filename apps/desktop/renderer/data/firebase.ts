@@ -5,6 +5,7 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  clearIndexedDbPersistence,
 } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
@@ -28,6 +29,13 @@ export const db = initializeFirestore(app, {
     tabManager: persistentMultipleTabManager(),
   }),
 });
+// One-time upgrade from the old direct private-record subscriptions. Fail closed if another tab holds the cache open.
+export const privateCacheReady =
+  localStorage.getItem("private-cache-version") === "7"
+    ? Promise.resolve()
+    : clearIndexedDbPersistence(db).then(() =>
+        localStorage.setItem("private-cache-version", "7"),
+      );
 export const functions = getFunctions(app, "us-central1");
 export const storage = getStorage(app);
 if (emulators) {

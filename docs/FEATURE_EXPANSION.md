@@ -2,7 +2,7 @@
 
 Approved October 18, 2026, following the comparison with TendFlock. The user requested every feature area identified in that comparison. This document turns that request into implementation scope. It does not claim those features have been built.
 
-The implemented baseline is Phase 6 on commit `85d52003325083ee907e5e38bada50ad95267262`. Phases 7 through 12 below are all planned. Earlier unfinished provisioning, managed backups and Windows release checks remain open. `PLAN.md` remains the source of truth for scope and the implemented data model. Update that model and `AGENTS.md` when a phase introduces a new collection or permission boundary.
+The expansion started from Phase 6 on commit `85d52003325083ee907e5e38bada50ad95267262`. Phase 7 security/account implementation is now included; see [Phase 7 setup and limits](PHASE_7.md). Live MFA/device and rollout checks remain separate. Phases 8 through 12 are planned. Earlier provisioning, managed backups and Windows release checks remain open. `PLAN.md` remains the source of truth for scope and the implemented data model. Update that model and `AGENTS.md` when a phase introduces a new collection or permission boundary.
 
 ## Coverage of the requested areas
 
@@ -31,7 +31,7 @@ Shared Zod schemas validate writes on the client and server. Historical reports 
 
 ## Phase 7. Security and account administration
 
-Status is planned. This is the next development milestone and the prerequisite for releasing the new private care surfaces.
+Status is implemented in code, with live staging and release checks still required. See [Phase 7 implementation](PHASE_7.md) for supported flows and limits. This is the prerequisite for releasing the new private care surfaces.
 
 ### Account protection
 

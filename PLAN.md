@@ -2,7 +2,7 @@
 
 A Windows desktop program with member and staff web access for Sycamore Reformed Presbyterian Church (sycamorerpc.org). It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and supports church administration and shepherding. Giving and tithing are left out on purpose.
 
-Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records the complete coverage, dependencies and acceptance criteria. Those phases are planned, not implemented. Phase 1 through Phase 6 implementation notes below still describe the current code.
+Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records coverage and acceptance criteria. Phase 7 security/account implementation is now included; its live setup and staging checks are separate. Phases 8 through 12 remain planned. Earlier milestone notes describe their implemented baseline, subject to the Phase 7 security changes.
 
 ## 1. Goals
 
@@ -153,7 +153,7 @@ The app is a Windows desktop program built with Electron, backed by Google Fireb
 |---|---|---|
 | Desktop app | Electron with React and TypeScript, built with Vite | Installs like any Windows program, and Firebase's best SDK (JavaScript) runs in it |
 | UI look | Fluent UI React v9 | Matches Windows 10 and 11 |
-| Sign in | Firebase Authentication with roles stored as custom claims; required staff MFA and passkeys planned in Phase 7, member email links in Phase 10 | Each person has their own account; current code uses email/password |
+| Sign in | Firebase Authentication with required staff assurance and passkey/browser sign-in; member email links remain Phase 10 | See Phase 7 for native MFA, separate passkey assurance and live setup |
 | Database | Cloud Firestore | Shared live data, real time updates to every PC |
 | Offline | Firestore persistent local cache (IndexedDB) | Booth PC keeps working with no internet and syncs on its own |
 | Access control | Firestore Security Rules checked against the user's role | Locks data down on Google's side, not just in the app |
@@ -201,13 +201,13 @@ people/{personId}
   sacraments/{id}         type (baptism | profession), date, category (infant | adult for baptism), place, officiant, revision
   offices/{id}            role (pastor | elder | deacon), ordainedOn, installedOn, endedOn
 
-sessionPrivate/{personId}    disciplineFlag, disciplineHistory[], revision, updatedAt, updatedBy     (Session only)
+sessionPrivate/{personId}    encrypted{disciplineFlag, disciplineHistory[]}, revision, updatedAt, updatedBy     (Session API only)
 attendanceRoster/{personId}  id, firstName, lastName, preferredName, householdId,
                              householdName, membershipStatus, isDeceased
                              (server-maintained names-only roll for attendance volunteers)
-careNotes/{noteId}           personId, authorUid, kind (note | visit), date, body, createdAt, revision, updatedAt, updatedBy    (Session only)
-followUps/{taskId}           personId, title, assignedToUid, dueDate, done, revision, updatedAt, updatedBy  (Session only)
-diaconalTasks/{taskId}       title, personId, assignedToUid, dueDate, done, revision, updatedAt, updatedBy   (Session and assigned deacon)
+careNotes/{noteId}           personId, authorUid, kind (note | visit), date, encrypted{body}, createdAt, revision, updatedAt, updatedBy    (Session API only)
+followUps/{taskId}           personId, encrypted{title}, assignedToUid, dueDate, done, revision, updatedAt, updatedBy  (Session API only)
+diaconalTasks/{taskId}       encrypted{title}, personId, assignedToUid, dueDate, done, revision, updatedAt, updatedBy   (Session and assigned deacon API)
 
 households/{householdId}     name, address, homePhone, revision, updatedAt, updatedBy
 elderDistricts/{id}          name, elderPersonId, archived, revision, updatedAt, updatedBy
@@ -257,7 +257,14 @@ onlineSubmissions/{requestId} kind, firstName, lastName, email, mobilePhone, mes
 portalBudgets/{hashedIp_hour} count, expiresAt (server only)
 
 users/{uid}                  personId, displayName, roles[]
-auditLog/{id}                uid, collection, docId, action, before, after, at   (written only by Functions)
+auditLog/{id}                uid, collection, docId, action, encrypted{before, after}, at   (server-owned, Session API only)
+staffAccess/{uid}            enabled, locked, pending, roles[], validAfter (Auth epoch-second cutoff)
+staffSessions/{nonce}        uid, validAfter, verifiedAt, expiresAt (server-owned assurance)
+staffCredentials/{id}        uid, publicKey, counter, transports[], createdAt, lastUsedAt
+securityChallenges/{id}      uid, kind, challenge, used, expiresAt
+desktopHandoffs/{id}         uid, challenge, authTime, validAfter, used, expiresAt
+securityBudgets/{id}         count, expiresAt
+securityEvents/{id}          actorUid, action, outcome, scope (security | session), target, at
 settings/church              name, address, timeZone, revision, updatedAt, updatedBy
 ```
 
@@ -270,8 +277,9 @@ Each roll-call update also writes `lastAttendancePersonId`. Rules constrain the 
 ### 4.4 Roles and security rules
 * Roles are Admin, Pastor, Clerk, Elder, Deacon, Attendance Volunteer, and Read Only. They are set by an Admin through a Cloud Function that writes a custom claim on the user's login.
 * An Attendance Volunteer can read names and households and write check marks, and nothing else.
-* `sessionPrivate`, `careNotes`, and `followUps` can be read and written only by users with the Pastor, Clerk, or Elder role. An Admin who is not on Session cannot open them either.
-* Deacons can read and complete only the `diaconalTasks` assigned to them.
+* `sessionPrivate`, `careNotes`, and `followUps` are accessed only through audited callable APIs by Pastor, Clerk or Elder. Direct client reads/writes are denied even for Session. An Admin who is not on Session cannot open them either.
+* Deacons can read and complete only their assigned `diaconalTasks` through the audited API.
+* Every staff role requires verified email and completed assurance. Server-owned access and session records enforce revocation in rules and callables. Account updates close access before Auth changes and preserve a pending lock on partial failure.
 * The audit log is written by a Cloud Function every time a person, membership, or note changes. Users cannot write or edit it.
 * Every rule has an automated test run against the Firebase emulator before release.
 * Electron is locked down with context isolation on and Node access off in the UI.
@@ -402,7 +410,7 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Charted report workbooks and readable matrix PDF sections
 * Dashboard attendance links, birthdays and serving gaps, with private Session follow-ups
 
-**Phase 7, Security and account administration (approved, not implemented)**
+**Phase 7, Security and account administration (implemented; live staging checks required)**
 * Required staff MFA and passkeys, enrollment, recovery, revocation and secure desktop sign-in
 * Staff account and role setup without self-escalation or access to Session records by non-Session administrators
 * Private-record encryption, legacy migration and key rotation
@@ -476,7 +484,11 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-The expanded scope is approved. Phase 7 is the next implementation milestone. Complete the security foundation before adding the new private care surfaces. Phases 7 through 12 remain open until their implementation and acceptance checks pass. Existing live provisioning and Windows release work remain required.
+Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is the next implementation milestone. Phases 8 through 12 remain open. Existing live provisioning and Windows release work remain required.
+
+### Phase 7 implementation details
+
+See `docs/PHASE_7.md`. Staff functions check live Auth identities, role intersections, revocation and completed assurance. Rules use server-owned access and signed MFA or bounded assurance sessions. Account operations close access and serialize cross-service changes with pending locks. TOTP uses the provider enrollment/challenge flow; passkeys use verified WebAuthn assertions and a one-time system-browser desktop exchange. Direct private-document access is removed. Audited APIs decrypt application-encrypted fields only for the proper role and keep private content out of persistent attendance storage. Reports request only private visit/follow-up metadata. A one-time cache upgrade clears old private subscriptions. `sessionPrivate` now stores an envelope containing discipline flag/history rather than plaintext fields. The envelope has a version, key ID, IV, authentication tag and ciphertext bound to the document path. Security expiry moments use Timestamps; Auth cutoff fields are protocol epoch seconds. Account, read and change history is scoped, while platform Auth/console audit remains separate. Migration and rotation are resumable and require verified backup/recovery. This phase does not deploy or migrate a live church project.
 
 ### Phase 5 implementation details
 

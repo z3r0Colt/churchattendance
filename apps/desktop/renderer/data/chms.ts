@@ -47,11 +47,23 @@ import {
   type Sacrament,
 } from "@sycamore/shared";
 import { auth, db, functions, storage } from "./firebase";
+import { usePrivateRecords } from "./private";
 export async function chmsCall<T = unknown>(
   name: string,
   input: unknown,
 ): Promise<T> {
-  return (await httpsCallable<unknown, T>(functions, name)(input)).data;
+  const result = (await httpsCallable<unknown, T>(functions, name)(input)).data;
+  if (
+    [
+      "saveCareNote",
+      "saveFollowUp",
+      "saveDiaconalTask",
+      "completeDiaconalTask",
+      "recordDiscipline",
+    ].includes(name)
+  )
+    window.dispatchEvent(new Event("private-records-changed"));
+  return result;
 }
 // Stable subscription keys avoid resubscribing every time a form changes.
 export function useCollection<T>(
@@ -146,16 +158,13 @@ export type Assignee = { id: string; name: string; roles: Role[] };
 export function useCareData(roles: Role[]) {
   const session = hasRole(roles, SESSION_ROLES);
   const people = useCollection<Person>(session ? "people" : "");
-  const notes = useCollection<CareNote>(session ? "careNotes" : "");
-  const followUps = useCollection<FollowUp>(session ? "followUps" : "");
-  const privateRecords = useCollection<PrivateRecord>(
-    session ? "sessionPrivate" : "",
+  const notes = usePrivateRecords<CareNote>("careNotes", session);
+  const followUps = usePrivateRecords<FollowUp>("followUps", session);
+  const privateRecords = usePrivateRecords<PrivateRecord>(
+    "sessionPrivate",
+    session,
   );
-  const tasks = useCollection<DiaconalTask>(
-    "diaconalTasks",
-    session ? "" : "assignedToUid",
-    auth.currentUser?.uid || "",
-  );
+  const tasks = usePrivateRecords<DiaconalTask>("diaconalTasks", true);
   const [users, setUsers] = useState<Assignee[]>([]);
   useEffect(() => {
     if (session)
