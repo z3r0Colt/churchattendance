@@ -105,6 +105,11 @@ beforeEach(async () => {
         "shepherdingSettings",
         "householdLocations",
         "flockAssessments",
+        "mercySettings",
+        "mercyAssignments",
+        "mercyRequests",
+        "mercyNotes",
+        "mercyTasks",
       ].map((collection) =>
         setDoc(doc(db, `${collection}/private`), { body: "Private" }),
       ),
@@ -143,6 +148,11 @@ describe("Session boundary", () => {
     "shepherdingSettings",
     "householdLocations",
     "flockAssessments",
+    "mercySettings",
+    "mercyAssignments",
+    "mercyRequests",
+    "mercyNotes",
+    "mercyTasks",
   ]) {
     it(`${collection} requires audited APIs even for Session and denies all direct writes`, async () => {
       for (const role of ["pastor", "clerk", "elder"])

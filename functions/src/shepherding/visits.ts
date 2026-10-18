@@ -27,7 +27,7 @@ import {
 } from "../security/encryption.js";
 import { securityEvent } from "../security/audit.js";
 
-async function liveAccount(uid: string, roles: readonly string[]) {
+export async function liveAccount(uid: string, roles: readonly string[]) {
   const user = await getAuth()
     .getUser(uid)
     .catch(() => null);

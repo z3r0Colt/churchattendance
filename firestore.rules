@@ -77,6 +77,12 @@ service cloud.firestore {
     match /shepherdingSettings/{id} { allow read, write: if false; }
     match /householdLocations/{id} { allow read, write: if false; }
     match /flockAssessments/{id} { allow read, write: if false; }
+    // Mercy ministry records are served only by audited callables scoped to assigned deacons and the Pastor.
+    match /mercySettings/{id} { allow read, write: if false; }
+    match /mercyAssignments/{id} { allow read, write: if false; }
+    match /mercyRequests/{id} { allow read, write: if false; }
+    match /mercyNotes/{id} { allow read, write: if false; }
+    match /mercyTasks/{id} { allow read, write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {

@@ -4,7 +4,7 @@ export async function securityEvent(
   actorUid: string,
   action: string,
   outcome: string,
-  scope: "security" | "session" = "security",
+  scope: "security" | "session" | "mercy" = "security",
   target = "",
 ) {
   // Deliberately no request bodies, keys, IPs, note text or authentication material.

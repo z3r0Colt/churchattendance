@@ -17,7 +17,7 @@ import {
   accountActionSchema,
   rolesInputSchema,
   migrationPageSchema,
-  encryptedCollections,
+  migrationCollections,
   securityLogSchema,
   type Role,
   type StaffAccount,
@@ -32,13 +32,13 @@ export function Security({ roles }: { roles: Role[] }) {
     [notice, setNotice] = useState(""),
     [setupLink, setSetupLink] = useState(""),
     [cursor, setCursor] = useState(""),
-    [scope, setScope] = useState<"security" | "session">("security"),
+    [scope, setScope] = useState<"security" | "session" | "mercy">("security"),
     [editing, setEditing] = useState<StaffAccount | "new" | null>(null),
     [busy, setBusy] = useState(false),
     [selected, setSelected] = useState<StaffAccount | null>(null),
     [backup, setBackup] = useState(false),
     [migration, setMigration] =
-      useState<(typeof encryptedCollections)[number]>("careNotes");
+      useState<(typeof migrationCollections)[number]>("careNotes");
   const admin = roles.includes("admin"),
     session = hasRole(roles, SESSION_ROLES);
   async function run(action: () => Promise<unknown>) {
@@ -163,6 +163,9 @@ export function Security({ roles }: { roles: Role[] }) {
               {session && (
                 <option value="session">Session only record access</option>
               )}
+              {roles.includes("pastor") && (
+                <option value="mercy">Mercy ministry record access</option>
+              )}
             </Select>
           </Field>
           <Button disabled={busy} onClick={() => void run(() => loadEvents())}>
@@ -177,7 +180,11 @@ export function Security({ roles }: { roles: Role[] }) {
               Outcome: row.outcome,
               Record: row.target,
               Visibility:
-                row.scope === "session" ? "Session only" : "Account security",
+                row.scope === "session"
+                  ? "Session only"
+                  : row.scope === "mercy"
+                    ? "Mercy ministry"
+                    : "Account security",
             }))}
           />
           {cursor && (
@@ -203,7 +210,7 @@ export function Security({ roles }: { roles: Role[] }) {
               value={migration}
               onChange={(e) => setMigration(e.target.value as typeof migration)}
             >
-              {encryptedCollections.map((name) => (
+              {migrationCollections.map((name) => (
                 <option key={name}>{name}</option>
               ))}
             </Select>

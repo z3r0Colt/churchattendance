@@ -42,13 +42,23 @@ export const privatePageSchema = z
     view: z.enum(["full", "report"]).default("full"),
   })
   .strict();
+// Mercy records are sealed with the same key ring but are never served by the Session private-records API.
+export const mercyEncryptedCollections = [
+  "mercyRequests",
+  "mercyNotes",
+  "mercyTasks",
+] as const;
+export const migrationCollections = [
+  ...encryptedCollections,
+  ...mercyEncryptedCollections,
+] as const;
 export const migrationPageSchema = privatePageSchema.extend({
-  collection: z.enum(encryptedCollections),
+  collection: z.enum(migrationCollections),
   backupConfirmed: z.literal(true),
 });
 export const securityLogSchema = z
   .object({
-    scope: z.enum(["security", "session"]).default("security"),
+    scope: z.enum(["security", "session", "mercy"]).default("security"),
     after: z
       .string()
       .regex(/^[A-Za-z0-9_-]{0,1500}$/)
@@ -89,7 +99,7 @@ export type StaffAccount = {
   factors: number;
 };
 export type SecurityEvent = {
-  scope: "security" | "session";
+  scope: "security" | "session" | "mercy";
   id: string;
   actorUid: string;
   action: string;

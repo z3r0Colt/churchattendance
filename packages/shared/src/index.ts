@@ -9,3 +9,4 @@ export * from "./shepherding.js";
 export * from "./contact.js";
 export * from "./geography.js";
 export * from "./health.js";
+export * from "./mercy.js";

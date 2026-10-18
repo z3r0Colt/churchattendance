@@ -83,7 +83,7 @@ Contact flags distinguish unknown history from a known gap. Tests prove failed/q
 
 ## Phase 9. Care workflows and diaconal ministry
 
-Status is planned. Depends on Phase 7 and the Phase 8 visit/contact contracts. Member request intake is completed in Phase 10.
+Status is in progress. See [Phase 9 implementation](PHASE_9.md) for the slices built so far. Depends on Phase 7 and the Phase 8 visit/contact contracts. Member request intake is completed in Phase 10.
 
 ### Workflow builder
 

@@ -220,6 +220,9 @@ export const getSecurityEvents = onCall(async (request) => {
   const input = parse(securityLogSchema, request.data);
   if (input.scope === "session" && !hasRole(actor.roles, SESSION_ROLES))
     throw new HttpsError("permission-denied", "Session access is required.");
+  // Mercy access history follows mercy notes: the Pastor oversees it, other officers do not.
+  if (input.scope === "mercy" && !actor.roles.includes("pastor"))
+    throw new HttpsError("permission-denied", "Pastor access is required.");
   let query = db
     .collection("securityEvents")
     .where("scope", "==", input.scope)
