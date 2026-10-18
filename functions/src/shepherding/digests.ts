@@ -223,10 +223,24 @@ export async function processShepherdingDigests(now: Date) {
     }
   }
   if (clock.daily) {
-    const followUps = await db
-      .collection("followUps")
-      .where("done", "==", false)
-      .get();
+    const [followUps, mercyVisits] = await Promise.all([
+      db.collection("followUps").where("done", "==", false).get(),
+      db.collection("mercyVisits").where("status", "==", "planned").get(),
+    ]);
+    // Deacon-led visits an officer was invited to, as time and household only.
+    const invited = (uids: string[]) =>
+      mercyVisits.docs
+        .map((row) => ({
+          householdId: row.get("householdId") as string,
+          start: (row.get("start") as Timestamp).toDate().toISOString(),
+          officerUids: (row.get("officerUids") || []) as string[],
+        }))
+        .filter(
+          (visit) =>
+            visit.officerUids.some((uid) => uids.includes(uid)) &&
+            DateTime.fromISO(visit.start, { zone }).toISODate() === clock.date,
+        )
+        .sort((a, b) => a.start.localeCompare(b.start));
     for (const [personId, uids] of officers) {
       const own = visitsFor(uids);
       await sendDigest(
@@ -242,6 +256,13 @@ export async function processShepherdingDigests(now: Date) {
                   clock.date,
               )
               .map((visit) => `${at(visit)} · ${household(visit.householdId)}`),
+          },
+          {
+            title: "Deacon visits you are invited to today",
+            names: invited(uids).map(
+              (visit) =>
+                `${DateTime.fromISO(visit.start, { zone }).toFormat("h:mm a")} · ${household(visit.householdId)}`,
+            ),
           },
           {
             title: "Overdue visits",

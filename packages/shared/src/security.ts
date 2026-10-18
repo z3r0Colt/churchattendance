@@ -47,6 +47,7 @@ export const mercyEncryptedCollections = [
   "mercyRequests",
   "mercyNotes",
   "mercyTasks",
+  "mercyVisits",
 ] as const;
 export const migrationCollections = [
   ...encryptedCollections,

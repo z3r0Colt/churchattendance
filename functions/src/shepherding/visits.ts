@@ -241,32 +241,44 @@ export const completeVisit = onCall(privateOptions, async (request) => {
   return { completed: true };
 });
 // Deacons receive scheduling details for joint visits they are invited to, and nothing else.
+// Session officers invited to a deacon-led mercy visit likewise receive its logistics only.
 export const getVisitLogistics = onCall(async (request) => {
   parse(emptySecuritySchema, request.data ?? {});
   const actor = await requireRoles(request, [...SESSION_ROLES, "deacon"]);
-  const field = hasRole(actor.roles, SESSION_ROLES)
-    ? "officerUids"
-    : "deaconUids";
-  const rows = await db
-    .collection("pastoralVisits")
-    .where(field, "array-contains", actor.uid)
-    .where("start", ">=", Timestamp.fromMillis(Date.now() - 30 * 86_400_000))
-    .orderBy("start")
-    .limit(100)
-    .get();
+  const session = hasRole(actor.roles, SESSION_ROLES);
+  const since = Timestamp.fromMillis(Date.now() - 30 * 86_400_000);
+  const recent = (collection: string, field: string) =>
+    db
+      .collection(collection)
+      .where(field, "array-contains", actor.uid)
+      .where("start", ">=", since)
+      .orderBy("start")
+      .limit(100)
+      .get();
+  const [own, mercy] = await Promise.all([
+    recent("pastoralVisits", session ? "officerUids" : "deaconUids"),
+    session ? recent("mercyVisits", "officerUids") : null,
+  ]);
   await securityEvent(actor.uid, "visit.logistics", "success", "session");
   const names = new Map<string, string>();
+  const name = async (uid: string, fallback: string) => {
+    if (!names.has(uid))
+      names.set(
+        uid,
+        (await getAuth()
+          .getUser(uid)
+          .then((user) => user.displayName || "")
+          .catch(() => "")) || fallback,
+      );
+    return names.get(uid)!;
+  };
   const households = new Map<string, { name: string; address: string }>();
-  for (const row of rows.docs) {
-    for (const uid of row.get("officerUids") as string[])
-      if (!names.has(uid))
-        names.set(
-          uid,
-          (await getAuth()
-            .getUser(uid)
-            .then((user) => user.displayName || "")
-            .catch(() => "")) || "Session officer",
-        );
+  const rows = [
+    ...own.docs.map((row) => ({ row, ministry: "session" as const })),
+    ...(mercy?.docs.map((row) => ({ row, ministry: "mercy" as const })) || []),
+  ];
+  const visits = [];
+  for (const { row, ministry } of rows) {
     const id = row.get("householdId") as string;
     if (!households.has(id)) {
       const household = await db.doc(`households/${id}`).get();
@@ -275,11 +287,9 @@ export const getVisitLogistics = onCall(async (request) => {
         address: household.get("address") || "",
       });
     }
-  }
-  return {
-    zone: await getChurchZone(),
-    visits: rows.docs.map((row) => ({
+    visits.push({
       id: row.id,
+      ministry,
       ...Object.fromEntries(
         visitLogisticsKeys.map((key) => [
           key,
@@ -288,13 +298,24 @@ export const getVisitLogistics = onCall(async (request) => {
             : row.get(key),
         ]),
       ),
-      householdName: households.get(row.get("householdId"))!.name,
-      address: households.get(row.get("householdId"))!.address,
-      officerNames: (row.get("officerUids") as string[]).map((uid) =>
-        names.get(uid)!,
+      householdName: households.get(id)!.name,
+      address: households.get(id)!.address,
+      officerNames: await Promise.all(
+        ((row.get("officerUids") || []) as string[]).map((uid) =>
+          name(uid, "Session officer"),
+        ),
       ),
-    })),
-  };
+      deaconNames:
+        ministry === "mercy"
+          ? await Promise.all(
+              ((row.get("deaconUids") || []) as string[]).map((uid) =>
+                name(uid, "Deacon"),
+              ),
+            )
+          : [],
+    });
+  }
+  return { zone: await getChurchZone(), visits };
 });
 // Reminders carry no household, purpose or note text. A changed plan gets a new revision and message ID.
 export async function processVisitReminders(now: Date) {

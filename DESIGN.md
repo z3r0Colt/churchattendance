@@ -238,7 +238,7 @@ Reports provides a report selector and shared date, service type, historical mem
 
 ## Approved Phase 7 through Phase 12 screens
 
-Phase 7 security screens are implemented as described in `docs/PHASE_7.md`; their live deployment checks remain open. Phase 8 Shepherding screens are implemented: the Visits, Workload, Visit rounds, Contact gaps, Locations and routes and Flock health tabs, deacon joint visits and the Settings digest controls (see `docs/PHASE_8.md`). Phase 9 is being built in slices (see `docs/PHASE_9.md`); the Mercy ministry workspace is implemented with Requests, Households, Mercy notes, Tasks and Deacon chairs tabs. The remaining Phase 9 through Phase 12 screens below remain future requirements. Scope and acceptance criteria live in [Expanded feature requirements](docs/FEATURE_EXPANSION.md).
+Phase 7 security screens are implemented as described in `docs/PHASE_7.md`; their live deployment checks remain open. Phase 8 Shepherding screens are implemented: the Visits, Workload, Visit rounds, Contact gaps, Locations and routes and Flock health tabs, deacon joint visits and the Settings digest controls (see `docs/PHASE_8.md`). Phase 9 is being built in slices (see `docs/PHASE_9.md`); the Mercy ministry workspace is implemented with Requests, Households, Mercy notes, Tasks, Visits and Deacon chairs tabs, and Settings has the daily deacon summary controls. The remaining Phase 9 through Phase 12 screens below remain future requirements. Scope and acceptance criteria live in [Expanded feature requirements](docs/FEATURE_EXPANSION.md).
 
 ### Security and accounts
 

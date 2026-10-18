@@ -129,6 +129,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "mercyVisits",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "officerUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "start",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

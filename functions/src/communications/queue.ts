@@ -53,6 +53,8 @@ export type StoredMessage = {
     revision: number;
     audience: "officers" | "deacons";
   } | null;
+  // Session-only log entries addressed to deacons are rechecked against a live deacon role.
+  recipientRole?: "deacon" | null;
 };
 export const identityHash = (channel: Channel, address: string) =>
   createHash("sha256").update(`${channel}:${address}`).digest("hex");
@@ -174,6 +176,7 @@ export async function queueMessage(
     expiresAt?: Date;
     servingAssignment?: { id: string; revision: number };
     pastoralVisit?: StoredMessage["pastoralVisit"];
+    recipientRole?: "deacon";
   } = {},
 ) {
   const settings = await getSettings();
@@ -279,6 +282,7 @@ export async function queueMessage(
       serviceTime,
       servingAssignment: options.servingAssignment ?? null,
       pastoralVisit: options.pastoralVisit ?? null,
+      recipientRole: options.recipientRole ?? null,
       expiresAt: options.expiresAt
         ? Timestamp.fromDate(options.expiresAt)
         : null,
@@ -301,7 +305,10 @@ export async function queueMessage(
     excluded: recipients.length - pending.length,
   };
 }
-export async function isSessionPerson(personId: string, pastorOnly = false) {
+export async function personHasRole(
+  personId: string,
+  allowed: readonly string[],
+) {
   const users = await db
     .collection("users")
     .where("personId", "==", personId)
@@ -313,19 +320,17 @@ export async function isSessionPerson(personId: string, pastorOnly = false) {
       if (
         !account.disabled &&
         Array.isArray(roles) &&
-        roles.some((role) =>
-          (pastorOnly ? ["pastor"] : ["pastor", "clerk", "elder"]).includes(
-            String(role),
-          ),
-        )
+        roles.some((role) => allowed.includes(String(role)))
       )
         return true;
     } catch {
-      /* A removed login cannot receive Session information. */
+      /* A removed login cannot receive private information. */
     }
   }
   return false;
 }
+export const isSessionPerson = (personId: string, pastorOnly = false) =>
+  personHasRole(personId, pastorOnly ? ["pastor"] : ["pastor", "clerk", "elder"]);
 // A visit reminder is sent only for the current plan, to someone still assigned with a live role.
 export async function visitReminderAllowed(
   visit: NonNullable<StoredMessage["pastoralVisit"]>,
@@ -570,7 +575,9 @@ export async function dispatchQueue(now = new Date()) {
               ? current.emailEnabled
               : current.smsEnabled) &&
             (await deliveryAllowed(row.personId, row.channel, row.address)) &&
-            (!message.sessionOnly || (await isSessionPerson(row.personId)))
+            (message.recipientRole === "deacon"
+              ? await personHasRole(row.personId, ["deacon"])
+              : !message.sessionOnly || (await isSessionPerson(row.personId)))
           );
         };
         if (!(await authorize()))

@@ -105,7 +105,14 @@ export type VisitLogistics = Pick<
   | "status"
   | "officerUids"
   | "deaconUids"
-> & { householdName: string; address: string; officerNames: string[] };
+> & {
+  // Session-led pastoral visit, or a deacon-led mercy visit an officer was invited to.
+  ministry: "session" | "mercy";
+  householdName: string;
+  address: string;
+  officerNames: string[];
+  deaconNames: string[];
+};
 export const visitLogisticsKeys = [
   "householdId",
   "start",

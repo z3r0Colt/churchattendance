@@ -5,7 +5,7 @@ Phase 9 adds care workflows, important dates and a separate Mercy ministry works
 | Slice | Scope | Status |
 |---|---|---|
 | 1 | Mercy ministry: deacon chairs, household assignments, practical-help requests and triage, encrypted mercy notes and tasks, explicit sharing | Implemented |
-| 2 | Joint deacon visits and the daily deacon digest | Planned |
+| 2 | Joint deacon visits and the daily deacon digest | Implemented |
 | 3 | Important dates, recurring reminders and bereavement care | Planned |
 | 4 | Workflow engine: versions, runs, waits, conditions, tasks, approvals and consented messages | Planned |
 | 5 | Workflow builder, templates, preview, pause, cancel and retry | Planned |
@@ -28,9 +28,26 @@ Mercy ministry covers practical help: meals, transport, help at home, errands, h
 
 **Storage and audit.** All five mercy collections are denied to every direct client. Details, outcomes, decline reasons, note bodies and task titles are sealed with the private record key ring, bound to the document path, and included in key migration. `getMercyWorkspace` writes a `mercy.read` security event for each private record before returning it. Denied calls write `mercy.access`. Mercy security events use a separate `mercy` scope that only the Pastor can view. Change audit entries record mercy changes with the sealed fields still sealed; the audit trail's metadata (household, dates, status) is Session-scope like the rest of the audit log.
 
+## Deacon visits
+
+Assigned deacons and the Pastor plan visits to a household they serve, optionally linked to one of its requests. A visit has a church-local time, length, place, one to four deacons who serve that household or request, up to four invited Session officers and a private purpose. Cancelling needs a short reason. Planning is not a record of care: completion is a separate one-time action, available only after the start time, that can add a mercy note. The note ID follows the visit, so a retried completion cannot write a second note. A completed visit cannot be rescheduled.
+
+The purpose and cancellation reason are sealed like other mercy content. An invited Session officer receives only the time, length, place, status, household name and address and the deacons' names, through `getVisitLogistics`, and sees them under Mercy ministry, Visits. The Session daily summary lists the deacon visits an officer is invited to that day by time and household. Session-led joint visits from Phase 8 are unchanged: invited deacons still see only their logistics.
+
+## Daily deacon summary
+
+Communication settings add a daily mercy ministry summary with its own hour and channel. Administrators and Pastors can change it. At or after the chosen church-local hour, each person linked to a live deacon account receives one summary listing:
+
+- requests waiting for triage, for deacon chairs only;
+- their open requests, by household, kind of help, needed-by date and urgency;
+- their tasks due, by household and due date (task titles are private and never included);
+- their deacon visits and invited Session visits today, by time and household, and their overdue deacon visits.
+
+Email lists these entries. Text carries counts only. Nothing is sent when every section is empty. Message IDs are `deacon_<church date>_<person>_<channel>`, so repeated ticks queue one notice. The summary is marked Session only in the message log, so an Admin outside the Session cannot read it there. At dispatch the queue rechecks that the recipient still holds a live deacon role, and normal consent and suppression checks apply. No summary includes request details, outcomes, notes, visit purposes or task titles.
+
 ## Verification
 
-Unit tests cover the read and triage rules, forward-only request status and the request, triage and resolution schemas. Rules tests confirm every role, including Session and deacons, is denied direct access to all five mercy collections. Emulator tests confirm sealed storage; triage by a chair and refusal for an ordinary deacon; that the assigned deacon reads the details, writes a note and a task, and moves the request forward; that another deacon sees nothing, the chair and an elder see only triage fields and the Pastor sees everything; that an Admin is denied and a deacon cannot read Session care notes; that a household transfer removes the former deacon's access to an earlier note; that the Session reads a note only after a deacon shares it, and cannot share it themselves; that mercy history is Pastor-only and free of note text; and that a declined request keeps its reason sealed and cannot be reopened. A desktop test signs in as the assigned deacon, reads the request and writes a mercy note.
+Unit tests cover the read and triage rules, forward-only request status and the request, triage and resolution schemas. Rules tests confirm every role, including Session and deacons, is denied direct access to all five mercy collections. Emulator tests confirm sealed storage; triage by a chair and refusal for an ordinary deacon; that the assigned deacon reads the details, writes a note and a task, and moves the request forward; that another deacon sees nothing, the chair and an elder see only triage fields and the Pastor sees everything; that an Admin is denied and a deacon cannot read Session care notes; that a household transfer removes the former deacon's access to an earlier note; that the Session reads a note only after a deacon shares it, and cannot share it themselves; that mercy history is Pastor-only and free of note text; and that a declined request keeps its reason sealed and cannot be reopened. A desktop test signs in as the assigned deacon, reads the request and writes a mercy note. Visit tests confirm sealed purposes, refusal for an unassigned deacon or a deacon who does not serve the household, logistics only for the invited elder, no visit for an uninvited elder, one-time completion with a linked note and refusal to complete a future visit. Digest unit tests cover the church-local hour and counts-only text. An emulator test confirms nothing before the hour, one email and one text across repeated ticks, households and kinds of help without details, notes or task titles, a waiting summary skipped once the recipient is no longer a deacon, and no new summary for them.
 
 ## Live checks and limits
 

@@ -42,6 +42,7 @@ export * from "./shepherding/contact.js";
 export * from "./shepherding/geography.js";
 export * from "./shepherding/health.js";
 export * from "./mercy/ministry.js";
+export * from "./mercy/visits.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
@@ -342,6 +343,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "mercyRequests",
         "mercyNotes",
         "mercyTasks",
+        "mercyVisits",
       ].includes(event.params.collection) ||
       !event.data
     )

@@ -179,6 +179,10 @@ export const communicationSettingsSchema = z
     digestHour: z.number().int().min(0).max(23).default(9),
     dailySummaryEnabled: z.boolean().default(false),
     dailySummaryHour: z.number().int().min(0).max(23).default(7),
+    // The daily mercy ministry summary to each live deacon. No notes, details or task titles.
+    deaconDigestEnabled: z.boolean().default(false),
+    deaconDigestHour: z.number().int().min(0).max(23).default(7),
+    deaconDigestChannel: z.enum(["email", "sms", "both"]).default("email"),
   })
   .strict()
   .refine(
@@ -425,7 +429,10 @@ export function digestClock(
     | "digestHour"
     | "dailySummaryEnabled"
     | "dailySummaryHour"
-  >,
+  > &
+    Partial<
+      Pick<CommunicationSettings, "deaconDigestEnabled" | "deaconDigestHour">
+    >,
 ) {
   const local = DateTime.fromJSDate(now, { zone });
   if (!local.isValid) throw new Error("Set a valid church time zone");
@@ -437,6 +444,9 @@ export function digestClock(
       local.hour >= settings.digestHour,
     daily:
       settings.dailySummaryEnabled && local.hour >= settings.dailySummaryHour,
+    deacon:
+      !!settings.deaconDigestEnabled &&
+      local.hour >= (settings.deaconDigestHour ?? 7),
   };
 }
 export type DigestSection = { title: string; names: string[] };
@@ -445,6 +455,7 @@ export function digestText(
   sections: DigestSection[],
   channel: Channel,
   dateLabel: string,
+  heading = "Shepherding summary",
 ) {
   // Braces would be read as merge fields when the queue sends the message.
   const filled = sections
@@ -455,7 +466,7 @@ export function digestText(
     }));
   if (!filled.length) return "";
   if (channel === "sms")
-    return `Shepherding summary for {FirstName}, ${dateLabel}: ${filled
+    return `${heading} for {FirstName}, ${dateLabel}: ${filled
       .map((section) => `${section.title} ${section.names.length}`)
       .join(", ")}. Open the church app for details.`;
   const body = filled
@@ -464,5 +475,5 @@ export function digestText(
         `${section.title} (${section.names.length})\n${section.names.join("\n")}`,
     )
     .join("\n\n");
-  return `Dear {FirstName},\n\nShepherding summary for ${dateLabel}.\n\n${body}\n\nPlease review the records in the church app before following up.`;
+  return `Dear {FirstName},\n\n${heading} for ${dateLabel}.\n\n${body}\n\nPlease review the records in the church app before following up.`;
 }

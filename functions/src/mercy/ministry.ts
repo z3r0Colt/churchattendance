@@ -509,7 +509,7 @@ export const saveMercyTask = onCall(privateOptions, async (request) => {
   return { id };
 });
 
-export async function liveDeacons() {
+async function liveStaff(allowed: readonly string[]) {
   const users = await db.collection("users").get();
   const rows = await Promise.all(
     users.docs.map(async (row) => {
@@ -517,7 +517,7 @@ export async function liveDeacons() {
         .getUser(row.id)
         .catch(() => null);
       const roles = roleSchema.array().catch([]).parse(user?.customClaims?.roles);
-      return user && !user.disabled && roles.includes("deacon")
+      return user && !user.disabled && hasRole(roles, allowed as typeof roles)
         ? {
             uid: row.id,
             name: user.displayName || user.email || "Deacon",
@@ -528,20 +528,25 @@ export async function liveDeacons() {
   );
   return rows.filter((row) => row !== null);
 }
+export const liveDeacons = () => liveStaff(["deacon"]);
 
 // One audited read. Each caller receives only what their live role and assignment allow.
 export const getMercyWorkspace = onCall(privateOptions, async (request) => {
   parse(emptySecuritySchema, request.data ?? {});
   const { viewer, settings } = await mercyViewer(request);
   const triage = canTriageMercy(viewer);
-  const [assignmentRows, requestRows, noteRows, taskRows, deacons] =
+  const [assignmentRows, requestRows, noteRows, taskRows, visitRows, deacons] =
     await Promise.all([
       db.collection("mercyAssignments").get(),
       db.collection("mercyRequests").get(),
       db.collection("mercyNotes").get(),
       db.collection("mercyTasks").get(),
+      db.collection("mercyVisits").get(),
       triage || viewer.deacon ? liveDeacons() : [],
     ]);
+  // Planners may invite Session officers, who then see the time and place only.
+  const officers =
+    viewer.deacon || viewer.pastor ? await liveStaff(SESSION_ROLES) : [];
   const homes = new Map(
     assignmentRows.docs.map((row) => [row.id, householdDeacons(row)]),
   );
@@ -588,12 +593,16 @@ export const getMercyWorkspace = onCall(privateOptions, async (request) => {
   const tasks = taskRows.docs.filter((row) =>
     readable(row.get("householdId"), row.get("requestId")),
   );
+  const visits = visitRows.docs.filter((row) =>
+    readable(row.get("householdId"), row.get("requestId")),
+  );
   // Audit commits before private content leaves the server. A failed log write blocks delivery.
   await Promise.all(
     [
       ...requests.filter((row) => row.full).map((row) => row.path),
       ...notes.map((row) => row.ref.path),
       ...tasks.map((row) => row.ref.path),
+      ...visits.map((row) => row.ref.path),
     ].map((path) =>
       securityEvent(viewer.uid, "mercy.read", "success", "mercy", path),
     ),
@@ -603,6 +612,7 @@ export const getMercyWorkspace = onCall(privateOptions, async (request) => {
     zone: await getChurchZone(),
     settings: viewer.session ? settings : null,
     deacons: deacons.map(({ uid, name }) => ({ uid, name })),
+    officers: officers.map(({ uid, name }) => ({ uid, name })),
     assignments: assignmentRows.docs
       .filter(
         (row) => triage || viewer.pastor || householdDeacons(row).includes(viewer.uid),
@@ -618,6 +628,10 @@ export const getMercyWorkspace = onCall(privateOptions, async (request) => {
       id: row.id,
     })),
     tasks: tasks.map((row) => ({
+      ...plain(openRecord(row.ref.path, row.data())),
+      id: row.id,
+    })),
+    visits: visits.map((row) => ({
       ...plain(openRecord(row.ref.path, row.data())),
       id: row.id,
     })),

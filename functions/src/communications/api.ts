@@ -21,6 +21,7 @@ import {
 import { db } from "../admin.js";
 import { processServingReminders } from "../chms.js";
 import { processVisitReminders } from "../shepherding/visits.js";
+import { processDeaconDigests } from "../mercy/digest.js";
 import { processShepherdingDigests } from "../shepherding/digests.js";
 import { parse, requireRoles } from "../access.js";
 import { emulatorMode, providerConfig } from "./environment.js";
@@ -383,6 +384,7 @@ export async function communicationTick(now = new Date()) {
     ["absence", processShepherdingDigests],
     ["serving", processServingReminders],
     ["visit", processVisitReminders],
+    ["deacon", processDeaconDigests],
   ] as const) {
     try {
       await task(now);

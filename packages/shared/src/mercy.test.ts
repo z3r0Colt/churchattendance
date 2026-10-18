@@ -8,6 +8,7 @@ import {
   mercyRequestSchema,
   mercyTransition,
   mercyTriageSchema,
+  mercyVisitSchema,
   type MercyViewer,
 } from "./index";
 
@@ -109,6 +110,30 @@ describe("mercy requests", () => {
         expectedRevision: 2,
         status: "resolved",
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe("mercy visits", () => {
+  const visit = {
+    id: "v1",
+    householdId: "calder",
+    start: "2026-11-02T15:00:00-05:00",
+    deaconUids: ["fenn"],
+  };
+  it("needs a deacon, keeps officers and deacons distinct and requires a cancel reason", () => {
+    expect(mercyVisitSchema.safeParse(visit).success).toBe(true);
+    expect(
+      mercyVisitSchema.safeParse({ ...visit, deaconUids: [] }).success,
+    ).toBe(false);
+    expect(
+      mercyVisitSchema.safeParse({ ...visit, officerUids: ["fenn"] }).success,
+    ).toBe(false);
+    expect(
+      mercyVisitSchema.safeParse({ ...visit, status: "cancelled" }).success,
+    ).toBe(false);
+    expect(
+      mercyVisitSchema.safeParse({ ...visit, status: "completed" }).success,
     ).toBe(false);
   });
 });

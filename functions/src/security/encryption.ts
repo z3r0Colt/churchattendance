@@ -90,6 +90,7 @@ const protectedFields: Record<string, string[]> = {
   mercyRequests: ["details", "outcome", "declineReason"],
   mercyNotes: ["body"],
   mercyTasks: ["title"],
+  mercyVisits: ["purpose", "cancelReason"],
 };
 export const protectedFieldNames = (collection: string) =>
   protectedFields[collection] ?? [];

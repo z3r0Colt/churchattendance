@@ -337,6 +337,52 @@ export function CommunicationSettingsPanel({
           sent when there is nothing to report.
         </p>
       </fieldset>
+      <fieldset className="member-picker">
+        <legend>Mercy ministry summary</legend>
+        <Checkbox
+          label="Send each deacon a daily mercy ministry summary"
+          checked={draft.deaconDigestEnabled}
+          onChange={(_, value) =>
+            update("deaconDigestEnabled", value.checked === true)
+          }
+        />
+        <Field label="Deacon summary hour (church time)">
+          <Select
+            value={String(draft.deaconDigestHour)}
+            onChange={(event) =>
+              update("deaconDigestHour", Number(event.target.value))
+            }
+          >
+            {hours.map((hour) => (
+              <option key={hour.value} value={hour.value}>
+                {hour.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Send deacon summaries by">
+          <Select
+            value={draft.deaconDigestChannel}
+            onChange={(event) =>
+              update(
+                "deaconDigestChannel",
+                event.target
+                  .value as CommunicationSettings["deaconDigestChannel"],
+              )
+            }
+          >
+            <option value="email">Email (lists households)</option>
+            <option value="sms">Text (counts only)</option>
+            <option value="both">Email and text</option>
+          </Select>
+        </Field>
+        <p>
+          Summaries go only to linked accounts that hold the deacon role when
+          they are sent, and opt-outs always apply. They list households, kinds
+          of help, due dates and visit times. Request details, notes and task
+          titles are never included.
+        </p>
+      </fieldset>
       {error && <MessageBar intent="error">{error}</MessageBar>}
       {notice && <MessageBar intent="success">{notice}</MessageBar>}
       {data.automationError && (

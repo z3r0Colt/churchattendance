@@ -218,3 +218,52 @@ export function mercyTransition(from: MercyStatus, to: MercyStatus) {
 export const mercyOpen = (status: MercyStatus) =>
   status === "approved" || status === "inProgress";
 
+// Deacon-led visits. Invited Session officers receive the time and place only.
+export const mercyVisitSchema = z
+  .object({
+    id: idSchema,
+    expectedRevision,
+    householdId: idSchema,
+    requestId: optionalId.default(""),
+    start: z.iso.datetime({ offset: true }),
+    durationMinutes: z.number().int().min(15).max(480).default(60),
+    location: z.string().trim().max(300).default(""),
+    deaconUids: deacons(4).refine(
+      (ids) => ids.length > 0,
+      "Choose at least one deacon",
+    ),
+    officerUids: z
+      .array(idSchema)
+      .max(4)
+      .refine(distinct, "List each officer once")
+      .default([]),
+    purpose: z.string().trim().max(4000).default(""),
+    status: z.enum(["planned", "cancelled"]).default("planned"),
+    cancelReason: z.string().trim().max(1000).default(""),
+  })
+  .strict()
+  .refine(
+    (row) => !row.officerUids.some((uid) => row.deaconUids.includes(uid)),
+    "List each person once",
+  )
+  .refine(
+    (row) => row.status !== "cancelled" || row.cancelReason.length > 0,
+    "Give a short reason for cancelling",
+  );
+export const completeMercyVisitSchema = z
+  .object({
+    id: idSchema,
+    expectedRevision: z.number().int().nonnegative(),
+    note: z.string().trim().max(10000).default(""),
+  })
+  .strict();
+export type MercyVisit = Omit<
+  z.infer<typeof mercyVisitSchema>,
+  "expectedRevision" | "status"
+> & {
+  status: "planned" | "completed" | "cancelled";
+  revision: number;
+  completedAt?: string;
+  completedBy?: string;
+  noteId?: string;
+};

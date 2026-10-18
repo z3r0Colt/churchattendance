@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import {
+  completeMercyVisitSchema,
+  mercyVisitSchema,
   mercyAssignmentSchema,
   mercyNoteSchema,
   mercyProgressSchema,
@@ -14,6 +16,7 @@ import {
   type MercySettings,
   type MercyTask,
   type MercyViewer,
+  type MercyVisit,
 } from "@sycamore/shared";
 import { chmsCall } from "./chms";
 
@@ -22,10 +25,12 @@ export type MercyWorkspace = {
   zone: string;
   settings: MercySettings | null;
   deacons: { uid: string; name: string }[];
+  officers: { uid: string; name: string }[];
   assignments: MercyAssignment[];
   requests: MercyRequest[];
   notes: MercyNote[];
   tasks: MercyTask[];
+  visits: MercyVisit[];
 };
 // Mercy records stay in component memory from one audited call, never the attendance cache.
 export function useMercyWorkspace(enabled: boolean) {
@@ -75,3 +80,7 @@ export const shareMercyNote = (value: unknown) =>
   chmsCall("shareMercyNote", mercyShareSchema.parse(value));
 export const saveMercyTask = (value: unknown) =>
   chmsCall("saveMercyTask", mercyTaskSchema.parse(value));
+export const saveMercyVisit = (value: unknown) =>
+  chmsCall("saveMercyVisit", mercyVisitSchema.parse(value));
+export const completeMercyVisit = (value: unknown) =>
+  chmsCall("completeMercyVisit", completeMercyVisitSchema.parse(value));

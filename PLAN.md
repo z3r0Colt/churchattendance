@@ -232,6 +232,10 @@ mercyNotes/{id}              householdId, requestId, date, encrypted{body}, auth
                              createdAt, revision, updatedAt, updatedBy   (mercy API; assigned deacons and the Pastor, Session once shared)
 mercyTasks/{id}              requestId, householdId, encrypted{title}, assignedToUid, dueDate, done, authorUid, createdAt,
                              revision, updatedAt, updatedBy   (mercy API; assigned deacons and the Pastor)
+mercyVisits/{id}             householdId, requestId, start (Timestamp), durationMinutes, location, deaconUids[], officerUids[],
+                             status (planned | completed | cancelled), encrypted{purpose, cancelReason}, completedAt,
+                             completedBy, noteId, authorUid, createdAt, revision, updatedAt, updatedBy
+                             (mercy API; invited Session officers get logistics only)
 
 households/{householdId}     name, address, homePhone, revision, updatedAt, updatedBy
 elderDistricts/{id}          name, elderPersonId, archived, revision, updatedAt, updatedBy
@@ -264,7 +268,8 @@ savedAudiences/{id}          name, audience { kind, ids[] }, updatedBy, updatedA
 smsInbox/{messageSid}        fromNumber, personIds[], body, receivedAt, read, consentCommand
 communicationSettings/church delivery flags, churchName, footer, bulletin time/recipient/folder settings,
                              weekly digest settings (absenceEnabled, absenceServiceTypeId, absenceWeeks,
-                             digestChannel, digestWeekday, digestHour), dailySummaryEnabled, dailySummaryHour
+                             digestChannel, digestWeekday, digestHour), dailySummaryEnabled, dailySummaryHour,
+                             deaconDigestEnabled, deaconDigestHour, deaconDigestChannel
                              (no credentials)
 communicationSuppressions/{addressHash} channel, blocked, source, updatedAt (server only)
 communicationBudgets/{bucket} count, at (server only)

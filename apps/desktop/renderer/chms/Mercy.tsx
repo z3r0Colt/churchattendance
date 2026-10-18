@@ -15,6 +15,9 @@ import {
 import { LockClosedRegular } from "@fluentui/react-icons";
 import { DateTime } from "luxon";
 import {
+  canCompleteVisit,
+  localSchedule,
+  visitState,
   mercyCategories,
   mercyCategoryLabels,
   mercyOpen,
@@ -23,10 +26,14 @@ import {
   type MercyNote,
   type MercyRequest,
   type MercyTask,
+  type MercyVisit,
 } from "@sycamore/shared";
 import { ExportButton } from "../components/ExportButton";
-import { usePublicChms } from "../data/chms";
+import { churchLocalInput, usePublicChms } from "../data/chms";
+import { useVisitLogistics } from "../data/shepherding";
 import {
+  completeMercyVisit,
+  saveMercyVisit,
   progressMercyRequest,
   saveMercyAssignment,
   saveMercyNote,
@@ -63,6 +70,10 @@ export function Mercy() {
   const [error, setError] = useState("");
   const today = DateTime.now().toISODate()!;
   const viewer = data?.viewer;
+  const zone = data?.zone || congregation.zone;
+  const invited = useVisitLogistics(!!viewer?.session);
+  const when = (iso: string) =>
+    DateTime.fromISO(iso).setZone(zone).toFormat("LLL d, yyyy h:mm a");
   const household = (id: string) =>
     congregation.households.find((row) => row.id === id)?.name ||
     "Household removed";
@@ -297,6 +308,125 @@ export function Mercy() {
       save: (value) => saveMercyTask({ ...value, requestId }),
     });
   };
+  const visitStates = {
+    upcoming: "Upcoming",
+    overdue: "Overdue",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+  const servedHouseholds = viewer?.pastor
+    ? households
+    : households.filter(
+        (row) =>
+          assigned.get(row.id)?.deaconUids.includes(viewer?.uid || "") ||
+          data?.requests.some(
+            (r) => r.householdId === row.id && r.details !== undefined,
+          ),
+      );
+  const planVisit = (existing?: MercyVisit) =>
+    setEditing({
+      title: "Deacon visit",
+      fields: [
+        {
+          key: "householdId",
+          label: "Household",
+          kind: "select",
+          required: true,
+          options: servedHouseholds,
+        },
+        {
+          key: "requestId",
+          label: "Request (optional)",
+          kind: "select",
+          options: (data?.requests || [])
+            .filter((row) => row.details !== undefined)
+            .map((row) => ({ id: row.id, name: requestName(row.id) })),
+        },
+        {
+          key: "start",
+          label: "Date and time",
+          kind: "datetime-local",
+          required: true,
+        },
+        { key: "durationMinutes", label: "Minutes", kind: "number" },
+        { key: "location", label: "Where" },
+        {
+          key: "deaconUids",
+          label: "Deacons visiting",
+          kind: "multi",
+          options: deaconChoices,
+        },
+        {
+          key: "officerUids",
+          label: "Invited Session officers (see the time and place only)",
+          kind: "multi",
+          options: (data?.officers || []).map((row) => ({
+            id: row.uid,
+            name: row.name,
+          })),
+        },
+        {
+          key: "purpose",
+          label: `Purpose · ${PRIVATE_TEXT}`,
+          kind: "textarea",
+        },
+        ...(existing
+          ? ([
+              {
+                key: "status",
+                label: "Plan status",
+                kind: "select",
+                options: [
+                  { id: "planned", name: "Planned" },
+                  { id: "cancelled", name: "Cancelled" },
+                ],
+              },
+              { key: "cancelReason", label: "Reason for cancelling" },
+            ] satisfies EditorField[])
+          : []),
+      ],
+      value: existing
+        ? {
+            ...existing,
+            expectedRevision: existing.revision,
+            start: churchLocalInput(existing.start, zone),
+          }
+        : {
+            id: crypto.randomUUID(),
+            expectedRevision: 0,
+            householdId: "",
+            requestId: "",
+            start: "",
+            durationMinutes: 60,
+            location: "",
+            deaconUids: viewer?.deacon ? [viewer.uid] : [],
+            officerUids: [],
+            purpose: "",
+          },
+      save: (value) =>
+        saveMercyVisit({
+          ...value,
+          start: localSchedule(String(value.start), zone),
+        }),
+    });
+  const completeVisit = (row: MercyVisit) =>
+    setEditing({
+      title: `Complete visit with ${household(row.householdId)}`,
+      fields: [
+        {
+          key: "note",
+          label: `Mercy note (optional) · ${PRIVATE_TEXT}`,
+          kind: "textarea",
+        },
+      ],
+      value: { id: row.id, expectedRevision: row.revision, note: "" },
+      save: completeMercyVisit,
+    });
+  const officerName = (uid: string) =>
+    data?.officers.find((row) => row.uid === uid)?.name || "Session officer";
+  const visits = [...(data?.visits || [])].sort((a, b) =>
+    a.start.localeCompare(b.start),
+  );
   const notes = [...(data?.notes || [])].sort((a, b) =>
     b.date.localeCompare(a.date),
   );
@@ -345,6 +475,7 @@ export function Mercy() {
         <Tab value="households">Households</Tab>
         <Tab value="notes">Mercy notes</Tab>
         <Tab value="tasks">Tasks</Tab>
+        <Tab value="visits">Visits</Tab>
         {viewer?.session && <Tab value="settings">Deacon chairs</Tab>}
       </TabList>
       {!data && !loadError && <p>Loading mercy ministry records.</p>}
@@ -635,6 +766,121 @@ export function Mercy() {
           }))}
           choose={(index) => task(tasks[index].requestId, tasks[index])}
         />
+      )}
+      {data && tab === "visits" && (
+        <>
+          {(viewer?.deacon || viewer?.pastor) && (
+            <>
+              <p className="muted">
+                Plan visits for the households and requests you serve. Invited
+                Session officers see only the time, place and who is going.
+                Planning a visit does not record that it happened.
+              </p>
+              <Button appearance="primary" onClick={() => planVisit()}>
+                Plan visit
+              </Button>
+              <section className="surface table-card communication-panel">
+                <div className="section-heading">
+                  <span>
+                    {visits.length} visit{visits.length === 1 ? "" : "s"}
+                  </span>
+                  <ExportButton
+                    rows={visits.map((row) => ({
+                      id: row.id,
+                      When: when(row.start),
+                      Household: household(row.householdId),
+                      Deacons: row.deaconUids.map(deacon).join(", "),
+                      State: visitStates[visitState(row, new Date())],
+                    }))}
+                  />
+                </div>
+                {!visits.length ? (
+                  <p>No deacon visits are planned.</p>
+                ) : (
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>When</th>
+                          <th>Household</th>
+                          <th>Deacons</th>
+                          <th>Officers invited</th>
+                          <th>State</th>
+                          <th>Purpose</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visits.map((row) => (
+                          <tr key={row.id}>
+                            <td>{when(row.start)}</td>
+                            <td>{household(row.householdId)}</td>
+                            <td>{row.deaconUids.map(deacon).join(", ")}</td>
+                            <td>
+                              {row.officerUids.map(officerName).join(", ") ||
+                                "None"}
+                            </td>
+                            <td>{visitStates[visitState(row, new Date())]}</td>
+                            <td>{row.purpose}</td>
+                            <td>
+                              {row.status !== "completed" && (
+                                <Button
+                                  size="small"
+                                  onClick={() => planVisit(row)}
+                                >
+                                  Edit
+                                </Button>
+                              )}
+                              {canCompleteVisit(row, new Date()) && (
+                                <Button
+                                  size="small"
+                                  onClick={() => completeVisit(row)}
+                                >
+                                  Complete
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+          {viewer?.session && (
+            <section className="surface table-card communication-panel">
+              <div className="section-heading">
+                <span>Deacon visits you are invited to</span>
+              </div>
+              <p className="muted">
+                You see the time and place of deacon visits you are invited to.
+                Purposes and mercy notes stay with the deacons.
+              </p>
+              {invited.error && (
+                <MessageBar intent="error">{invited.error}</MessageBar>
+              )}
+              <Records
+                rows={invited.visits
+                  .filter((row) => row.ministry === "mercy")
+                  .map((row) => ({
+                    id: row.id,
+                    When: when(row.start),
+                    Household: row.householdName,
+                    Where: row.location || row.address || "Ask the deacons",
+                    With: row.deaconNames.join(", "),
+                    Status:
+                      row.status === "planned"
+                        ? "Planned"
+                        : row.status === "completed"
+                          ? "Completed"
+                          : "Cancelled",
+                  }))}
+              />
+            </section>
+          )}
+        </>
       )}
       {data && tab === "settings" && viewer?.session && (
         <section className="surface communication-panel">

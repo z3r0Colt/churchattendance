@@ -125,3 +125,38 @@ describe("configurable absence", () => {
     ).toHaveLength(1);
   });
 });
+
+describe("deacon digest", () => {
+  it("runs at the church-local hour only when turned on", () => {
+    const on = communicationSettingsSchema.parse({
+      deaconDigestEnabled: true,
+      deaconDigestHour: 8,
+    });
+    // 12:30 UTC is 8:30 AM in the church time zone in November.
+    expect(
+      digestClock(new Date("2026-11-02T12:30:00Z"), zone, on).deacon,
+    ).toBe(false);
+    expect(
+      digestClock(new Date("2026-11-02T13:30:00Z"), zone, on).deacon,
+    ).toBe(true);
+    expect(
+      digestClock(new Date("2026-11-02T20:00:00Z"), zone, settings).deacon,
+    ).toBe(false);
+  });
+  it("uses its own heading and still sends counts only by text", () => {
+    const sections = [
+      { title: "Your open requests", names: ["Calder · Meals"] },
+    ];
+    expect(
+      digestText(sections, "email", "Nov 2, 2026", "Mercy ministry summary"),
+    ).toContain("Mercy ministry summary for Nov 2, 2026.\n\nYour open requests (1)\nCalder · Meals");
+    const text = digestText(
+      sections,
+      "sms",
+      "Nov 2, 2026",
+      "Mercy ministry summary",
+    );
+    expect(text).toContain("Mercy ministry summary for {FirstName}");
+    expect(text).not.toContain("Calder");
+  });
+});
