@@ -2,7 +2,7 @@
 
 Approved October 18, 2026, following the comparison with TendFlock. The user requested every feature area identified in that comparison. This document turns that request into implementation scope. It does not claim those features have been built.
 
-The expansion started from Phase 6 on commit `85d52003325083ee907e5e38bada50ad95267262`. Phase 7 security/account implementation is now included; see [Phase 7 setup and limits](PHASE_7.md). Phase 8 shepherding is included; see [Phase 8 workflows and limits](PHASE_8.md). Live MFA/device, delivery and rollout checks remain separate. Phases 9 through 12 are planned. Earlier provisioning, managed backups and Windows release checks remain open. `PLAN.md` remains the source of truth for scope and the implemented data model. Update that model and `AGENTS.md` when a phase introduces a new collection or permission boundary.
+The expansion started from Phase 6 on commit `85d52003325083ee907e5e38bada50ad95267262`. Phase 7 security/account implementation is now included; see [Phase 7 setup and limits](PHASE_7.md). Phase 8 shepherding is included; see [Phase 8 workflows and limits](PHASE_8.md). Phase 9 care workflows and diaconal ministry is included; see [Phase 9 workflows and limits](PHASE_9.md). Live MFA/device, delivery and rollout checks remain separate. Phases 10 through 12 are planned. Earlier provisioning, managed backups and Windows release checks remain open. `PLAN.md` remains the source of truth for scope and the implemented data model. Update that model and `AGENTS.md` when a phase introduces a new collection or permission boundary.
 
 ## Coverage of the requested areas
 
@@ -83,7 +83,7 @@ Contact flags distinguish unknown history from a known gap. Tests prove failed/q
 
 ## Phase 9. Care workflows and diaconal ministry
 
-Status is in progress. See [Phase 9 implementation](PHASE_9.md) for the slices built so far. Depends on Phase 7 and the Phase 8 visit/contact contracts. Member request intake is completed in Phase 10.
+Status is implemented in code, with live delivery checks still required. See [Phase 9 implementation](PHASE_9.md) for supported workflows and limits. Depends on Phase 7 and the Phase 8 visit/contact contracts. Member request intake is completed in Phase 10.
 
 ### Workflow builder
 

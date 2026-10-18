@@ -457,3 +457,25 @@ th {
 .location-plot .plot-number { fill: var(--colorNeutralForegroundOnBrand); font-size: 12px; font-weight: 600; }
 .location-plot .plot-label { fill: var(--colorNeutralForeground1); font-size: 12px; }
 .route-list li { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+/* Care workflow builder: an ordered step list beside a keyboard-usable flow diagram. */
+.workflow-fieldset { display: grid; gap: 12px; border: 1px solid var(--colorNeutralStroke1); border-radius: 6px; padding: 12px 16px; margin: 16px 0; }
+.workflow-builder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 380px); gap: 24px; margin: 16px 0; }
+@media (max-width: 1199px) { .workflow-builder { grid-template-columns: minmax(0, 1fr); } }
+.workflow-heading { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+.workflow-steps { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
+.workflow-steps li { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--colorNeutralStroke2); border-radius: 6px; padding: 4px 8px; }
+.workflow-steps li.selected { border-color: var(--colorBrandStroke1); background: var(--colorNeutralBackground2); }
+.workflow-steps li > .fui-Button { justify-content: flex-start; text-align: left; white-space: normal; }
+.workflow-steps li > span { display: flex; gap: 4px; flex-shrink: 0; }
+.flow { list-style: none; padding: 0; margin: 0; display: grid; }
+.flow-item { display: grid; justify-items: center; }
+.flow-arrow { color: var(--colorNeutralForeground3); line-height: 1.6; }
+.flow-node { display: grid; gap: 2px; box-sizing: border-box; width: 100%; text-align: left; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--colorNeutralStroke1); background: var(--colorNeutralBackground1); color: var(--colorNeutralForeground1); font: inherit; }
+button.flow-node { cursor: pointer; }
+button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); outline-offset: 2px; }
+.flow-node.selected { border-color: var(--colorBrandStroke1); box-shadow: 0 0 0 1px var(--colorBrandStroke1); }
+.flow-trigger, .flow-end { text-align: center; font-weight: 600; background: var(--colorNeutralBackground3); }
+.flow-condition { border-style: dashed; }
+.flow-approval { border-left: 4px solid #7A67AB; }
+.flow-branch { font-size: 12px; color: var(--colorNeutralForeground3); margin-top: 4px; }
+.workflow-message { border-left: 3px solid var(--colorNeutralStroke1); padding: 4px 12px; margin: 8px 0; white-space: pre-wrap; }

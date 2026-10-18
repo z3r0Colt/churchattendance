@@ -3,6 +3,7 @@ import {
   expect,
   test,
   type APIRequestContext,
+  type Page,
 } from "@playwright/test";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { Timestamp, getFirestore } from "firebase-admin/firestore";
@@ -636,4 +637,56 @@ test("stops a cancelled run and drops a message still waiting for it", async ({
   } finally {
     await db.recursiveDelete(db.doc("messages/w9-waiting"));
   }
+});
+
+async function login(page: Page) {
+  await page.goto("/");
+  await page.getByLabel("Email").fill("w9-elder@example.test");
+  await page.getByLabel("Password").fill("LocalDemo123!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Take attendance", exact: true }),
+  ).toBeVisible();
+}
+test("builds a workflow from a template with the keyboard, previews it and activates it", async ({
+  page,
+}) => {
+  await login(page);
+  await page
+    .getByRole("button", { name: "Care workflows · Session only" })
+    .click();
+  await page
+    .getByRole("button", { name: "New from template: Visitor follow-up" })
+    .click();
+  await expect(page.getByText("Before activating: Step 3 needs")).toBeVisible();
+  // The diagram nodes are buttons, so the step can be chosen from the keyboard.
+  const node = page.getByRole("button", {
+    name: /^Step 3: Task for a chosen officer/,
+  });
+  await node.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Step 3 · Assign a task")).toBeVisible();
+  await page.getByLabel("Officer", { exact: true }).selectOption("w9-elder");
+  await expect(
+    page.getByRole("button", { name: /^Step 3: Task for Elder Hollis/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Move step 3 earlier" }).click();
+  await expect(
+    page.getByRole("button", { name: /^Step 2: Task for Elder Hollis/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByText("Draft saved")).toBeVisible();
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  const preview = page.getByRole("region", { name: "Workflow preview" });
+  await expect(preview).toContainText(
+    "Only people who meet the trigger after activation are enrolled.",
+  );
+  await expect(preview).toContainText("Thank you for worshipping with us");
+  await page.getByRole("button", { name: "Activate version 1" }).click();
+  await expect(page.getByText("Version 1 is active")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/phase9-workflow-builder.png",
+    fullPage: true,
+    animations: "disabled",
+  });
 });

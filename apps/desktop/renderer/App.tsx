@@ -73,6 +73,7 @@ import { Care } from "./chms/Care";
 import { Shepherding } from "./chms/Shepherding";
 import { Mercy } from "./chms/Mercy";
 import { ImportantDates } from "./chms/ImportantDates";
+import { Workflows } from "./chms/Workflows";
 import { Kiosk } from "./chms/Kiosk";
 import { AdvancedReports } from "./chms/Reports";
 import { configureKiosk, enterKiosk } from "./data/chms";
@@ -101,6 +102,7 @@ type Page =
   | "shepherding"
   | "mercy"
   | "dates"
+  | "workflows"
   | "annual"
   | "portal"
   | "dashboard"
@@ -420,6 +422,14 @@ function Workspace({
             )}
             {hasRole(roles, SESSION_ROLES) && (
               <Button
+                appearance={page === "workflows" ? "primary" : "subtle"}
+                onClick={() => setPage("workflows")}
+              >
+                Care workflows · Session only
+              </Button>
+            )}
+            {hasRole(roles, SESSION_ROLES) && (
+              <Button
                 appearance={page === "shepherding" ? "primary" : "subtle"}
                 onClick={() => setPage("shepherding")}
               >
@@ -617,6 +627,7 @@ function Workspace({
         {page === "shepherding" && hasRole(roles, SESSION_ROLES) && (
           <Shepherding roles={roles} />
         )}
+        {page === "workflows" && hasRole(roles, SESSION_ROLES) && <Workflows />}
         {page === "dates" && hasRole(roles, EDITOR_ROLES) && (
           <ImportantDates roles={roles} />
         )}

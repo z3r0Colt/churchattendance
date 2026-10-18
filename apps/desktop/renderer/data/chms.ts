@@ -84,6 +84,11 @@ export async function chmsCall<T = unknown>(
       "saveBereavementDate",
       "removeImportantDate",
       "removeBereavementDate",
+      "saveWorkflowDraft",
+      "publishWorkflow",
+      "controlWorkflow",
+      "controlWorkflowRun",
+      "decideWorkflowApproval",
     ].includes(name)
   )
     window.dispatchEvent(new Event("private-records-changed"));
