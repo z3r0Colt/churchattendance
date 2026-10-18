@@ -473,7 +473,7 @@ test("exposes only explicitly enabled bulletin links and revokes old links when 
     .update({ shareBulletinLink: false });
   expect((await request.get(url)).status()).toBe(404);
 });
-test("alerts only a linked Session elder after three recorded missed Lord's Days", async ({
+test("sends the weekly digest only to a linked Session elder after three recorded missed Lord's Days", async ({
   request,
 }) => {
   await db
@@ -494,11 +494,14 @@ test("alerts only a linked Session elder after three recorded missed Lord's Days
   await tick(request, "2027-03-22T14:00:00Z");
   const messages = await db
     .collection("messages")
-    .where("source", "==", "absence-alert")
+    .where("source", "==", "shepherding-digest")
     .get();
   expect(messages.size).toBe(1);
+  expect(messages.docs[0].id).toBe("digest_2027-03-22_north_email");
   expect(messages.docs[0].get("sessionOnly")).toBe(true);
-  expect(messages.docs[0].get("body")).toContain("Ruth Calder");
+  expect(messages.docs[0].get("body")).toContain(
+    "Absent the last 3 recorded Lord's Days (1)\nRuth Calder",
+  );
   expect(messages.docs[0].get("totals.simulated")).toBe(1);
   await db.doc("elderDistricts/north").update({ archived: true });
   await tick(request, "2027-03-29T14:00:00Z");
@@ -506,7 +509,7 @@ test("alerts only a linked Session elder after three recorded missed Lord's Days
     (
       await db
         .collection("messages")
-        .where("source", "==", "absence-alert")
+        .where("source", "==", "shepherding-digest")
         .get()
     ).size,
   ).toBe(1);

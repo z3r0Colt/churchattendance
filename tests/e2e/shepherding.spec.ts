@@ -74,6 +74,7 @@ test.beforeEach(async () => {
     "messages",
     "emulatorDeliveries",
     "communicationBudgets",
+    "communicationSuppressions",
     "shepherdingSettings",
     "smsInbox",
   ])
@@ -541,4 +542,168 @@ test("shows unknown history until records cover the rule, then a known gap with 
     fullPage: true,
     animations: "disabled",
   });
+});
+
+async function tick(request: APIRequestContext, now: string) {
+  await call(request, "runLocalCommunicationTick", { now }, 200, "pastor");
+}
+const digests = async () =>
+  (
+    await db
+      .collection("messages")
+      .where("source", "==", "shepherding-digest")
+      .get()
+  ).docs;
+test("sends one weekly digest per district elder with names by email, counts by text, and live eligibility", async ({
+  request,
+}) => {
+  await db.doc("communicationSettings/church").update({
+    absenceEnabled: true,
+    absenceServiceTypeId: "am",
+    absenceWeeks: 2,
+    digestChannel: "both",
+    digestWeekday: 1,
+    digestHour: 9,
+    dailySummaryEnabled: false,
+  });
+  await db
+    .doc("people/ruth")
+    .update({ smsOptIn: true, mobilePhone: "+12025550102" });
+  await db.doc("people/john").update({ elderDistrictId: "p8-north" });
+  await db
+    .doc("elderDistricts/p8-north")
+    .set({ name: "Fictional North", elderPersonId: "ruth" });
+  for (const date of ["2027-03-21", "2027-03-14"])
+    await db.doc(`services/am_${date}`).set({
+      serviceTypeId: "am",
+      date,
+      notes: "",
+      present: {},
+      lastAttendancePersonId: "",
+    });
+  await call(request, "saveContactPolicy", {
+    historyStart: "2026-10-01",
+    defaultContactDays: 30,
+  });
+  await call(request, "saveVisit", {
+    ...visit,
+    start: "2027-03-20T22:00:00.000Z",
+  });
+  try {
+    // 10:00 AM on Monday in the church time zone, twice.
+    await tick(request, "2027-03-22T14:00:00Z");
+    await tick(request, "2027-03-22T14:01:00Z");
+    const sent = await digests();
+    expect(sent.map((row) => row.id).sort()).toEqual([
+      "digest_2027-03-22_p8-north_email",
+      "digest_2027-03-22_p8-north_sms",
+    ]);
+    const email = sent.find((row) => row.id.endsWith("_email"))!;
+    const text = sent.find((row) => row.id.endsWith("_sms"))!;
+    expect(email.get("sessionOnly")).toBe(true);
+    expect(email.get("body")).toContain(
+      "Absent the last 2 recorded Lord's Days (1)\nJohn Baker",
+    );
+    expect(email.get("body")).toContain("Contact gaps");
+    expect(email.get("body")).toContain("Your overdue visits (1)\nCalder");
+    expect(email.get("body")).not.toContain("Fictional purpose");
+    expect(text.get("body")).toContain(
+      "Absent the last 2 recorded Lord's Days 1",
+    );
+    expect(text.get("body")).not.toContain("John");
+    expect(text.get("body")).not.toContain("Calder");
+    expect((await db.collection("emulatorDeliveries").get()).size).toBe(2);
+    // Opt-outs are absolute: next week the email is skipped and the text still goes.
+    await db.doc("people/ruth").update({ emailOptIn: false });
+    await db.doc("services/am_2027-03-28").set({
+      serviceTypeId: "am",
+      date: "2027-03-28",
+      notes: "",
+      present: {},
+      lastAttendancePersonId: "",
+    });
+    await tick(request, "2027-03-29T14:00:00Z");
+    expect(
+      (await db.doc("messages/digest_2027-03-29_p8-north_email").get()).get(
+        "totals.skipped",
+      ),
+    ).toBe(1);
+    expect((await db.collection("emulatorDeliveries").get()).size).toBe(3);
+    // An elder whose account no longer links to a Session role receives nothing.
+    await db.doc("users/p8-elder").update({ personId: "" });
+    await db.doc("services/am_2027-04-04").set({
+      serviceTypeId: "am",
+      date: "2027-04-04",
+      notes: "",
+      present: {},
+      lastAttendancePersonId: "",
+    });
+    await tick(request, "2027-04-05T14:00:00Z");
+    expect(
+      (await digests()).filter((row) => row.id.includes("2027-04-05")),
+    ).toHaveLength(0);
+  } finally {
+    await db.doc("users/p8-elder").update({ personId: "ruth" });
+    await db.doc("people/john").update({ elderDistrictId: "" });
+    await db.doc("elderDistricts/p8-north").delete();
+    for (const date of ["2027-03-21", "2027-03-14", "2027-03-28", "2027-04-04"])
+      await db.doc(`services/am_${date}`).delete();
+  }
+});
+test("sends a daily summary of the officer's own visits and follow-ups without private titles", async ({
+  request,
+}) => {
+  await db.doc("communicationSettings/church").update({
+    absenceEnabled: false,
+    digestChannel: "email",
+    dailySummaryEnabled: true,
+    dailySummaryHour: 7,
+  });
+  await db.recursiveDelete(db.collection("followUps"));
+  await call(request, "saveVisit", {
+    ...visit,
+    start: "2027-03-23T22:00:00.000Z",
+  });
+  await call(request, "saveFollowUp", {
+    id: "p8-follow",
+    expectedRevision: 0,
+    personId: "mary",
+    title: "Fictional private follow-up title",
+    assignedToUid: "p8-elder",
+    dueDate: "2027-03-22",
+  });
+  // 6:59 AM is before the summary hour, then 8:00 AM twice.
+  await tick(request, "2027-03-23T10:59:00Z");
+  expect(await digests()).toHaveLength(0);
+  await tick(request, "2027-03-23T12:00:00Z");
+  await tick(request, "2027-03-23T12:01:00Z");
+  const sent = await digests();
+  expect(sent.map((row) => row.id)).toEqual(["daily_2027-03-23_ruth_email"]);
+  const body = sent[0].get("body");
+  expect(body).toContain("Visits today (1)\n6:00 PM · Calder");
+  expect(body).toContain("Follow-ups due (1)\nMary Baker");
+  expect(body).not.toContain("Fictional private follow-up title");
+  expect(body).not.toContain("Fictional purpose");
+});
+test("saves the digest schedule and channel from Settings", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Email").fill("pastor@example.test");
+  await page.getByLabel("Password").fill("LocalDemo123!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByLabel("Send digests by").selectOption("sms");
+  await page.getByLabel("Digest day").selectOption("2");
+  await page
+    .getByLabel("Absent this many recorded Lord's Days in a row")
+    .fill("4");
+  await page
+    .getByRole("button", { name: "Save communication settings" })
+    .click();
+  await expect
+    .poll(async () =>
+      (await db.doc("communicationSettings/church").get()).data(),
+    )
+    .toMatchObject({ digestChannel: "sms", digestWeekday: 2, absenceWeeks: 4 });
 });

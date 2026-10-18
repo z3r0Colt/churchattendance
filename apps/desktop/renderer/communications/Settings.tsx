@@ -7,6 +7,7 @@ import {
   Input,
   MessageBar,
   Option,
+  Select,
   Subtitle2,
   Textarea,
 } from "@fluentui/react-components";
@@ -21,6 +22,19 @@ import {
   saveCommunicationSettings,
   useCommunicationData,
 } from "../data/communications";
+const weekdays = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Lord's Day",
+];
+const hours = Array.from({ length: 24 }, (_, value) => ({
+  value,
+  label: `${value % 12 || 12}:00 ${value < 12 ? "AM" : "PM"}`,
+}));
 export function CommunicationSettingsPanel({
   roles,
   serviceTypes,
@@ -213,14 +227,66 @@ export function CommunicationSettingsPanel({
         />
       </fieldset>
       <fieldset disabled={!allowed || busy}>
-        <legend>Shepherding alerts</legend>
+        <legend>Shepherding digests</legend>
         <Checkbox
-          label="Email elders after three missed Lord's Days"
+          label="Send each district elder a weekly shepherding digest"
           checked={draft.absenceEnabled}
           onChange={(_, value) =>
             update("absenceEnabled", value.checked === true)
           }
         />
+        <Field label="Digest day">
+          <Select
+            value={String(draft.digestWeekday)}
+            onChange={(event) =>
+              update("digestWeekday", Number(event.target.value))
+            }
+          >
+            {weekdays.map((day, index) => (
+              <option key={day} value={index + 1}>
+                {day}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Digest hour (church time)">
+          <Select
+            value={String(draft.digestHour)}
+            onChange={(event) =>
+              update("digestHour", Number(event.target.value))
+            }
+          >
+            {hours.map((hour) => (
+              <option key={hour.value} value={hour.value}>
+                {hour.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Send digests by">
+          <Select
+            value={draft.digestChannel}
+            onChange={(event) =>
+              update(
+                "digestChannel",
+                event.target.value as CommunicationSettings["digestChannel"],
+              )
+            }
+          >
+            <option value="email">Email (lists names)</option>
+            <option value="sms">Text (counts only)</option>
+            <option value="both">Email and text</option>
+          </Select>
+        </Field>
+        <Field label="Absent this many recorded Lord's Days in a row">
+          <Input
+            type="number"
+            min={2}
+            max={12}
+            value={String(draft.absenceWeeks)}
+            onChange={(_, value) => update("absenceWeeks", Number(value.value))}
+          />
+        </Field>
         <Field label="Service used for absence alerts">
           <Dropdown
             value={
@@ -243,9 +309,32 @@ export function CommunicationSettingsPanel({
             ))}
           </Dropdown>
         </Field>
+        <Checkbox
+          label="Send Session officers a daily summary of visits and follow-ups due"
+          checked={draft.dailySummaryEnabled}
+          onChange={(_, value) =>
+            update("dailySummaryEnabled", value.checked === true)
+          }
+        />
+        <Field label="Daily summary hour (church time)">
+          <Select
+            value={String(draft.dailySummaryHour)}
+            onChange={(event) =>
+              update("dailySummaryHour", Number(event.target.value))
+            }
+          >
+            {hours.map((hour) => (
+              <option key={hour.value} value={hour.value}>
+                {hour.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <p>
-          Alerts require three recorded services and a linked Session account
-          for the district elder. Consent still applies.
+          Digests go only to linked accounts that hold a Session role when they
+          are sent, and opt-outs always apply. They include absences, contact
+          gaps and visits, never note text. Texts carry counts only. Nothing is
+          sent when there is nothing to report.
         </p>
       </fieldset>
       {error && <MessageBar intent="error">{error}</MessageBar>}

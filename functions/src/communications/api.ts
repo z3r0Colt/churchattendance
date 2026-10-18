@@ -21,6 +21,7 @@ import {
 import { db } from "../admin.js";
 import { processServingReminders } from "../chms.js";
 import { processVisitReminders } from "../shepherding/visits.js";
+import { processShepherdingDigests } from "../shepherding/digests.js";
 import { parse, requireRoles } from "../access.js";
 import { emulatorMode, providerConfig } from "./environment.js";
 import { secretOptions } from "./webhooks.js";
@@ -36,7 +37,6 @@ import {
 } from "./queue.js";
 import {
   previewBulletin,
-  processAbsences,
   processBulletins,
   registerBulletin,
   sendBulletin,
@@ -380,7 +380,7 @@ export const bulletinAction = onCall(secretOptions, async (request) => {
 export async function communicationTick(now = new Date()) {
   for (const [name, task] of [
     ["bulletin", processBulletins],
-    ["absence", processAbsences],
+    ["absence", processShepherdingDigests],
     ["serving", processServingReminders],
     ["visit", processVisitReminders],
   ] as const) {

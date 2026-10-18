@@ -3,12 +3,7 @@ import { getStorage } from "firebase-admin/storage";
 import { DateTime } from "luxon";
 import { randomBytes, createHash } from "node:crypto";
 import { HttpsError } from "firebase-functions/v2/https";
-import {
-  absencePeople,
-  bulletinClock,
-  type Person,
-  type Service,
-} from "@sycamore/shared";
+import { bulletinClock } from "@sycamore/shared";
 import { db } from "../admin.js";
 import { providers } from "./providers.js";
 import {
@@ -324,53 +319,4 @@ export async function processBulletins(now: Date) {
   }
   if (clock.send && current.get("file") && current.get("status") !== "skipped")
     await sendBulletin(clock.week);
-}
-export async function processAbsences(now: Date) {
-  const settings = await getSettings();
-  if (
-    !settings.absenceEnabled ||
-    !settings.absenceServiceTypeId ||
-    !settings.emailEnabled
-  )
-    return;
-  const zone = await getChurchZone();
-  const local = DateTime.fromJSDate(now, { zone });
-  if (local.weekday !== 1 || local.hour < 9) return;
-  const [people, services, districts] = await Promise.all([
-    db.collection("people").get(),
-    db
-      .collection("services")
-      .where("serviceTypeId", "==", settings.absenceServiceTypeId)
-      .where("date", ">=", local.minus({ weeks: 4 }).toISODate())
-      .get(),
-    db.collection("elderDistricts").get(),
-  ]);
-  const absent = absencePeople(
-    people.docs.map((row) => ({ ...row.data(), id: row.id }) as Person),
-    services.docs.map((row) => ({ ...row.data(), id: row.id }) as Service),
-    settings.absenceServiceTypeId,
-    now,
-    zone,
-  );
-  for (const district of districts.docs) {
-    if (district.get("archived") === true) continue;
-    const members = absent.filter(
-      (person) => person.elderDistrictId === district.id,
-    );
-    const elder = district.get("elderPersonId") as string;
-    if (!members.length || !elder || !(await isSessionPerson(elder))) continue;
-    await queueMessage(
-      {
-        requestId: `absence_${local.toISODate()}_${district.id}`,
-        channel: "email",
-        subject: "Elder district attendance follow-up",
-        body: `The following people in your district were absent from the last three recorded Lord's Day services.\n\n${members.map((person) => `${person.firstName} ${person.lastName}`).join("\n")}\n\nPlease review the attendance record before following up.`,
-        audience: { kind: "people", ids: [elder] },
-        scheduledFor: null,
-        confirmLarge: true,
-      },
-      "automation",
-      { automatic: true, sessionOnly: true, source: "absence-alert" },
-    );
-  }
 }

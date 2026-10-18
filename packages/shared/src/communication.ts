@@ -170,8 +170,15 @@ export const communicationSettingsSchema = z
     ),
     bulletinSms: z.boolean().default(false),
     shareBulletinLink: z.boolean().default(false),
+    // The weekly shepherding digest, including absence, to each district elder.
     absenceEnabled: z.boolean().default(false),
     absenceServiceTypeId: z.union([idSchema, z.literal("")]).default(""),
+    absenceWeeks: z.number().int().min(2).max(12).default(3),
+    digestChannel: z.enum(["email", "sms", "both"]).default("email"),
+    digestWeekday: z.number().int().min(1).max(7).default(1),
+    digestHour: z.number().int().min(0).max(23).default(9),
+    dailySummaryEnabled: z.boolean().default(false),
+    dailySummaryHour: z.number().int().min(0).max(23).default(7),
   })
   .strict()
   .refine(
@@ -380,10 +387,11 @@ export function absencePeople(
   typeId: string,
   now: Date,
   zone: string,
+  weeks = 3,
 ) {
   const local = DateTime.fromJSDate(now, { zone });
   const last = local.minus({ days: local.weekday === 7 ? 0 : local.weekday });
-  const dates = [0, 1, 2].map((index) =>
+  const dates = Array.from({ length: weeks }, (_, index) =>
     last.minus({ weeks: index }).toISODate()!,
   );
   const meetings = dates.map((date) =>
@@ -405,4 +413,56 @@ export function absencePeople(
 }
 export function validStatus(value: string) {
   return statusSchema.safeParse(value).success;
+}
+// Digest identities use the church-local date, so repeated scheduler ticks queue each notice once.
+export function digestClock(
+  now: Date,
+  zone: string,
+  settings: Pick<
+    CommunicationSettings,
+    | "absenceEnabled"
+    | "digestWeekday"
+    | "digestHour"
+    | "dailySummaryEnabled"
+    | "dailySummaryHour"
+  >,
+) {
+  const local = DateTime.fromJSDate(now, { zone });
+  if (!local.isValid) throw new Error("Set a valid church time zone");
+  return {
+    date: local.toISODate()!,
+    weekly:
+      settings.absenceEnabled &&
+      local.weekday === settings.digestWeekday &&
+      local.hour >= settings.digestHour,
+    daily:
+      settings.dailySummaryEnabled && local.hour >= settings.dailySummaryHour,
+  };
+}
+export type DigestSection = { title: string; names: string[] };
+// Texts carry counts only. Emails list names. Neither carries note bodies, purposes or reasons.
+export function digestText(
+  sections: DigestSection[],
+  channel: Channel,
+  dateLabel: string,
+) {
+  // Braces would be read as merge fields when the queue sends the message.
+  const filled = sections
+    .filter((section) => section.names.length)
+    .map((section) => ({
+      ...section,
+      names: section.names.map((name) => name.replace(/[{}]/g, "")),
+    }));
+  if (!filled.length) return "";
+  if (channel === "sms")
+    return `Shepherding summary for {FirstName}, ${dateLabel}: ${filled
+      .map((section) => `${section.title} ${section.names.length}`)
+      .join(", ")}. Open the church app for details.`;
+  const body = filled
+    .map(
+      (section) =>
+        `${section.title} (${section.names.length})\n${section.names.join("\n")}`,
+    )
+    .join("\n\n");
+  return `Dear {FirstName},\n\nShepherding summary for ${dateLabel}.\n\n${body}\n\nPlease review the records in the church app before following up.`;
 }
