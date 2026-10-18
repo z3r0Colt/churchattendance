@@ -65,6 +65,8 @@ import { Bulletin } from "./communications/Bulletin";
 import { CommunicationSettingsPanel } from "./communications/Settings";
 import { useUnreadSms } from "./data/communications";
 
+import { People } from "./chms/People";
+import { Administration } from "./chms/Administration";
 import { PortalAdministration } from "./chms/PortalAdmin";
 import { Groups } from "./chms/Groups";
 import { Calendar } from "./chms/Calendar";
@@ -423,7 +425,7 @@ function Workspace({
           </>
         )}
         <div className="nav-bottom">
-          Church management<small>Phase 4 · Development</small>
+          Church management<small>Phase 5 · Development</small>
         </div>
       </nav>
       <main className="content">
@@ -527,7 +529,12 @@ function Workspace({
           </>
         )}
         {page === "people" && (
-          <People data={data} editor={editor} add={() => setHousehold(true)} />
+          <People
+            roles={roles}
+            timeZone={data.timeZone}
+            services={data.services}
+            add={() => setHousehold(true)}
+          />
         )}
         {page === "reports" && <Reports data={data} />}
         {page === "portal" && hasRole(roles, EDITOR_ROLES) && (
@@ -588,8 +595,13 @@ function Workspace({
               <p>
                 Church time zone <strong>{data.timeZone}</strong>
               </p>
-              <p>Service types and roles are managed through setup.</p>
+              <p>
+                Account creation and staff roles use the trusted setup process.
+              </p>
             </section>
+            {hasRole(roles, ["admin", "pastor"]) && (
+              <Administration roles={roles} />
+            )}
             {editor && (
               <CommunicationSettingsPanel
                 roles={roles}
@@ -925,75 +937,6 @@ function RollCall({
         <span>Visitors {counts.visitor}</span>
         <span className="muted">Children counted in families</span>
       </footer>
-    </>
-  );
-}
-function People({
-  data,
-  editor,
-  add,
-}: {
-  data: AttendanceData;
-  editor: boolean;
-  add: () => void;
-}) {
-  const [search, setSearch] = useState("");
-  const people = filterRoster(data.people, search);
-  const rows = people.map((person) => ({
-    Name: `${person.firstName} ${person.lastName}`,
-    Status: statusLabels[person.membershipStatus],
-    Household: person.householdName,
-  }));
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <Title3 as="h1">People & households</Title3>
-          <p>The active congregational roll</p>
-        </div>
-        <div className="actions">
-          <ExportCsv rows={rows} />
-          {editor && (
-            <Button
-              appearance="primary"
-              icon={<AddRegular />}
-              disabled={!data.online}
-              onClick={add}
-            >
-              Add household
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className="surface table-card">
-        <Input
-          aria-label="Search people"
-          placeholder="Search people or household…"
-          value={search}
-          onChange={(_, value) => setSearch(value.value)}
-        />
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Status</th>
-              <th>Household</th>
-            </tr>
-          </thead>
-          <tbody>
-            {people.map((person) => (
-              <tr key={person.id}>
-                <td>
-                  {person.firstName} {person.lastName}
-                </td>
-                <td>{statusLabels[person.membershipStatus]}</td>
-                <td>{person.householdName}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!people.length && <p>No people match this list.</p>}
-      </div>
     </>
   );
 }

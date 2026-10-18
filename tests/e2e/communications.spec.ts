@@ -500,6 +500,16 @@ test("alerts only a linked Session elder after three recorded missed Lord's Days
   expect(messages.docs[0].get("sessionOnly")).toBe(true);
   expect(messages.docs[0].get("body")).toContain("Ruth Calder");
   expect(messages.docs[0].get("totals.simulated")).toBe(1);
+  await db.doc("elderDistricts/north").update({ archived: true });
+  await tick(request, "2027-03-29T14:00:00Z");
+  expect(
+    (
+      await db
+        .collection("messages")
+        .where("source", "==", "absence-alert")
+        .get()
+    ).size,
+  ).toBe(1);
 });
 async function login(page: Page) {
   await page.goto("/");

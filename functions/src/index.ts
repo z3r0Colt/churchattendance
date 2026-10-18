@@ -24,6 +24,7 @@ export * from "./chms.js";
 export * from "./kiosk.js";
 export * from "./chms-audit.js";
 export * from "./portal.js";
+export * from "./administration.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = requireRoles(request, EDITOR_ROLES);
@@ -78,6 +79,17 @@ export const savePerson = onCall(async (request) => {
     const before = await transaction.get(ref);
     if (!before.exists)
       throw new HttpsError("not-found", "That person could not be found.");
+    if (
+      input.expected &&
+      (Object.keys(input.changes).some((key) => !(key in input.expected!)) ||
+        Object.entries(input.expected).some(
+          ([key, value]) => (before.get(key) ?? "") !== value,
+        ))
+    )
+      throw new HttpsError(
+        "aborted",
+        "This person changed. Reopen the profile before saving.",
+      );
     const previous = Object.fromEntries(
       Object.keys(personInputSchema.shape).map((key) => [key, before.get(key)]),
     );
@@ -87,19 +99,50 @@ export const savePerson = onCall(async (request) => {
     );
     if (!household.exists)
       throw new HttpsError("not-found", "Choose an existing household.");
+    if (
+      person.elderDistrictId &&
+      person.elderDistrictId !== before.get("elderDistrictId")
+    ) {
+      const district = await transaction.get(
+        db.doc(`elderDistricts/${person.elderDistrictId}`),
+      );
+      if (!district.exists || district.get("archived"))
+        throw new HttpsError(
+          "failed-precondition",
+          "Choose an active elder district.",
+        );
+    }
     const changedStatus =
       before.get("membershipStatus") !== person.membershipStatus;
-    if (changedStatus) {
+    const changedDeceased =
+      (before.get("isDeceased") ?? false) !== person.isDeceased;
+    if (changedStatus || changedDeceased) {
       if (
         !input.membershipEvent ||
         input.membershipEvent.fromStatus !== before.get("membershipStatus") ||
-        input.membershipEvent.toStatus !== person.membershipStatus
+        input.membershipEvent.toStatus !== person.membershipStatus ||
+        input.membershipEvent.method === "initial" ||
+        (input.membershipEvent.method === "death" && !person.isDeceased) ||
+        (person.isDeceased &&
+          (person.membershipStatus !== "former" ||
+            input.membershipEvent.method !== "death"))
       ) {
         throw new HttpsError(
           "invalid-argument",
           "Record the membership change date and reason.",
         );
       }
+      const latest = await transaction.get(
+        ref.collection("membershipEvents").orderBy("date", "desc").limit(1),
+      );
+      if (
+        latest.docs[0] &&
+        input.membershipEvent.date < latest.docs[0].get("date")
+      )
+        throw new HttpsError(
+          "failed-precondition",
+          "The change predates recorded history. Ask the Clerk to review the dates.",
+        );
       transaction.create(
         ref.collection("membershipEvents").doc(),
         input.membershipEvent,
@@ -243,6 +286,10 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
     if (
       ![
         "people",
+        "households",
+        "settings",
+        "serviceTypes",
+        "elderDistricts",
         "sessionPrivate",
         "careNotes",
         "followUps",

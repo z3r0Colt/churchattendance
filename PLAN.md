@@ -187,9 +187,9 @@ careNotes/{noteId}           personId, authorUid, kind (note | visit), date, bod
 followUps/{taskId}           personId, title, assignedToUid, dueDate, done, revision, updatedAt, updatedBy  (Session only)
 diaconalTasks/{taskId}       title, personId, assignedToUid, dueDate, done, revision, updatedAt, updatedBy   (Session and assigned deacon)
 
-households/{householdId}     name, address, homePhone
-elderDistricts/{id}          name, elderPersonId
-serviceTypes/{id}            name, dayOfWeek, defaultTime, isActive
+households/{householdId}     name, address, homePhone, revision, updatedAt, updatedBy
+elderDistricts/{id}          name, elderPersonId, archived, revision, updatedAt, updatedBy
+serviceTypes/{id}            name, dayOfWeek, defaultTime, isActive, revision, updatedAt, updatedBy
 
 services/{serviceId}
   serviceTypeId, date, notes, lastAttendancePersonId
@@ -236,7 +236,7 @@ portalBudgets/{hashedIp_hour} count, expiresAt (server only)
 
 users/{uid}                  personId, displayName, roles[]
 auditLog/{id}                uid, collection, docId, action, before, after, at   (written only by Functions)
-settings/church              name, address, service defaults, message footer
+settings/church              name, address, timeZone, revision, updatedAt, updatedBy
 ```
 
 Attendance for a service is one document with a `present` map. A full year of three services a week is only about 150 documents, so reports are fast and cheap. The booth and a kiosk can check people in at the same moment without clashing, because each check mark updates its own field.
@@ -264,7 +264,7 @@ Each roll-call update also writes `lastAttendancePersonId`. Rules constrain the 
 ### 4.6 Multiple PCs and offline use
 * Every PC runs the same app and signs in with that person's own account.
 * The booth PC keeps the people list and recent services in its local cache. If the internet is down on the Lord's Day, check marks save locally and upload by themselves once the connection returns.
-* Edits only send the fields that changed, so if the pastor fixes a phone number while the booth fixes an address, both changes stick. If two people change the very same field, the later save wins, and the audit log keeps the old value so it can be restored.
+* Edits only send the fields that changed, so if the pastor fixes a phone number while the booth fixes an address, both changes stick. The Phase 5 profile form also sends the original values of changed fields and rejects a stale edit to the same field. Older API integrations without expectations retain last-write behavior. The audit log keeps before/after values for review.
 * Adding another PC later just means installing the app and signing in.
 
 ### 4.7 Email details (Microsoft 365)
@@ -297,7 +297,7 @@ Other details
 
 ### 4.10 Backups
 * Firestore scheduled backups run daily and are kept 30 days.
-* An Admin "Export Everything" button saves the whole database to an XLSX workbook on the PC.
+* An Admin "Export permitted records" button saves an inspectable XLSX document archive on the PC. Session records require a Session administrator. Storage files, delivery queues, bulletin records and operational secrets/capabilities are excluded. This live, paged archive is not an atomic backup or a supported restore format. Managed backups remain required and must be provisioned separately.
 
 ### 4.11 Phase 2 implementation details
 Messages and recipients are created through validated callable Functions. All communication documents are client-read-only, apart from new immutable PDF uploads to the permitted Storage paths. Admin, Pastor, Clerk and Elder may use Messages and Bulletin. Generated elder alerts carry `sessionOnly: true`; their bodies and recipient logs are denied to an Admin without a Session role. Server-only suppression records, budgets and bulletin link tokens cannot be read by any client.
@@ -370,6 +370,13 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Member portal or phone app for directory and RSVP
 * Online forms (visitor card, event sign up)
 
+**Phase 5, Staff administration (implementation extension)**
+* Editable person profiles, membership timelines and person attendance
+* Add a person to an existing household, household editing and atomic roster renames
+* Church/time zone, service type and elder district setup with revision checks
+* Permission-aware administrative archive with explicit exclusions
+* Live provisioning, managed backups and native Windows release checks remain separate
+
 ## 7. Running Costs (estimate for a 150 person church)
 | Item | Cost |
 |---|---|
@@ -406,3 +413,7 @@ These four make up the Session group, so they are the only ones who can see past
 
 ## 9. Next Step
 Approve this plan (with any changes), and Phase 1 development starts with the Firebase project, the Electron app scaffold, security rules, and the roll call screen.
+
+### Phase 5 implementation details
+
+See `docs/PHASE_5.md` for workflows and archive semantics. Setup forms use document revisions; profile forms compare original values only for changed fields. Household renames update the names-only roster atomically. Membership and deceased-flag changes require matching history, and a death records Former and Deceased together. Setup writes are validated callable Functions and are audited. Initial legacy records without revisions are treated as revision zero. District archival preserves existing person assignments. The archive API checks live Auth administrator/Session roles on every page and never exposes arbitrary collections. No backup, hosting deployment or installer publication is performed by this milestone.

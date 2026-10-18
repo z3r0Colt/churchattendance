@@ -914,7 +914,7 @@ function Contacts({ data }: { data: Data }) {
     </section>
   );
 }
-function ConsentDialog({
+export function ConsentDialog({
   person,
   close,
 }: {

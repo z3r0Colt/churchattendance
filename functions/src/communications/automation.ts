@@ -203,14 +203,12 @@ export async function sendBulletin(
     ) {
       // The PDF is shareable only after an administrator explicitly enables bulletin links.
       const token = randomBytes(24).toString("hex");
-      await db
-        .doc(`bulletinLinks/${token}`)
-        .set({
-          path: attachment.path,
-          generation: attachment.generation,
-          week,
-          createdAt: Timestamp.now(),
-        });
+      await db.doc(`bulletinLinks/${token}`).set({
+        path: attachment.path,
+        generation: attachment.generation,
+        week,
+        createdAt: Timestamp.now(),
+      });
       publicUrl = `${providerConfig().publicFunctionsUrl}/bulletinDownload?token=${token}`;
       await queueMessage(
         {
@@ -355,6 +353,7 @@ export async function processAbsences(now: Date) {
     zone,
   );
   for (const district of districts.docs) {
+    if (district.get("archived") === true) continue;
     const members = absent.filter(
       (person) => person.elderDistrictId === district.id,
     );

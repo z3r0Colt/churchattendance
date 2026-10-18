@@ -8,7 +8,9 @@ contextBridge.exposeInMainWorld("desktop", {
     ipcRenderer.invoke("preview-pdf", bytes),
   saveCsv: (csv: string): Promise<boolean> =>
     ipcRenderer.invoke("save-csv", csv),
-  saveXlsx: (bytes: number[]): Promise<boolean> =>
-    ipcRenderer.invoke("save-xlsx", bytes),
+  saveXlsx: (
+    bytes: number[],
+    filename?: "sycamore-archive.xlsx",
+  ): Promise<boolean> => ipcRenderer.invoke("save-xlsx", bytes, filename),
   printReport: (): Promise<boolean> => ipcRenderer.invoke("print-report"),
 });

@@ -24,7 +24,7 @@ Local accounts, both using password `LocalDemo123!`
 * A basic service attendance summary with date filters, CSV/XLSX export and desktop PDF output. Workbooks have Summary, Detail and Data sheets. Categories use current membership status. Historical category reconstruction and full report layouts are still pending.
 * Default-deny Firestore and Storage rules, Session isolation, assigned Deacon task completion, a server-owned audit trail, emulator tests and browser workflow tests.
 
-Private Session documents cannot be written directly by clients. Validated care-editing Functions will be added with the Phase 3 pastoral screens. Audit logs are Session-only because before/after values can contain private records.
+Private Session documents cannot be written directly by clients. Validated care-editing Functions serve the Phase 3 pastoral screens. Audit logs are Session-only because before/after values can contain private records.
 
 ## Checks
 
@@ -34,13 +34,13 @@ Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run t
 
 No live Firebase project is created or deployed by this milestone. Create the church-owned project with Firestore, email/password Authentication and Storage, and enable billing before deploying Functions. Copy `.env.example` to `.env`, set `VITE_USE_EMULATORS=false`, and fill the public Firebase web config. Never place service-account keys or provider secrets in the renderer.
 
-The first administrator must be bootstrapped through a trusted Admin SDK environment with `roles: ['pastor', 'admin']` in custom claims. No account may grant itself roles. Only a Session administrator can grant or remove Session roles. Other accounts are provisioned in Firebase Authentication before roles are assigned through `setUserRoles`. Initial church settings must include an IANA `timeZone`, and service types must be created by a trusted setup process. The emulator seed is not a production provisioning tool.
+The first administrator must be bootstrapped through a trusted Admin SDK environment with `roles: ['pastor', 'admin']` in custom claims. No account may grant itself roles. Only a Session administrator can grant or remove Session roles. Other accounts are provisioned in Firebase Authentication before roles are assigned through `setUserRoles`. An Admin or Pastor can now configure church settings, service types and elder districts in Settings. The church settings include an IANA `timeZone`. The emulator seed is not a production provisioning tool.
 
 Functions bundle shared schemas into their output so deployment does not depend on a private npm registry. Build before deployment, then deploy using an explicit project ID. This foundation has not been reviewed for production use with real church records.
 
 ## Remaining Phase 1 work
 
-Full person editing and membership history screens, elder districts, user/service-type setup screens, full attendance reports with charts and historical membership categories, backup provisioning and Export Everything, signed installer/release testing, offline restart recovery, and update publishing remain. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
+Staff account/role setup screens, full attendance reports with charts and historical membership categories, managed backup provisioning, signed installer/release testing, offline restart recovery, and update publishing remain. Phase 5 adds person editing, membership history, elder districts, church/service setup and a scoped document archive. The archive has explicit exclusions and does not replace managed backups. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
 
 ## Phase 2 communication
 
@@ -48,7 +48,7 @@ Messages now supports email and text, recipient previews, reusable templates and
 
 Microsoft Graph and Twilio adapters are implemented behind provider interfaces. Local emulators always use fakes. Provider credentials remain in Secret Manager, and the app receives no credentials. Live delivery remains disabled until the church accounts and server settings are configured.
 
-Read [Communication setup](docs/COMMUNICATIONS_SETUP.md) for the Microsoft, Twilio and Firebase steps, delivery limits and verification requirements. No live accounts or DNS records were changed by this implementation. Remaining Phase 1 work listed above is still separate. Pastoral editing belongs to Phase 3. There is no giving or financial tracking.
+Read [Communication setup](docs/COMMUNICATIONS_SETUP.md) for the Microsoft, Twilio and Firebase steps, delivery limits and verification requirements. No live accounts or DNS records were changed by this implementation. Remaining Phase 1 work listed above is still separate. Pastoral editing is implemented in Phase 3. There is no giving or financial tracking.
 
 ## Phase 3 ChMS extras
 
@@ -61,3 +61,9 @@ Read [Phase 3 workflows](docs/PHASE_3.md) for roles, recurrence rules, kiosk pro
 The separate mobile-friendly portal provides verified member access, an opt-in contact directory, personal RSVPs, visitor forms and published event request forms. Staff review requests and manage account links/publication through Online access. Public forms do not subscribe people to messages or reserve event places before review. Members receive no staff privileges or direct database access.
 
 Use npm run dev:portal for the fictional local demo, or read [Phase 4 setup](docs/PHASE_4.md) for hosting, App Check, origin/secret configuration and church account provisioning. No live portal has been deployed.
+
+## Phase 5 staff administration
+
+People now includes editable profiles, membership timelines, person attendance, household editing and adding people to existing households. Settings adds church, service type and elder district setup. Administrative exports use paginated, allowlisted data with Session records restricted to Session administrators.
+
+Read [Phase 5 workflows](docs/PHASE_5.md) for permissions, stale-edit checks, archive format and exclusions, and remaining production/release work.

@@ -200,22 +200,30 @@ app.whenReady().then(async () => {
     await writeFile(result.filePath, buffer);
     return true;
   });
-  ipcMain.handle("save-xlsx", async (event, value: unknown) => {
-    trusted(event);
-    if (
-      !Array.isArray(value) ||
-      value.length > 10_000_000 ||
-      !value.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)
-    )
-      throw new Error("Invalid export");
-    const result = await dialog.showSaveDialog(window!, {
-      defaultPath: "attendance.xlsx",
-      filters: [{ name: "Excel workbook", extensions: ["xlsx"] }],
-    });
-    if (result.canceled || !result.filePath) return false;
-    await writeFile(result.filePath, new Uint8Array(value));
-    return true;
-  });
+  ipcMain.handle(
+    "save-xlsx",
+    async (event, value: unknown, filename: unknown) => {
+      trusted(event);
+      if (filename !== undefined && filename !== "sycamore-archive.xlsx")
+        throw new Error("Invalid export name");
+      if (
+        !Array.isArray(value) ||
+        value.length > 10_000_000 ||
+        !value.every(
+          (byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255,
+        )
+      )
+        throw new Error("Invalid export");
+      const result = await dialog.showSaveDialog(window!, {
+        defaultPath:
+          filename === "sycamore-archive.xlsx" ? filename : "attendance.xlsx",
+        filters: [{ name: "Excel workbook", extensions: ["xlsx"] }],
+      });
+      if (result.canceled || !result.filePath) return false;
+      await writeFile(result.filePath, new Uint8Array(value));
+      return true;
+    },
+  );
   if (app.isPackaged) {
     await window.loadFile(path.join(__dirname, "renderer/index.html"));
     autoUpdater
