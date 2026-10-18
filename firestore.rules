@@ -85,6 +85,9 @@ service cloud.firestore {
     }
     match /serving/{id} { allow read: if reader(); allow write: if false; }
     match /reportSettings/{id} { allow read: if reader(); allow write: if false; }
+    match /portalAccess/{id} { allow read: if roles().hasAny(['admin','pastor']); allow write: if false; }
+    match /eventPublications/{id} { allow read: if editor(); allow write: if false; }
+    match /onlineSubmissions/{id} { allow read: if editor(); allow write: if false; }
     match /consentEvents/{id} { allow read: if communicator(); allow write: if false; }
     match /{document=**} { allow read, write: if false; }
   }

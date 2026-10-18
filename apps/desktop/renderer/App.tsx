@@ -65,6 +65,7 @@ import { Bulletin } from "./communications/Bulletin";
 import { CommunicationSettingsPanel } from "./communications/Settings";
 import { useUnreadSms } from "./data/communications";
 
+import { PortalAdministration } from "./chms/PortalAdmin";
 import { Groups } from "./chms/Groups";
 import { Calendar } from "./chms/Calendar";
 import { Serving } from "./chms/Serving";
@@ -85,7 +86,8 @@ type Page =
   | "calendar"
   | "serving"
   | "care"
-  | "annual";
+  | "annual"
+  | "portal";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
   pastor: "Pastor",
@@ -347,6 +349,14 @@ function Workspace({
             </Button>
           </>
         )}
+        {hasRole(roles, EDITOR_ROLES) && (
+          <Button
+            appearance={page === "portal" ? "primary" : "subtle"}
+            onClick={() => setPage("portal")}
+          >
+            Online access
+          </Button>
+        )}
         {!volunteer && (
           <>
             <Button
@@ -413,7 +423,7 @@ function Workspace({
           </>
         )}
         <div className="nav-bottom">
-          Church management<small>Phase 3 · Development</small>
+          Church management<small>Phase 4 · Development</small>
         </div>
       </nav>
       <main className="content">
@@ -520,6 +530,9 @@ function Workspace({
           <People data={data} editor={editor} add={() => setHousehold(true)} />
         )}
         {page === "reports" && <Reports data={data} />}
+        {page === "portal" && hasRole(roles, EDITOR_ROLES) && (
+          <PortalAdministration roles={roles} />
+        )}
         {page === "groups" && !volunteer && (
           <Groups
             roles={roles}

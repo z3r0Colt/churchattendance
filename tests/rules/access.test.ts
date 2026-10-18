@@ -565,3 +565,113 @@ describe("Phase 3 access", () => {
     }
   });
 });
+
+describe("online portal boundaries", () => {
+  it("allows only Admin and Pastor to read member access mappings", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      setDoc(doc(context.firestore(), "portalAccess/member"), {
+        personId: "alex",
+        enabled: true,
+      }),
+    );
+    for (const role of ["admin", "pastor"])
+      await assertSucceeds(
+        getDoc(doc(auth(role).firestore(), "portalAccess/member")),
+      );
+    for (const role of ["clerk", "elder", "deacon", "readOnly"])
+      await assertFails(
+        getDoc(doc(auth(role).firestore(), "portalAccess/member")),
+      );
+    await assertFails(
+      setDoc(doc(auth("admin").firestore(), "portalAccess/member"), {
+        enabled: true,
+      }),
+    );
+  });
+  for (const collection of ["eventPublications", "onlineSubmissions"]) {
+    it(`${collection} permits editors but no direct writes or member reads`, async () => {
+      await env.withSecurityRulesDisabled((context) =>
+        setDoc(doc(context.firestore(), `${collection}/example`), {
+          private: true,
+        }),
+      );
+      for (const role of ["admin", "pastor", "clerk", "elder"])
+        await assertSucceeds(
+          getDoc(doc(auth(role).firestore(), `${collection}/example`)),
+        );
+      for (const role of ["deacon", "readOnly", "attendanceVolunteer"])
+        await assertFails(
+          getDoc(doc(auth(role).firestore(), `${collection}/example`)),
+        );
+      await assertFails(
+        getDoc(
+          doc(
+            env
+              .authenticatedContext("member", { portalMember: true })
+              .firestore(),
+            `${collection}/example`,
+          ),
+        ),
+      );
+      await assertFails(
+        getDoc(
+          doc(
+            env.unauthenticatedContext().firestore(),
+            `${collection}/example`,
+          ),
+        ),
+      );
+      await assertFails(
+        setDoc(doc(auth("pastor").firestore(), `${collection}/example`), {
+          forged: true,
+        }),
+      );
+    });
+  }
+  it("keeps sharing preferences and rate buckets server-only even against their owner", async () => {
+    for (const path of [
+      "directoryPreferences/member",
+      "portalBudgets/iphash",
+    ]) {
+      await env.withSecurityRulesDisabled((context) =>
+        setDoc(doc(context.firestore(), path), { listed: true }),
+      );
+      for (const context of [
+        auth("admin"),
+        auth("pastor"),
+        env.authenticatedContext("member", { portalMember: true }),
+      ]) {
+        await assertFails(getDoc(doc(context.firestore(), path)));
+        await assertFails(
+          setDoc(doc(context.firestore(), path), { listed: true }),
+        );
+      }
+    }
+  });
+  it("gives member identities no direct directory, staff, attendance, RSVP or photo access", async () => {
+    const context = env.authenticatedContext("member", { portalMember: true });
+    for (const path of [
+      "people/alex",
+      "attendanceRoster/alex",
+      "households/ash",
+      "groups/choir",
+      "events/meal",
+      "events/meal/rsvps/one",
+      "services/am_2026-11-01",
+      "sessionPrivate/private",
+      "careNotes/private",
+      "followUps/private",
+      "diaconalTasks/move",
+      "portalAccess/member",
+      "users/pastor",
+    ]) {
+      await assertFails(getDoc(doc(context.firestore(), path)));
+      await assertFails(
+        setDoc(doc(context.firestore(), path), { forged: true }),
+      );
+    }
+    await assertFails(
+      getBytes(ref(context.storage(), "photos/alex/avatar.png")),
+    );
+  });
+});

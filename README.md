@@ -55,3 +55,9 @@ Read [Communication setup](docs/COMMUNICATIONS_SETUP.md) for the Microsoft, Twil
 Groups now includes membership, meeting schedules and named attendance. Calendar supports recurring events and per-occurrence RSVPs. Serving includes conflict checks, gaps and consented text reminders. Session care includes notes, visits, follow-ups and discipline history; assigned Deacons receive a separate practical task list. The optional kiosk uses an expiring identity with no direct database access. Annual reports adds historical statistics, monthly meeting summaries and a photo directory, with charted XLSX and isolated PDF templates.
 
 Read [Phase 3 workflows](docs/PHASE_3.md) for roles, recurrence rules, kiosk provisioning and release checks. Live church provisioning and native Windows release verification remain necessary. The earlier Phase 1 remaining-work list still applies.
+
+## Phase 4 member portal
+
+The separate mobile-friendly portal provides verified member access, an opt-in contact directory, personal RSVPs, visitor forms and published event request forms. Staff review requests and manage account links/publication through Online access. Public forms do not subscribe people to messages or reserve event places before review. Members receive no staff privileges or direct database access.
+
+Use npm run dev:portal for the fictional local demo, or read [Phase 4 setup](docs/PHASE_4.md) for hosting, App Check, origin/secret configuration and church account provisioning. No live portal has been deployed.

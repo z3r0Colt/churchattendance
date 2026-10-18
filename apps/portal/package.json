@@ -1,0 +1,25 @@
+{
+  "name": "@sycamore/portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "build": "vite build --config vite.config.ts"
+  },
+  "dependencies": {
+    "@sycamore/shared": "0.1.0",
+    "@fluentui/react-components": "^9.74.9",
+    "firebase": "^13.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "luxon": "^3.7.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.10",
+    "typescript": "^5.9.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
+  }
+}

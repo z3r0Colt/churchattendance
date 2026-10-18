@@ -226,6 +226,14 @@ bulletins/{lordsDayDate}     week, file { path, name, generation, size, source, 
 bulletinLinks/{token}        path, generation, week, createdAt (server only)
 automationStatus/church     bulletinError, absenceError, servingError, queueError, checkedAt
 
+portalAccess/{uid}           personId, enabled, revision, updatedAt, updatedBy (Admin/Pastor read)
+directoryPreferences/{personId} listed, shareEmail, sharePhone, shareAddress, revision, updatedAt, updatedBy
+                             (server-only, member accesses own preferences through validated APIs)
+eventPublications/{eventId}  portalVisible, publicRegistration, description, revision, updatedAt, updatedBy
+onlineSubmissions/{requestId} kind, firstName, lastName, email, mobilePhone, message, eventId, date,
+                             status (pending | approved | declined), approvedPersonId, createdAt, reviewedAt, reviewedBy
+portalBudgets/{hashedIp_hour} count, expiresAt (server only)
+
 users/{uid}                  personId, displayName, roles[]
 auditLog/{id}                uid, collection, docId, action, before, after, at   (written only by Functions)
 settings/church              name, address, service defaults, message footer
@@ -306,6 +314,13 @@ The existing scheduler queues consented serving reminders once per assignment re
 The optional kiosk uses a separate custom-token identity with no direct Firestore or Storage access. An Admin or Pastor opens it for one existing service. Starting signs out staff and clears local Firestore persistence. Exact surname or full-phone lookup returns only household names and checked-in state, with a two-minute single-use capability for those people. Device sessions expire after four hours, requests are throttled, and five wrong exit PIN attempts lock that device. Exiting returns to staff sign-in and does not grant staff access. PINs are salted and hashed on the server. Kiosk search needs a connection; the existing staff roll call retains offline support.
 
 Annual statistics reconstruct membership from recorded history, count explicit infant/adult baptisms, and flag missing or inconsistent records. The meeting summary contains twelve months per service type. Missing service records do not become zero-attendance services. The directory includes active member and adherent households, and photos are embedded in the PDF rather than published. Report XLSX files have Summary, Detail and Data sheets and an attendance chart. PDF templates are isolated from the staff app; Windows release verification remains a separate deployment check.
+
+### 4.13 Phase 4 implementation details
+The member portal is a separate responsive web app in apps/portal. It uses Firebase Auth with session persistence and callable Functions, and does not initialize Firestore persistence. Portal access is linked by Admin or Pastor to one eligible active person. Verified email, an enabled Auth account, the live access mapping and active membership are checked on every member request. Linking a portal account grants no staff role. Members can manage only their own sharing preferences and RSVPs.
+
+Online directory sharing defaults off. Only explicitly shared contact fields are returned. Birthdays, membership status, attendance, care records and other staff data are never included. Public events require explicit publication. Public visitor and event forms create pending requests, with no messaging subscription and no capacity reservation. Staff approval atomically links an existing person or creates a Visitor, and checks event capacity before confirming a registration. Repeated approval cannot create another visitor.
+
+Production portal callables enforce App Check and the configured PORTAL_ORIGIN. Form submissions additionally use a honeypot, idempotent request IDs and an eight-request-per-hour network budget keyed with a Secret Manager HMAC secret. Raw network addresses are not stored in rate buckets. Hosting serves only the portal build with restrictive headers. No site, DNS record, public event or real member account is provisioned automatically by development.
 
 ## 5. Screens
 

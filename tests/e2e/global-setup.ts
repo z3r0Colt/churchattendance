@@ -7,7 +7,13 @@ export default async function setup() {
     server: { host: "127.0.0.1", port: 5173, strictPort: true },
   });
   await server.listen();
+  const portal = await createServer({
+    configFile: "apps/portal/vite.config.ts",
+    server: { host: "127.0.0.1", port: 5174, strictPort: true },
+  });
+  await portal.listen();
   return async () => {
     await server.close();
+    await portal.close();
   };
 }

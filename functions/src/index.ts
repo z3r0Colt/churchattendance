@@ -23,6 +23,7 @@ export * from "./communications/api.js";
 export * from "./chms.js";
 export * from "./kiosk.js";
 export * from "./chms-audit.js";
+export * from "./portal.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = requireRoles(request, EDITOR_ROLES);
@@ -249,6 +250,10 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "groups",
         "events",
         "serving",
+        "portalAccess",
+        "eventPublications",
+        "directoryPreferences",
+        "onlineSubmissions",
       ].includes(event.params.collection) ||
       !event.data
     )

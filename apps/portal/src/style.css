@@ -1,0 +1,173 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font:
+    16px "Segoe UI",
+    sans-serif;
+  color: #1f2321;
+  background: #fafaf8;
+}
+.portal.fui-FluentProvider {
+  min-height: 100vh;
+  background: #fafaf8;
+  color: #1f2321;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 24px max(24px, calc((100% - 1100px) / 2));
+  background: white;
+  border-bottom: 1px solid #dadfdc;
+}
+header .fui-Button {
+  margin-left: auto;
+}
+.wordmark {
+  letter-spacing: 0.12em;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2f6b4f;
+  text-decoration: none;
+  white-space: nowrap;
+}
+main {
+  max-width: 1100px;
+  margin: auto;
+  padding: 24px;
+}
+.intro {
+  padding: 36px 0 20px;
+  max-width: 720px;
+}
+.intro h1 {
+  display: block;
+  font-size: 30px;
+  line-height: 1.3;
+  margin: 12px 0;
+}
+.intro p {
+  font-size: 17px;
+  color: #5b625e;
+  line-height: 1.6;
+}
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5b625e;
+}
+.card {
+  border: 1px solid #dadfdc;
+  border-radius: 8px;
+  background: white;
+  padding: 24px;
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+.card h2 {
+  font-size: 20px;
+  line-height: 1.4;
+  margin: 0 0 16px;
+}
+.narrow {
+  max-width: 620px;
+}
+form {
+  display: grid;
+  gap: 20px;
+}
+.card .fui-Checkbox {
+  display: flex;
+  min-height: 48px;
+}
+.fui-Button {
+  min-height: 44px;
+}
+.fui-Input,
+.fui-Select {
+  min-height: 44px;
+}
+.event-grid,
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+.event-grid .card,
+.directory-grid .card {
+  margin-bottom: 0;
+}
+.two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  margin-top: 24px;
+}
+.toolbar .fui-Field {
+  flex: 1;
+}
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.preserve-lines {
+  white-space: pre-line;
+}
+footer {
+  max-width: 1100px;
+  margin: 40px auto 0;
+  padding: 24px;
+  color: #5b625e;
+  border-top: 1px solid #dadfdc;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  header {
+    padding: 20px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header > span {
+    display: none;
+  }
+  main {
+    padding: 16px;
+  }
+  .intro {
+    padding-top: 24px;
+  }
+  .intro h1 {
+    font-size: 25px;
+  }
+  .two-columns {
+    grid-template-columns: 1fr;
+  }
+  .card {
+    padding: 20px;
+  }
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .fui-Tab {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

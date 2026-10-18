@@ -6,19 +6,22 @@
   "workspaces": [
     "apps/desktop",
     "packages/shared",
-    "functions"
+    "functions",
+    "apps/portal"
   ],
   "scripts": {
     "dev": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/dev.mjs\"",
     "dev:ui": "vite --config apps/desktop/vite.config.ts --host 127.0.0.1",
     "seed": "node scripts/seed.mjs",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p apps/desktop && tsc --noEmit -p functions && tsc --noEmit -p tests",
+    "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p apps/desktop && tsc --noEmit -p functions && tsc --noEmit -p apps/portal && tsc --noEmit -p tests",
     "test": "vitest run",
     "test:rules": "firebase emulators:exec --project demo-sycamore --only firestore,storage \"vitest run --config vitest.rules.config.ts\"",
     "test:e2e": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/seed.mjs && playwright test\"",
-    "build": "npm run build -w @sycamore/shared && npm run build -w @sycamore/desktop && npm run build -w @sycamore/functions",
-    "dist": "npm run build && npm exec -w @sycamore/desktop -- electron-builder --win nsis --publish never"
+    "build": "npm run build -w @sycamore/shared && npm run build -w @sycamore/desktop && npm run build -w @sycamore/portal && npm run build -w @sycamore/functions",
+    "dist": "npm run build && npm exec -w @sycamore/desktop -- electron-builder --win nsis --publish never",
+    "dev:portal": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/portal-dev.mjs\"",
+    "dev:portal:ui": "npm run dev -w @sycamore/portal"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
