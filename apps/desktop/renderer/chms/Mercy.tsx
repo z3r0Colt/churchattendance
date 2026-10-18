@@ -122,7 +122,10 @@ export function Mercy() {
       kind: "select",
       options: congregation.people
         .filter((row) => !row.isDeceased)
-        .map((row) => ({ id: row.id, name: `${row.firstName} ${row.lastName}` })),
+        .map((row) => ({
+          id: row.id,
+          name: `${row.firstName} ${row.lastName}`,
+        })),
     },
     {
       key: "category",
@@ -237,11 +240,11 @@ export function Mercy() {
             ? households
             : households.filter(
                 (row) =>
-                  assigned.get(row.id)?.deaconUids.includes(viewer?.uid || "") ||
+                  assigned
+                    .get(row.id)
+                    ?.deaconUids.includes(viewer?.uid || "") ||
                   data?.requests.some(
-                    (r) =>
-                      r.householdId === row.id &&
-                      r.details !== undefined,
+                    (r) => r.householdId === row.id && r.details !== undefined,
                   ),
               ),
         },
@@ -460,7 +463,8 @@ export function Mercy() {
         icon={<LockClosedRegular />}
       >
         Mercy ministry · {PRIVATE_TEXT}. Triage shows who needs which kind of
-        help, never the notes. {viewer ? `You are viewing as: ${roleLabel}.` : ""}
+        help, never the notes.{" "}
+        {viewer ? `You are viewing as: ${roleLabel}.` : ""}
       </MessageBar>
       {(error || loadError || congregation.error) && (
         <MessageBar intent="error">
@@ -543,7 +547,9 @@ export function Mercy() {
                           {row.neededBy ? ` · by ${row.neededBy}` : ""}
                         </td>
                         <td>{mercyStatusLabels[row.status]}</td>
-                        <td>{row.deaconUids.map(deacon).join(", ") || "None"}</td>
+                        <td>
+                          {row.deaconUids.map(deacon).join(", ") || "None"}
+                        </td>
                         <td>
                           {row.details ?? PRIVATE_TEXT}
                           {row.outcome ? ` · Outcome: ${row.outcome}` : ""}
@@ -724,10 +730,7 @@ export function Mercy() {
                         </td>
                         <td>
                           {row.authorUid === viewer?.uid && (
-                            <Button
-                              size="small"
-                              onClick={() => note({}, row)}
-                            >
+                            <Button size="small" onClick={() => note({}, row)}>
                               Edit
                             </Button>
                           )}
@@ -931,7 +934,10 @@ export function Mercy() {
         />
       )}
       {sharing && (
-        <Dialog open onOpenChange={(_, value) => !value.open && setSharing(null)}>
+        <Dialog
+          open
+          onOpenChange={(_, value) => !value.open && setSharing(null)}
+        >
           <DialogSurface>
             <DialogBody>
               <DialogTitle>Share this note with the Session</DialogTitle>

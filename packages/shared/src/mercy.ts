@@ -70,28 +70,27 @@ export const mercyRequestSchema = z
     details: z.string().trim().min(1).max(4000),
   })
   .strict();
-export const mercyTriageSchema = z
-  .discriminatedUnion("action", [
-    z
-      .object({
-        id: idSchema,
-        expectedRevision: z.number().int().nonnegative(),
-        action: z.enum(["approve", "reassign"]),
-        deaconUids: deacons(4).refine(
-          (ids) => ids.length > 0,
-          "Assign at least one deacon",
-        ),
-      })
-      .strict(),
-    z
-      .object({
-        id: idSchema,
-        expectedRevision: z.number().int().nonnegative(),
-        action: z.literal("decline"),
-        reason: z.string().trim().min(1).max(1000),
-      })
-      .strict(),
-  ]);
+export const mercyTriageSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      id: idSchema,
+      expectedRevision: z.number().int().nonnegative(),
+      action: z.enum(["approve", "reassign"]),
+      deaconUids: deacons(4).refine(
+        (ids) => ids.length > 0,
+        "Assign at least one deacon",
+      ),
+    })
+    .strict(),
+  z
+    .object({
+      id: idSchema,
+      expectedRevision: z.number().int().nonnegative(),
+      action: z.literal("decline"),
+      reason: z.string().trim().min(1).max(1000),
+    })
+    .strict(),
+]);
 export const mercyProgressSchema = z
   .object({
     id: idSchema,

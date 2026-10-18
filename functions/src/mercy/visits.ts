@@ -59,7 +59,13 @@ export const saveMercyVisit = onCall(privateOptions, async (request) => {
       ...((linked?.get("deaconUids") || []) as string[]),
     ];
     if (!canReadMercy(viewer, serving)) {
-      await securityEvent(viewer.uid, "mercy.access", "denied", "mercy", ref.path);
+      await securityEvent(
+        viewer.uid,
+        "mercy.access",
+        "denied",
+        "mercy",
+        ref.path,
+      );
       throw new HttpsError(
         "permission-denied",
         "Only the assigned deacons and the Pastor can plan these visits.",
@@ -122,7 +128,13 @@ export const completeMercyVisit = onCall(privateOptions, async (request) => {
       ...((linked?.get("deaconUids") || []) as string[]),
     ];
     if (!canReadMercy(viewer, serving)) {
-      await securityEvent(viewer.uid, "mercy.access", "denied", "mercy", ref.path);
+      await securityEvent(
+        viewer.uid,
+        "mercy.access",
+        "denied",
+        "mercy",
+        ref.path,
+      );
       throw new HttpsError(
         "permission-denied",
         "Only the assigned deacons and the Pastor can complete this visit.",

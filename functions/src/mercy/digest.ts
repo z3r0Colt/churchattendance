@@ -1,4 +1,7 @@
-import { Timestamp, type QueryDocumentSnapshot } from "firebase-admin/firestore";
+import {
+  Timestamp,
+  type QueryDocumentSnapshot,
+} from "firebase-admin/firestore";
 import { DateTime } from "luxon";
 import {
   digestClock,
@@ -41,17 +44,25 @@ export async function processDeaconDigests(now: Date) {
   if (!clock.deacon || !channels.length) return;
   const local = DateTime.fromJSDate(now, { zone });
   const dateLabel = local.toFormat("LLL d, yyyy");
-  const [deacons, chairs, households, assignments, requests, tasks, mercy, joint] =
-    await Promise.all([
-      liveDeacons(),
-      mercySettings(),
-      db.collection("households").get(),
-      db.collection("mercyAssignments").get(),
-      db.collection("mercyRequests").get(),
-      db.collection("mercyTasks").where("done", "==", false).get(),
-      db.collection("mercyVisits").where("status", "==", "planned").get(),
-      db.collection("pastoralVisits").where("status", "==", "planned").get(),
-    ]);
+  const [
+    deacons,
+    chairs,
+    households,
+    assignments,
+    requests,
+    tasks,
+    mercy,
+    joint,
+  ] = await Promise.all([
+    liveDeacons(),
+    mercySettings(),
+    db.collection("households").get(),
+    db.collection("mercyAssignments").get(),
+    db.collection("mercyRequests").get(),
+    db.collection("mercyTasks").where("done", "==", false).get(),
+    db.collection("mercyVisits").where("status", "==", "planned").get(),
+    db.collection("pastoralVisits").where("status", "==", "planned").get(),
+  ]);
   const household = (id: string) =>
     (households.docs.find((row) => row.id === id)?.get("name") as string) ||
     "Household";
@@ -97,9 +108,7 @@ export async function processDeaconDigests(now: Date) {
       {
         title: "Requests waiting for triage",
         names: uids.some((uid) => chairs.chairUids.includes(uid))
-          ? requests.docs
-              .filter((row) => row.get("status") === "new")
-              .map(help)
+          ? requests.docs.filter((row) => row.get("status") === "new").map(help)
           : [],
       },
       {
@@ -120,7 +129,8 @@ export async function processDeaconDigests(now: Date) {
               String(row.get("dueDate")) <= clock.date,
           )
           .map(
-            (row) => `${household(row.get("householdId"))} · ${row.get("dueDate")}`,
+            (row) =>
+              `${household(row.get("householdId"))} · ${row.get("dueDate")}`,
           ),
       },
       {

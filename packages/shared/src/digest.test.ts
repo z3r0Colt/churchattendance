@@ -133,12 +133,12 @@ describe("deacon digest", () => {
       deaconDigestHour: 8,
     });
     // 12:30 UTC is 8:30 AM in the church time zone in November.
-    expect(
-      digestClock(new Date("2026-11-02T12:30:00Z"), zone, on).deacon,
-    ).toBe(false);
-    expect(
-      digestClock(new Date("2026-11-02T13:30:00Z"), zone, on).deacon,
-    ).toBe(true);
+    expect(digestClock(new Date("2026-11-02T12:30:00Z"), zone, on).deacon).toBe(
+      false,
+    );
+    expect(digestClock(new Date("2026-11-02T13:30:00Z"), zone, on).deacon).toBe(
+      true,
+    );
     expect(
       digestClock(new Date("2026-11-02T20:00:00Z"), zone, settings).deacon,
     ).toBe(false);
@@ -149,7 +149,9 @@ describe("deacon digest", () => {
     ];
     expect(
       digestText(sections, "email", "Nov 2, 2026", "Mercy ministry summary"),
-    ).toContain("Mercy ministry summary for Nov 2, 2026.\n\nYour open requests (1)\nCalder · Meals");
+    ).toContain(
+      "Mercy ministry summary for Nov 2, 2026.\n\nYour open requests (1)\nCalder · Meals",
+    );
     const text = digestText(
       sections,
       "sms",

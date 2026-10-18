@@ -1,4 +1,8 @@
-import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
+import {
+  onCall,
+  HttpsError,
+  type CallableRequest,
+} from "firebase-functions/v2/https";
 import {
   Timestamp,
   type DocumentSnapshot,
@@ -65,7 +69,11 @@ export async function mercyViewer(request: CallableRequest) {
   };
   return { viewer, settings };
 }
-async function deny(uid: string, path: string, message: string): Promise<never> {
+async function deny(
+  uid: string,
+  path: string,
+  message: string,
+): Promise<never> {
   await securityEvent(uid, "mercy.access", "denied", "mercy", path);
   throw new HttpsError("permission-denied", message);
 }
@@ -162,7 +170,11 @@ async function requestContext(transaction: Transaction, id: string) {
         db.doc(`mercyAssignments/${before.get("householdId")}`),
       )
     : null;
-  return { ref, before, household: assignment ? householdDeacons(assignment) : [] };
+  return {
+    ref,
+    before,
+    household: assignment ? householdDeacons(assignment) : [],
+  };
 }
 function checkRevision(before: DocumentSnapshot, expected: number) {
   if (Number(before.get("revision") || 0) !== expected)
@@ -260,7 +272,9 @@ export const triageMercyRequest = onCall(privateOptions, async (request) => {
           ? "declined"
           : status;
     if (
-      input.action === "reassign" ? !mercyOpen(status) : !mercyTransition(status, next)
+      input.action === "reassign"
+        ? !mercyOpen(status)
+        : !mercyTransition(status, next)
     )
       throw new HttpsError(
         "failed-precondition",
@@ -346,7 +360,10 @@ export const saveMercyNote = onCall(privateOptions, async (request) => {
         ? transaction.get(db.doc(`mercyRequests/${input.requestId}`))
         : null,
     ]);
-    if (linked && (!linked.exists || linked.get("householdId") !== input.householdId))
+    if (
+      linked &&
+      (!linked.exists || linked.get("householdId") !== input.householdId)
+    )
       throw new HttpsError(
         "invalid-argument",
         "Link a request for this household.",
@@ -385,7 +402,10 @@ export const saveMercyNote = onCall(privateOptions, async (request) => {
         authorUid: viewer.uid,
         sharedWithSession: before.get("sharedWithSession") ?? false,
         ...(before.get("sharedBy")
-          ? { sharedBy: before.get("sharedBy"), sharedAt: before.get("sharedAt") }
+          ? {
+              sharedBy: before.get("sharedBy"),
+              sharedAt: before.get("sharedAt"),
+            }
           : {}),
         revision: expectedRevision + 1,
         createdAt: before.get("createdAt") ?? Timestamp.now(),
@@ -474,9 +494,7 @@ export const saveMercyTask = onCall(privateOptions, async (request) => {
         ref.path,
         "Only the assigned deacons and the Pastor can manage these tasks.",
       );
-    if (
-      ![...homeDeacons, ...requestDeacons].includes(input.assignedToUid)
-    )
+    if (![...homeDeacons, ...requestDeacons].includes(input.assignedToUid))
       throw new HttpsError(
         "invalid-argument",
         "Assign the task to a deacon serving this request or household.",
@@ -487,7 +505,10 @@ export const saveMercyTask = onCall(privateOptions, async (request) => {
         "Add tasks only to an open request.",
       );
     if (before.exists && before.get("requestId") !== input.requestId)
-      throw new HttpsError("invalid-argument", "Tasks stay with their request.");
+      throw new HttpsError(
+        "invalid-argument",
+        "Tasks stay with their request.",
+      );
     if (Number(before.get("revision") || 0) !== expectedRevision)
       throw new HttpsError(
         "aborted",
@@ -516,7 +537,10 @@ async function liveStaff(allowed: readonly string[]) {
       const user = await getAuth()
         .getUser(row.id)
         .catch(() => null);
-      const roles = roleSchema.array().catch([]).parse(user?.customClaims?.roles);
+      const roles = roleSchema
+        .array()
+        .catch([])
+        .parse(user?.customClaims?.roles);
       return user && !user.disabled && hasRole(roles, allowed as typeof roles)
         ? {
             uid: row.id,
@@ -615,7 +639,8 @@ export const getMercyWorkspace = onCall(privateOptions, async (request) => {
     officers: officers.map(({ uid, name }) => ({ uid, name })),
     assignments: assignmentRows.docs
       .filter(
-        (row) => triage || viewer.pastor || householdDeacons(row).includes(viewer.uid),
+        (row) =>
+          triage || viewer.pastor || householdDeacons(row).includes(viewer.uid),
       )
       .map((row) => ({
         householdId: row.id,

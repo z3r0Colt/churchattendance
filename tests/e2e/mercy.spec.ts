@@ -201,9 +201,7 @@ test("keeps practical requests, notes and tasks with assigned deacons and the Pa
 
   const own = await workspace(request, "m9-deacon");
   expect(own.notes[0].body).toBe("Fictional mercy note about the meal rota");
-  expect(own.tasks[0].title).toBe(
-    "Fictional task to collect a casserole dish",
-  );
+  expect(own.tasks[0].title).toBe("Fictional task to collect a casserole dish");
   // Another deacon sees nothing. The chair, an elder and the Session triage without reading.
   const other = await workspace(request, "m9-deacon-two");
   expect(other.requests).toHaveLength(0);
@@ -217,7 +215,9 @@ test("keeps practical requests, notes and tasks with assigned deacons and the Pa
     });
     expect(triage.notes).toHaveLength(0);
     expect(triage.tasks).toHaveLength(0);
-    expect(JSON.stringify(triage)).not.toMatch(/Fictional meals|meal rota|casserole/);
+    expect(JSON.stringify(triage)).not.toMatch(
+      /Fictional meals|meal rota|casserole/,
+    );
   }
   const pastor = await workspace(request, "pastor");
   expect(pastor.requests[0].details).toBe(meals.details);
@@ -342,13 +342,7 @@ test("transfers a household without leaving the former deacon access, and shares
     sharedBy: "m9-deacon-two",
   });
   expect((await workspace(request, "m9-deacon")).notes).toHaveLength(0);
-  await call(
-    request,
-    "getSecurityEvents",
-    { scope: "mercy" },
-    403,
-    "m9-elder",
-  );
+  await call(request, "getSecurityEvents", { scope: "mercy" }, 403, "m9-elder");
   const log = await call(
     request,
     "getSecurityEvents",
@@ -366,16 +360,12 @@ test("declines a request with a sealed reason and refuses closed or stale change
 }) => {
   await call(request, "saveMercyRequest", meals, 200, "m9-deacon-two");
   // The deacon who raised it sees its state but not the details after triage.
-  await call(
-    request,
-    "triageMercyRequest",
-    {
-      id: "m9-request",
-      expectedRevision: 1,
-      action: "decline",
-      reason: "Fictional reason: family is helping",
-    },
-  );
+  await call(request, "triageMercyRequest", {
+    id: "m9-request",
+    expectedRevision: 1,
+    action: "decline",
+    reason: "Fictional reason: family is helping",
+  });
   const raised = await workspace(request, "m9-deacon-two");
   expect(raised.requests[0]).toMatchObject({ status: "declined" });
   expect(raised.requests[0].details).toBeUndefined();
@@ -427,8 +417,12 @@ test("lets an assigned deacon read a request and write a mercy note from the des
     deaconUids: ["m9-deacon"],
   });
   await login(page, "m9-deacon@example.test");
-  await page.getByRole("button", { name: "Mercy ministry", exact: true }).click();
-  await expect(page.getByText("You are viewing as: Assigned deacon.")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Mercy ministry", exact: true })
+    .click();
+  await expect(
+    page.getByText("You are viewing as: Assigned deacon."),
+  ).toBeVisible();
   await expect(
     page.getByRole("cell", { name: "Fictional meals after a hospital stay" }),
   ).toBeVisible();
