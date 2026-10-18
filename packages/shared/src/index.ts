@@ -7,3 +7,4 @@ export * from "./attendance-reports.js";
 export * from "./security.js";
 export * from "./shepherding.js";
 export * from "./contact.js";
+export * from "./geography.js";

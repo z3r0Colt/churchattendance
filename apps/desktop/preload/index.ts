@@ -14,4 +14,6 @@ contextBridge.exposeInMainWorld("desktop", {
     filename?: "sycamore-archive.xlsx",
   ): Promise<boolean> => ipcRenderer.invoke("save-xlsx", bytes, filename),
   printReport: (): Promise<boolean> => ipcRenderer.invoke("print-report"),
+  openDirections: (stops: string[]): Promise<void> =>
+    ipcRenderer.invoke("open-directions", stops),
 });

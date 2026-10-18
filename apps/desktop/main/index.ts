@@ -11,6 +11,7 @@ import { writeFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { directionsUrl } from "@sycamore/shared";
 
 let window: BrowserWindow | null = null;
 declare const __STAFF_AUTH_ORIGIN__: string;
@@ -46,6 +47,13 @@ app.whenReady().then(async () => {
     if (app.isPackaged && (url.protocol !== "https:" || url.hostname.endsWith(".invalid"))) throw new Error("Configure the staff security origin before building the installer");
     url.hash = new URLSearchParams({ id, challenge }).toString();
     await shell.openExternal(url.href);
+  });
+  // The renderer sends stop addresses, never a URL. Only a Google Maps directions link is opened.
+  ipcMain.handle("open-directions", async (event, stops: unknown) => {
+    trusted(event);
+    if (!Array.isArray(stops) || stops.some((stop) => typeof stop !== "string"))
+      throw new Error("Invalid route");
+    await shell.openExternal(directionsUrl(stops as string[]));
   });
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());

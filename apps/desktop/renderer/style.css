@@ -450,3 +450,10 @@ th {
 .report-metrics .surface { padding:20px; }
 .dashboard-columns { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px; }
 @media (max-width:1199px) { .dashboard-columns { grid-template-columns:1fr; } }
+.location-plot { display: block; width: 100%; max-width: 640px; height: auto; margin: 12px 0; }
+.location-plot .plot-ground { fill: var(--colorNeutralBackground2); stroke: var(--colorNeutralStroke1); }
+.location-plot .plot-point { fill: var(--colorNeutralForeground2); }
+.location-plot .plot-stop { fill: var(--colorBrandBackground); }
+.location-plot .plot-number { fill: var(--colorNeutralForegroundOnBrand); font-size: 12px; font-weight: 600; }
+.location-plot .plot-label { fill: var(--colorNeutralForeground1); font-size: 12px; }
+.route-list li { display: flex; align-items: center; gap: 8px; min-height: 40px; }

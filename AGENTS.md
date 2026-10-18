@@ -53,11 +53,11 @@ These are created in Phase 1. Keep the names stable.
 | `npm run build` | Build renderer, main, preload and functions |
 | `npm run dist` | Build the Windows installer |
 
-Before every commit run `npm run lint`, `npm run typecheck` and `npm test`. If you touched `firestore.rules`, `storage.rules`, roles, or anything under `sessionPrivate`, `careNotes`, `followUps`, `diaconalTasks`, `pastoralVisits`, `visitRounds` or `shepherdingSettings`, also run `npm run test:rules`.
+Before every commit run `npm run lint`, `npm run typecheck` and `npm test`. If you touched `firestore.rules`, `storage.rules`, roles, or anything under `sessionPrivate`, `careNotes`, `followUps`, `diaconalTasks`, `pastoralVisits`, `visitRounds`, `shepherdingSettings` or `householdLocations`, also run `npm run test:rules`.
 
 ## Security and privacy rules (never break these)
 
-1. **Session only data.** `sessionPrivate`, `careNotes`, `followUps`, `pastoralVisits`, `visitRounds` and `shepherdingSettings` may be accessed only by users whose role is Pastor, Clerk or Elder, through audited callable APIs. Direct client reads/writes are denied even for Session. An Admin who is not on Session cannot read them. Deacons may only read and complete `diaconalTasks` assigned to them through those APIs, and may see only the logistics (time, place, household and officer names) of visits they are invited to through `getVisitLogistics`. Every permission change needs passing allow/deny tests.
+1. **Session only data.** `sessionPrivate`, `careNotes`, `followUps`, `pastoralVisits`, `visitRounds`, `shepherdingSettings` and `householdLocations` may be accessed only by users whose role is Pastor, Clerk or Elder, through audited callable APIs. Direct client reads/writes are denied even for Session. An Admin who is not on Session cannot read them. Deacons may only read and complete `diaconalTasks` assigned to them through those APIs, and may see only the logistics (time, place, household and officer names) of visits they are invited to through `getVisitLogistics`. Every permission change needs passing allow/deny tests.
 2. **Locking is per document.** Firestore rules cannot hide a single field, so never put sensitive data on `people/{id}`. Put it in a Session only collection.
 3. **No secrets on the client.** Twilio, Microsoft Graph and any other credentials live only in Secret Manager and are used only by Cloud Functions. The Firebase web config is public by design and may ship in the app.
 4. **Electron hardening.** Keep `contextIsolation: true`, `nodeIntegration: false` and `sandbox: true`. The renderer talks to the OS only through named functions in `preload`. Never expose `ipcRenderer` or `require` directly. Do not load remote content into app windows.

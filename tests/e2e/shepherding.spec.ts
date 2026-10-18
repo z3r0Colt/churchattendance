@@ -76,6 +76,7 @@ test.beforeEach(async () => {
     "communicationBudgets",
     "communicationSuppressions",
     "shepherdingSettings",
+    "householdLocations",
     "smsInbox",
   ])
     await db.recursiveDelete(db.collection(name));
@@ -706,4 +707,192 @@ test("saves the digest schedule and channel from Settings", async ({
       (await db.doc("communicationSettings/church").get()).data(),
     )
     .toMatchObject({ digestChannel: "sms", digestWeekday: 2, absenceWeeks: 4 });
+});
+
+async function withAddresses(
+  addresses: Record<string, string>,
+  run: () => Promise<void>,
+) {
+  for (const [id, address] of Object.entries(addresses))
+    await db.doc(`households/${id}`).update({ address });
+  try {
+    await run();
+  } finally {
+    for (const id of Object.keys(addresses))
+      await db.doc(`households/${id}`).update({ address: "" });
+  }
+}
+test("looks up locations only when allowed, waits for confirmation and flags changed addresses", async ({
+  request,
+}) => {
+  for (const account of ["p8-admin", "p8-deacon"]) {
+    await call(request, "getHouseholdLocations", {}, 403, account);
+    await call(
+      request,
+      "saveGeographySettings",
+      { geocoder: "census" },
+      403,
+      account,
+    );
+    await call(
+      request,
+      "lookupHouseholdLocation",
+      { householdId: "calder" },
+      403,
+      account,
+    );
+  }
+  await withAddresses(
+    {
+      calder: "100 Fictional Way, Springfield, IN",
+      baker: "200 No Match Road, Springfield, IN",
+    },
+    async () => {
+      // Lookups are off until a Session officer turns them on.
+      await call(
+        request,
+        "lookupHouseholdLocation",
+        { householdId: "calder" },
+        400,
+      );
+      await call(request, "saveGeographySettings", { geocoder: "census" });
+      await call(
+        request,
+        "lookupHouseholdLocation",
+        { householdId: "moss" },
+        400,
+      );
+      await call(
+        request,
+        "lookupHouseholdLocation",
+        { householdId: "baker" },
+        404,
+      );
+      await call(request, "lookupHouseholdLocation", { householdId: "calder" });
+      const found = (await call(request, "getHouseholdLocations", {}))
+        .locations;
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({
+        householdId: "calder",
+        provenance: "census",
+        verified: false,
+        addressChanged: false,
+        matchedAddress: "100 FICTIONAL WAY, SPRINGFIELD, IN",
+      });
+      await call(request, "confirmHouseholdLocation", {
+        householdId: "calder",
+        expectedRevision: 1,
+      });
+      await db
+        .doc("households/calder")
+        .update({ address: "300 Moved Lane, Springfield, IN" });
+      const moved = (await call(request, "getHouseholdLocations", {}))
+        .locations[0];
+      expect(moved).toMatchObject({ verified: true, addressChanged: true });
+      await call(
+        request,
+        "confirmHouseholdLocation",
+        { householdId: "calder", expectedRevision: 2 },
+        400,
+      );
+      await call(request, "saveHouseholdLocation", {
+        householdId: "baker",
+        lat: 39.77,
+        lng: -86.15,
+      });
+      const manual = (
+        await call(request, "getHouseholdLocations", {})
+      ).locations.find(
+        (row: { householdId: string }) => row.householdId === "baker",
+      );
+      expect(manual).toMatchObject({ provenance: "manual", verified: true });
+      const events = await db
+        .collection("securityEvents")
+        .where("action", "==", "location.lookup")
+        .get();
+      expect(
+        events.docs.map((row) => `${row.get("outcome")} ${row.get("target")}`),
+      ).toEqual(
+        expect.arrayContaining([
+          "failure households/baker",
+          "success households/calder",
+        ]),
+      );
+      expect(
+        JSON.stringify(events.docs.map((row) => row.data())),
+      ).not.toContain("Fictional Way");
+    },
+  );
+});
+test("plots only confirmed households and previews the addresses before opening directions", async ({
+  page,
+  request,
+}) => {
+  await withAddresses(
+    {
+      calder: "100 Fictional Way, Springfield, IN",
+      baker: "200 Example Road, Springfield, IN",
+    },
+    async () => {
+      await call(request, "saveHouseholdLocation", {
+        householdId: "calder",
+        lat: 39.78,
+        lng: -86.16,
+      });
+      await call(request, "saveHouseholdLocation", {
+        householdId: "baker",
+        lat: 39.8,
+        lng: -86.1,
+      });
+      await login(page);
+      await page
+        .getByRole("button", {
+          name: "Shepherding · Session only",
+          exact: true,
+        })
+        .click();
+      await page.getByRole("tab", { name: "Locations and routes" }).click();
+      await expect(
+        page.getByRole("img", {
+          name: "Sketch of 2 confirmed household locations",
+        }),
+      ).toBeVisible();
+      await expect(page.getByRole("row", { name: /Moss/ })).toContainText(
+        "No address on file",
+      );
+      await page.getByRole("checkbox", { name: "Calder" }).check();
+      await page.getByRole("checkbox", { name: "Baker" }).check();
+      await page.getByRole("button", { name: "Move Baker earlier" }).click();
+      await page.evaluate(() => {
+        window.open = (url) => {
+          (window as unknown as { opened: string }).opened = String(url);
+          return null;
+        };
+      });
+      await page.getByRole("button", { name: "Preview directions" }).click();
+      const list = page.getByRole("list", { name: "Addresses to send" });
+      await expect(list.getByRole("listitem")).toHaveText([
+        "200 Example Road, Springfield, IN",
+        "100 Fictional Way, Springfield, IN",
+      ]);
+      await page.screenshot({
+        path: "test-results/phase8-route-preview.png",
+        animations: "disabled",
+      });
+      await page.getByRole("button", { name: "Open in Google Maps" }).click();
+      const opened = new URL(
+        await page.evaluate(
+          () => (window as unknown as { opened: string }).opened,
+        ),
+      );
+      expect(opened.searchParams.get("origin")).toBe(
+        "200 Example Road, Springfield, IN",
+      );
+      expect(opened.searchParams.get("destination")).toBe(
+        "100 Fictional Way, Springfield, IN",
+      );
+      expect(opened.href).not.toContain("Calder");
+      expect(opened.href).not.toContain("Baker");
+    },
+  );
 });

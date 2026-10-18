@@ -3,12 +3,16 @@ import {
   SESSION_ROLES,
   completeVisitSchema,
   contactPolicySchema,
+  geographySettingsSchema,
+  householdLocationActionSchema,
+  householdLocationSchema,
   hasRole,
   visitRoundSchema,
   visitSchema,
   type CareNote,
   type ContactEvent,
   type ContactPolicy,
+  type HouseholdLocation,
   type PastoralVisit,
   type Role,
   type VisitLogistics,
@@ -126,3 +130,49 @@ export function useContactHistory(enabled: boolean) {
 }
 export const saveContactPolicy = (value: unknown) =>
   chmsCall("saveContactPolicy", contactPolicySchema.parse(value));
+export type LocationData = {
+  settings: { geocoder: "none" | "census"; revision: number };
+  locations: HouseholdLocation[];
+};
+export function useHouseholdLocations(enabled: boolean) {
+  const [state, setState] = useState<{
+    data: LocationData | null;
+    error: string;
+  }>({ data: null, error: "" });
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      enabled &&
+      void chmsCall<LocationData>("getHouseholdLocations", {})
+        .then((data) => active && setState({ data, error: "" }))
+        .catch(
+          () =>
+            active &&
+            setState({
+              data: null,
+              error: "Household locations could not be loaded.",
+            }),
+        );
+    load();
+    window.addEventListener("private-records-changed", load);
+    return () => {
+      active = false;
+      window.removeEventListener("private-records-changed", load);
+    };
+  }, [enabled]);
+  return state;
+}
+export const saveGeographySettings = (value: unknown) =>
+  chmsCall("saveGeographySettings", geographySettingsSchema.parse(value));
+export const lookupHouseholdLocation = (value: unknown) =>
+  chmsCall(
+    "lookupHouseholdLocation",
+    householdLocationActionSchema.parse(value),
+  );
+export const confirmHouseholdLocation = (value: unknown) =>
+  chmsCall(
+    "confirmHouseholdLocation",
+    householdLocationActionSchema.parse(value),
+  );
+export const saveHouseholdLocation = (value: unknown) =>
+  chmsCall("saveHouseholdLocation", householdLocationSchema.parse(value));

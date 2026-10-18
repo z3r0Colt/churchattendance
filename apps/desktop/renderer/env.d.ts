@@ -10,5 +10,6 @@ interface Window {
     ): Promise<boolean>;
     printReport(): Promise<boolean>;
     previewPdf(bytes: number[]): Promise<boolean>;
+    openDirections(stops: string[]): Promise<void>;
   };
 }

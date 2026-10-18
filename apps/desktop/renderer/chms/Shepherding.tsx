@@ -47,6 +47,7 @@ import {
   type EditorField,
 } from "./Common";
 import { ContactGaps } from "./ContactGaps";
+import { Locations } from "./Locations";
 
 const stateLabels: Record<VisitState, string> = {
   upcoming: "Upcoming",
@@ -241,8 +242,10 @@ export function Shepherding({ roles }: { roles: Role[] }) {
         <Tab value="workload">Workload</Tab>
         <Tab value="rounds">Visit rounds</Tab>
         <Tab value="contact">Contact gaps</Tab>
+        <Tab value="locations">Locations and routes</Tab>
       </TabList>
       {tab === "contact" && <ContactGaps data={data} />}
+      {tab === "locations" && <Locations data={data} />}
       {tab === "visits" && (
         <>
           <div className="report-filters">
