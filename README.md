@@ -1,6 +1,6 @@
 # Sycamore RPC attendance
 
-Phase 1 foundation for the Windows desktop app described in `PLAN.md` and `DESIGN.md`.
+Attendance and communication for the Windows desktop app described in `PLAN.md` and `DESIGN.md`.
 
 ## Run locally
 
@@ -40,6 +40,12 @@ Functions bundle shared schemas into their output so deployment does not depend 
 
 ## Remaining Phase 1 work
 
-Person editing and membership history screens, contact details, elder districts, user/service-type setup screens, full attendance reports with charts and historical membership categories, backup provisioning and Export Everything, signed installer/release testing, offline restart recovery, and update publishing remain. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
+Full person editing and membership history screens, elder districts, user/service-type setup screens, full attendance reports with charts and historical membership categories, backup provisioning and Export Everything, signed installer/release testing, offline restart recovery, and update publishing remain. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
 
-Messages, Microsoft Graph, Twilio, bulletin automation and pastoral editing are later phases. There is no giving or financial tracking.
+## Phase 2 communication
+
+Messages now supports email and text, recipient previews, reusable templates and lists, consent records, scheduled delivery, a reply inbox and per-person history. Bulletin supports app uploads, Microsoft folder pickup, Pastor previews, Saturday reminders and a weekly send. Elder absence alerts use three recorded Lord's Days and go only to linked Session recipients with consent.
+
+Microsoft Graph and Twilio adapters are implemented behind provider interfaces. Local emulators always use fakes. Provider credentials remain in Secret Manager, and the app receives no credentials. Live delivery remains disabled until the church accounts and server settings are configured.
+
+Read [Communication setup](docs/COMMUNICATIONS_SETUP.md) for the Microsoft, Twilio and Firebase steps, delivery limits and verification requirements. No live accounts or DNS records were changed by this implementation. Remaining Phase 1 work listed above is still separate. Pastoral editing belongs to Phase 3. There is no giving or financial tracking.

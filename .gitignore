@@ -15,3 +15,8 @@ playwright-report/
 test-results/
 coverage/
 *.tsbuildinfo
+.secret.local
+communication-config.json
+*.secrets.json
+service-account*.json
+.firebase/

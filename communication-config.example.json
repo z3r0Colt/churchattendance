@@ -1,0 +1,15 @@
+{
+  "publicFunctionsUrl": "https://us-central1-YOUR_PROJECT.cloudfunctions.net",
+  "unsubscribeSecret": "REPLACE_WITH_A_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS",
+  "graph": {
+    "tenantId": "YOUR_MICROSOFT_TENANT_ID",
+    "clientId": "YOUR_MICROSOFT_APPLICATION_ID",
+    "clientSecret": "YOUR_MICROSOFT_CLIENT_SECRET",
+    "mailbox": "office@sycamorerpc.org"
+  },
+  "twilio": {
+    "accountSid": "AC00000000000000000000000000000000",
+    "authToken": "YOUR_TWILIO_AUTH_TOKEN",
+    "from": "+12025550100"
+  }
+}

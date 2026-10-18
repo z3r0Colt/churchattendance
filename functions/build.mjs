@@ -8,5 +8,5 @@ await build({
   platform: "node",
   target: "node22",
   format: "esm",
-  external: ["firebase-admin/*", "firebase-functions/*"],
+  external: ["firebase-admin/*", "firebase-functions/*", "twilio"],
 });

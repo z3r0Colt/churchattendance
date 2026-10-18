@@ -4,12 +4,96 @@
       "collectionGroup": "services",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "serviceTypeId", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        {
+          "fieldPath": "serviceTypeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduledFor",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sessionOnly",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "selectedPersonIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "selectedPersonIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "sessionOnly",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "smsInbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "personIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "receivedAt",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],
   "fieldOverrides": [
-    { "collectionGroup": "services", "fieldPath": "present", "indexes": [] }
+    {
+      "collectionGroup": "services",
+      "fieldPath": "present",
+      "indexes": []
+    }
   ]
 }

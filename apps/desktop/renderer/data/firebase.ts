@@ -7,7 +7,8 @@ import {
   persistentMultipleTabManager,
 } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
-const emulators =
+import { connectStorageEmulator, getStorage } from "firebase/storage";
+export const emulators =
   import.meta.env.VITE_USE_EMULATORS === "true" || import.meta.env.DEV;
 export const configured =
   emulators || !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
@@ -28,8 +29,10 @@ export const db = initializeFirestore(app, {
   }),
 });
 export const functions = getFunctions(app, "us-central1");
+export const storage = getStorage(app);
 if (emulators) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
 }

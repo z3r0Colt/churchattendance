@@ -7,7 +7,7 @@ if (
   !process.env.FIREBASE_AUTH_EMULATOR_HOST
 )
   throw new Error("Seed requires running Auth and Firestore emulators.");
-initializeApp({ projectId: "demo-sycamore" });
+initializeApp({ projectId: "demo-sycamore", storageBucket: "demo-sycamore.appspot.com" });
 const db = getFirestore();
 const auth = getAuth();
 for (const [uid, email, roles] of [
@@ -25,6 +25,7 @@ for (const [uid, email, roles] of [
     });
   }
   await auth.setCustomUserClaims(uid, { roles });
+  await db.doc(`users/${uid}`).set({ personId: uid === "demo-pastor" ? "james" : "", displayName: uid === "demo-pastor" ? "James Calder" : "Alex Booth", roles });
 }
 if (!(await db.doc("settings/church").get()).exists) {
   await db
@@ -72,6 +73,11 @@ if (!(await db.doc("settings/church").get()).exists) {
       isDeceased: false,
       elderDistrictId: "",
     };
+    if (id === "james" || id === "ruth") {
+      person.email = id === "james" ? "pastor@example.test" : "ruth@example.test";
+      person.mobilePhone = id === "james" ? "+12025550101" : "+12025550102";
+      person.emailOptIn = true; person.smsOptIn = true;
+    }
     await db.doc(`people/${id}`).set(person);
     await db
       .doc(`attendanceRoster/${id}`)
@@ -86,6 +92,10 @@ if (!(await db.doc("settings/church").get()).exists) {
         isDeceased: false,
       });
   }
+}
+if (!(await db.doc("communicationSettings/church").get()).exists) {
+  const { communicationSettingsSchema } = await import("@sycamore/shared");
+  await db.doc("communicationSettings/church").set(communicationSettingsSchema.parse({ emailEnabled: true, smsEnabled: true, previewPersonId: "james", reminderPersonId: "ruth" }));
 }
 console.log(
   "Emulator data ready. Sign in as pastor@example.test or volunteer@example.test with LocalDemo123!",

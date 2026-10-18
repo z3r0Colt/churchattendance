@@ -315,3 +315,170 @@ describe("Storage", () => {
     );
   });
 });
+describe("communication access", () => {
+  for (const collection of [
+    "smsInbox",
+    "messageTemplates",
+    "savedAudiences",
+    "communicationSettings",
+    "automationStatus",
+    "bulletins",
+    "consentEvents",
+  ]) {
+    it(`${collection} permits communicators, denies other readers and all direct writes`, async () => {
+      const path = `${collection}/church`;
+      await env.withSecurityRulesDisabled((context) =>
+        setDoc(doc(context.firestore(), path), { example: true }),
+      );
+      for (const role of ["admin", "pastor", "clerk", "elder"])
+        await assertSucceeds(getDoc(doc(auth(role).firestore(), path)));
+      for (const role of ["deacon", "attendanceVolunteer", "readOnly"])
+        await assertFails(getDoc(doc(auth(role).firestore(), path)));
+      await assertFails(
+        getDoc(doc(env.unauthenticatedContext().firestore(), path)),
+      );
+      await assertFails(
+        setDoc(doc(auth("admin").firestore(), path), { forged: true }),
+      );
+    });
+  }
+  it("keeps Session-only message bodies and recipient details from an Admin", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "messages/public"), {
+        sessionOnly: false,
+      });
+      await setDoc(doc(context.firestore(), "messages/private"), {
+        sessionOnly: true,
+      });
+      await setDoc(
+        doc(context.firestore(), "messages/private/recipients/elder"),
+        { address: "elder@example.test" },
+      );
+      await setDoc(
+        doc(context.firestore(), "messages/public/recipients/reader"),
+        { address: "reader@example.test" },
+      );
+    });
+    await assertSucceeds(
+      getDoc(doc(auth("admin").firestore(), "messages/public")),
+    );
+    await assertSucceeds(
+      getDoc(
+        doc(auth("admin").firestore(), "messages/public/recipients/reader"),
+      ),
+    );
+    for (const path of [
+      "messages/private",
+      "messages/private/recipients/elder",
+    ]) {
+      await assertSucceeds(getDoc(doc(auth("elder").firestore(), path)));
+      await assertFails(getDoc(doc(auth("admin").firestore(), path)));
+      await assertFails(getDoc(doc(auth("deacon").firestore(), path)));
+    }
+    await assertFails(
+      setDoc(doc(auth("pastor").firestore(), "messages/public"), {
+        status: "sent",
+      }),
+    );
+    await assertFails(
+      setDoc(
+        doc(auth("pastor").firestore(), "messages/public/recipients/reader"),
+        { status: "delivered" },
+      ),
+    );
+  });
+  it("never exposes suppression records, send budgets, link tokens or emulator delivery payloads", async () => {
+    for (const collection of [
+      "communicationSuppressions",
+      "communicationBudgets",
+      "bulletinLinks",
+      "emulatorDeliveries",
+      "emulatorDriveFiles",
+    ]) {
+      await env.withSecurityRulesDisabled((context) =>
+        setDoc(doc(context.firestore(), `${collection}/secret`), {
+          private: true,
+        }),
+      );
+      await assertFails(
+        getDoc(doc(auth("pastor").firestore(), `${collection}/secret`)),
+      );
+      await assertFails(
+        setDoc(doc(auth("admin").firestore(), `${collection}/secret`), {
+          blocked: false,
+        }),
+      );
+    }
+    for (const collection of ["elderDistricts", "groups"]) {
+      await env.withSecurityRulesDisabled((context) =>
+        setDoc(doc(context.firestore(), `${collection}/north`), {
+          name: "North",
+        }),
+      );
+      await assertSucceeds(
+        getDoc(doc(auth("deacon").firestore(), `${collection}/north`)),
+      );
+      await assertFails(
+        getDoc(
+          doc(auth("attendanceVolunteer").firestore(), `${collection}/north`),
+        ),
+      );
+      await assertFails(
+        setDoc(doc(auth("admin").firestore(), `${collection}/north`), {
+          name: "Changed",
+        }),
+      );
+    }
+  });
+  it("allows immutable PDF uploads by communicators and denies overwrites, foreign owners and other file types", async () => {
+    const pdf = new Uint8Array(Buffer.from("%PDF-fake"));
+    const path = "bulletins/2026-11-01/bulletin.pdf";
+    await assertSucceeds(
+      uploadBytes(ref(auth("clerk").storage(), path), pdf, {
+        contentType: "application/pdf",
+      }),
+    );
+    await assertSucceeds(getBytes(ref(auth("elder").storage(), path)));
+    await assertFails(
+      uploadBytes(ref(auth("admin").storage(), path), pdf, {
+        contentType: "application/pdf",
+      }),
+    );
+    await assertFails(deleteObject(ref(auth("admin").storage(), path)));
+    await assertFails(getBytes(ref(auth("deacon").storage(), path)));
+    await assertFails(
+      uploadBytes(
+        ref(
+          auth("attendanceVolunteer").storage(),
+          "bulletins/2026-11-01/no.pdf",
+        ),
+        pdf,
+        { contentType: "application/pdf" },
+      ),
+    );
+    await assertFails(
+      uploadBytes(
+        ref(auth("admin").storage(), "bulletins/2026-11-01/no.pdf"),
+        pdf,
+        { contentType: "text/html" },
+      ),
+    );
+    await assertSucceeds(
+      uploadBytes(
+        ref(auth("clerk").storage(), "messageAttachments/clerk/file.pdf"),
+        pdf,
+        { contentType: "application/pdf" },
+      ),
+    );
+    await assertFails(
+      uploadBytes(
+        ref(auth("clerk").storage(), "messageAttachments/another/file.pdf"),
+        pdf,
+        { contentType: "application/pdf" },
+      ),
+    );
+    await assertFails(
+      getBytes(ref(env.unauthenticatedContext().storage(), path)),
+    );
+  });
+});

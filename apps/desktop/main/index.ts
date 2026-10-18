@@ -6,8 +6,10 @@ import {
   type IpcMainInvokeEvent,
 } from "electron";
 import { autoUpdater } from "electron-updater";
-import { writeFile } from "node:fs/promises";
+import { writeFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 let window: BrowserWindow | null = null;
 function trusted(event: IpcMainInvokeEvent) {
@@ -64,6 +66,56 @@ app.whenReady().then(async () => {
     });
     if (result.canceled || !result.filePath) return false;
     await writeFile(result.filePath, "\uFEFF" + value, "utf8");
+    return true;
+  });
+  ipcMain.handle("preview-pdf", async (event, value: unknown) => {
+    trusted(event);
+    if (
+      !Array.isArray(value) ||
+      value.length > 20 * 1024 * 1024 ||
+      !value.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)
+    )
+      throw new Error("Invalid PDF");
+    const bytes = new Uint8Array(value);
+    if (Buffer.from(bytes.subarray(0, 5)).toString() !== "%PDF-")
+      throw new Error("Invalid PDF");
+    const folder = await mkdtemp(path.join(tmpdir(), "sycamore-bulletin-"));
+    const file = path.join(folder, "bulletin.pdf");
+    await writeFile(file, bytes);
+    const preview = new BrowserWindow({
+      width: 900,
+      height: 800,
+      title: "Bulletin preview",
+      webPreferences: {
+        partition: `bulletin-preview-${randomUUID()}`,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        webSecurity: true,
+        plugins: true,
+      },
+    });
+    preview.removeMenu();
+    preview.webContents.session.setPermissionRequestHandler(
+      (_contents, _permission, callback) => callback(false),
+    );
+    preview.webContents.session.webRequest.onBeforeRequest(
+      { urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] },
+      (_details, callback) => callback({ cancel: true }),
+    );
+    preview.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    preview.webContents.on("will-navigate", (event) => event.preventDefault());
+    const temporaryRoot = path.resolve(tmpdir());
+    const resolvedFolder = path.resolve(folder);
+    if (
+      path.dirname(resolvedFolder) !== temporaryRoot ||
+      !path.basename(resolvedFolder).startsWith("sycamore-bulletin-")
+    )
+      throw new Error("Invalid preview folder");
+    preview.on("closed", () => {
+      void rm(resolvedFolder, { recursive: true, force: true }).catch(() => {});
+    });
+    await preview.loadFile(file);
     return true;
   });
   ipcMain.handle("print-report", async (event) => {

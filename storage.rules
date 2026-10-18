@@ -3,6 +3,16 @@ service firebase.storage {
   match /b/{bucket}/o {
     function reader() { return request.auth != null && request.auth.token.get('roles', []).hasAny(['admin', 'pastor', 'clerk', 'elder', 'deacon', 'readOnly']); }
     function editor() { return request.auth != null && request.auth.token.get('roles', []).hasAny(['admin', 'pastor', 'clerk', 'elder']); }
+    match /bulletins/{week}/{filename} {
+      allow read: if editor();
+      allow create: if resource == null && editor() && week.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && filename.matches('^[A-Za-z0-9_-]+[.]pdf$') && request.resource.size > 4 && request.resource.size <= 20 * 1024 * 1024 && request.resource.contentType == 'application/pdf';
+      allow update, delete: if false;
+    }
+    match /messageAttachments/{uid}/{filename} {
+      allow read: if editor();
+      allow create: if resource == null && editor() && request.auth.uid == uid && filename.matches('^[A-Za-z0-9_-]+[.]pdf$') && request.resource.size > 4 && request.resource.size <= 20 * 1024 * 1024 && request.resource.contentType == 'application/pdf';
+      allow update, delete: if false;
+    }
     match /photos/{personId}/{filename} {
       allow read: if reader();
       allow create, update: if editor() && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/(jpeg|png|webp)');

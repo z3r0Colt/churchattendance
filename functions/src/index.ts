@@ -1,16 +1,6 @@
-import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import {
-  FieldPath,
-  FieldValue,
-  Timestamp,
-  getFirestore,
-} from "firebase-admin/firestore";
-import {
-  HttpsError,
-  onCall,
-  type CallableRequest,
-} from "firebase-functions/v2/https";
+import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onDocumentWrittenWithAuthContext } from "firebase-functions/v2/firestore";
 import { z } from "zod";
 import {
@@ -25,27 +15,11 @@ import {
   savePersonSchema,
   toRoster,
   visitorInputSchema,
-  type Role,
 } from "@sycamore/shared";
 
-initializeApp();
-const db = getFirestore();
-function requireRoles(request: CallableRequest, allowed: readonly Role[]) {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
-  const roles = z.array(roleSchema).catch([]).parse(request.auth.token.roles);
-  if (!hasRole(roles, allowed))
-    throw new HttpsError(
-      "permission-denied",
-      "Your role cannot make this change.",
-    );
-  return { uid: request.auth.uid, roles };
-}
-function parse<T>(schema: z.ZodType<T>, data: unknown): T {
-  const parsed = schema.safeParse(data);
-  if (!parsed.success)
-    throw new HttpsError("invalid-argument", "Check the fields and try again.");
-  return parsed.data;
-}
+import { db } from "./admin.js";
+import { parse, requireRoles } from "./access.js";
+export * from "./communications/api.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = requireRoles(request, EDITOR_ROLES);
@@ -86,6 +60,15 @@ export const createHousehold = onCall(async (request) => {
 export const savePerson = onCall(async (request) => {
   const actor = requireRoles(request, EDITOR_ROLES);
   const input = parse(savePersonSchema, request.data);
+  if (
+    ["email", "mobilePhone", "emailOptIn", "smsOptIn"].some(
+      (field) => field in input.changes,
+    )
+  )
+    throw new HttpsError(
+      "invalid-argument",
+      "Use the contact and consent form to change delivery details.",
+    );
   const ref = db.collection("people").doc(input.id);
   await db.runTransaction(async (transaction) => {
     const before = await transaction.get(ref);
@@ -232,17 +215,15 @@ export const setUserRoles = onCall(async (request) => {
       { displayName: user.displayName ?? "", roles: input.roles },
       { merge: true },
     );
-  await db
-    .collection("auditLog")
-    .add({
-      uid: actor.uid,
-      collection: "users",
-      docId: input.uid,
-      action: "roles",
-      before: current,
-      after: input.roles,
-      at: FieldValue.serverTimestamp(),
-    });
+  await db.collection("auditLog").add({
+    uid: actor.uid,
+    collection: "users",
+    docId: input.uid,
+    action: "roles",
+    before: current,
+    after: input.roles,
+    at: FieldValue.serverTimestamp(),
+  });
   return { updated: true };
 });
 

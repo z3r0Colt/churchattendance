@@ -19,14 +19,14 @@ export async function exportXlsx(rows: ExportRow[]) {
   book.creator = "Sycamore RPC";
   const summary = book.addWorksheet("Summary");
   summary.addRow(["Sycamore RPC"]);
-  summary.addRow(["Filtered attendance / roll export"]);
+  summary.addRow(["Filtered congregational data export"]);
   summary.addRow(["Rows exported", rows.length]);
   if (rows[0] && "Total" in rows[0])
     summary.addRow([
       "Total attendance across services",
       rows.reduce((sum, row) => sum + Number(row.Total || 0), 0),
     ]);
-  summary.addRow(["Membership categories reflect the current roll."]);
+  summary.addRow(["This workbook contains the rows selected on screen."]);
   summary.columns = [{ width: 48 }, { width: 20 }];
   for (const name of ["Detail", "Data"]) {
     const sheet = book.addWorksheet(name, {

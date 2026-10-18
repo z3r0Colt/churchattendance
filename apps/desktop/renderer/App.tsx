@@ -11,11 +11,6 @@ import {
   Field,
   FluentProvider,
   Input,
-  Menu,
-  MenuItem,
-  MenuList,
-  MenuPopover,
-  MenuTrigger,
   MessageBar,
   Option,
   Spinner,
@@ -63,10 +58,14 @@ import {
   useAttendanceData,
 } from "./data/attendance";
 import { darkTheme, lightTheme } from "./theme/brand";
-import { exportCsv, exportXlsx } from "./data/export";
+import { ExportButton as ExportCsv } from "./components/ExportButton";
+import { Messages } from "./communications/Messages";
+import { Bulletin } from "./communications/Bulletin";
+import { CommunicationSettingsPanel } from "./communications/Settings";
+import { useUnreadSms } from "./data/communications";
 
 type AttendanceData = ReturnType<typeof useAttendanceData>;
-type Page = "attendance" | "people" | "reports" | "settings";
+type Page = "attendance" | "people" | "reports" | "settings" | "messages" | "bulletin";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
   pastor: "Pastor",
@@ -204,6 +203,7 @@ function Workspace({
   const [busy, setBusy] = useState(false);
   const editor = hasRole(roles, EDITOR_ROLES);
   const volunteer = roles.length === 1 && roles[0] === "attendanceVolunteer";
+  const unreadTexts = useUnreadSms(editor);
   useEffect(() => {
     if (selectedType || !data.types.length) return;
     const next = nextService(data.types, new Date(), data.timeZone);
@@ -307,6 +307,7 @@ function Workspace({
         >
           Attendance
         </Button>
+        {editor && <><Button appearance={page === "messages" ? "primary" : "subtle"} onClick={() => setPage("messages")}>Messages {unreadTexts > 0 ? `(${unreadTexts})` : ""}</Button><Button appearance={page === "bulletin" ? "primary" : "subtle"} onClick={() => setPage("bulletin")}>Bulletin</Button></>}
         {!volunteer && (
           <>
             <Button
@@ -333,7 +334,7 @@ function Workspace({
           </>
         )}
         <div className="nav-bottom">
-          Attendance core<small>Phase 1 · Development</small>
+          Church management<small>Phase 2 · Development</small>
         </div>
       </nav>
       <main className="content">
@@ -440,6 +441,8 @@ function Workspace({
           <People data={data} editor={editor} add={() => setHousehold(true)} />
         )}
         {page === "reports" && <Reports data={data} />}
+        {page === "messages" && editor && <Messages roles={roles} />}
+        {page === "bulletin" && editor && <Bulletin roles={roles} />}
         {page === "settings" && (
           <>
             <div className="page-heading">
@@ -470,10 +473,10 @@ function Workspace({
                 Church time zone <strong>{data.timeZone}</strong>
               </p>
               <p>
-                Service types and roles are managed through setup in this first
-                milestone.
+                Service types and roles are managed through setup.
               </p>
             </section>
+            {editor && <CommunicationSettingsPanel roles={roles} serviceTypes={data.types} />}
           </>
         )}
       </main>
@@ -909,40 +912,6 @@ function Reports({ data }: { data: AttendanceData }) {
         </table>
         {!rows.length && <p>No services in this date range.</p>}
       </section>
-    </>
-  );
-}
-function ExportCsv({ rows }: { rows: Record<string, string | number>[] }) {
-  const [error, setError] = useState(false);
-  async function save(format: "csv" | "xlsx") {
-    try {
-      await (format === "csv" ? exportCsv(rows) : exportXlsx(rows));
-    } catch {
-      setError(true);
-    }
-  }
-  return (
-    <>
-      <Menu>
-        <MenuTrigger disableButtonEnhancement>
-          <Button icon={<ArrowDownloadRegular />} disabled={!rows.length}>
-            Export
-          </Button>
-        </MenuTrigger>
-        <MenuPopover>
-          <MenuList>
-            <MenuItem onClick={() => void save("csv")}>CSV</MenuItem>
-            <MenuItem onClick={() => void save("xlsx")}>
-              Excel workbook
-            </MenuItem>
-          </MenuList>
-        </MenuPopover>
-      </Menu>
-      {error && (
-        <MessageBar intent="error">
-          The export could not be saved. Try again.
-        </MessageBar>
-      )}
     </>
   );
 }

@@ -7,6 +7,8 @@ service cloud.firestore {
     function reader() { return roles().hasAny(['admin', 'pastor', 'clerk', 'elder', 'deacon', 'readOnly']); }
     function attendanceWriter() { return roles().hasAny(['admin', 'pastor', 'clerk', 'elder', 'deacon', 'attendanceVolunteer']); }
     function attendanceReader() { return reader() || roles().hasAny(['attendanceVolunteer']); }
+    function communicator() { return editor(); }
+    function visibleMessage(data) { return communicator() && (data.sessionOnly == false || session()); }
     function validService() {
       let d = request.resource.data;
       return d.keys().hasAll(['serviceTypeId', 'date', 'notes', 'present', 'lastAttendancePersonId']) &&
@@ -61,6 +63,20 @@ service cloud.firestore {
     match /auditLog/{id} { allow read: if session(); allow write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if request.auth != null && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
+    match /messages/{id} {
+      allow read: if visibleMessage(resource.data);
+      allow write: if false;
+      match /recipients/{recipientId} { allow read: if visibleMessage(get(/databases/$(database)/documents/messages/$(id)).data); allow write: if false; }
+    }
+    match /smsInbox/{id} { allow read: if communicator(); allow write: if false; }
+    match /messageTemplates/{id} { allow read: if communicator(); allow write: if false; }
+    match /savedAudiences/{id} { allow read: if communicator(); allow write: if false; }
+    match /communicationSettings/{id} { allow read: if communicator() && id == 'church'; allow write: if false; }
+    match /automationStatus/{id} { allow read: if communicator() && id == 'church'; allow write: if false; }
+    match /bulletins/{id} { allow read: if communicator(); allow write: if false; }
+    match /elderDistricts/{id} { allow read: if reader(); allow write: if false; }
+    match /groups/{id} { allow read: if reader(); allow write: if false; }
+    match /consentEvents/{id} { allow read: if communicator(); allow write: if false; }
     match /{document=**} { allow read, write: if false; }
   }
 }

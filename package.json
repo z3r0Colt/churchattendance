@@ -2,6 +2,7 @@
   "name": "sycamore-church-management",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "workspaces": [
     "apps/desktop",
     "packages/shared",
@@ -29,6 +30,7 @@
     "@firebase/rules-unit-testing": "^5.0.0",
     "firebase-tools": "^15.0.0",
     "@types/node": "^22.18.0",
-    "globals": "^16.4.0"
+    "globals": "^16.4.0",
+    "@types/luxon": "^3.7.1"
   }
 }

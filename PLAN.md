@@ -144,7 +144,7 @@ The app is a Windows desktop program built with Electron, backed by Google Fireb
 | PDF / printing | HTML report templates printed with Electron's printToPDF and silent print | Reports, directory |
 | Charts | Chart.js | Attendance trends |
 | SMS | Twilio (behind a provider interface so another carrier can be swapped in) | Reliable, two-way, cheap |
-| Email | Nodemailer over SMTP with the church's Google or Microsoft account, optional SendGrid for bulk | Church keeps its own address |
+| Email | Microsoft Graph application OAuth from the church shared mailbox | Church keeps its own address and credentials stay on the server |
 | Installer | electron-builder (NSIS) with electron-updater auto update from GitHub Releases | One click install, updates itself |
 | Tests | Vitest for logic, Firebase Emulator Suite with rules-unit-testing for security rules, Playwright for app screens | Rules are tested before anything ships |
 
@@ -201,10 +201,23 @@ events/{eventId}             title, start, end, recurrence, location
   rsvps/{personId}           status
 serving/{scheduleId}         role, date, personId
 
-messages/{messageId}         channel (email | sms), subject, body, audience, scheduledFor,
-                             status, sentAt, createdByUid
-  recipients/{personId}      address, status, providerId, error
-smsInbox/{id}                fromNumber, personId, body, receivedAt, read
+messages/{messageId}         channel (email | sms | both), subject, body, audience, scheduledFor,
+                             status, createdAt, createdByUid, selectedPersonIds[], sessionOnly,
+                             attachments[], activeCount, totals{}, source, dateLabel, serviceTime, expiresAt
+  recipients/{personId_channel} personId, channel, address, status, providerId, error,
+                               attemptKey, startedAt, updatedAt
+messageTemplates/{id}       name, channel, subject, body, updatedBy, updatedAt
+savedAudiences/{id}          name, audience { kind, ids[] }, updatedBy, updatedAt
+smsInbox/{messageSid}        fromNumber, personIds[], body, receivedAt, read, consentCommand
+communicationSettings/church delivery flags, churchName, footer, bulletin time/recipient/folder settings,
+                             absence alert settings (no credentials)
+communicationSuppressions/{addressHash} channel, blocked, source, updatedAt (server only)
+communicationBudgets/{bucket} count, at (server only)
+consentEvents/{id}           personId, channel, optedIn, source, actor, at
+bulletins/{lordsDayDate}     week, file { path, name, generation, size, source, sourceModifiedAt, sourceKey },
+                             status, messageId, previewMessageId, publicUrl, preparingAt, updatedAt
+bulletinLinks/{token}        path, generation, week, createdAt (server only)
+automationStatus/church     bulletinError, absenceError, queueError, checkedAt
 
 users/{uid}                  personId, displayName, roles[]
 auditLog/{id}                uid, collection, docId, action, before, after, at   (written only by Functions)
@@ -270,6 +283,13 @@ Other details
 ### 4.10 Backups
 * Firestore scheduled backups run daily and are kept 30 days.
 * An Admin "Export Everything" button saves the whole database to an XLSX workbook on the PC.
+
+### 4.11 Phase 2 implementation details
+Messages and recipients are created through validated callable Functions. All communication documents are client-read-only, apart from new immutable PDF uploads to the permitted Storage paths. Admin, Pastor, Clerk and Elder may use Messages and Bulletin. Generated elder alerts carry `sessionOnly: true`; their bodies and recipient logs are denied to an Admin without a Session role. Server-only suppression records, budgets and bulletin link tokens cannot be read by any client.
+
+Cloud Scheduler runs the queue and automation every minute. Recipient claims and rate budgets are transactional. Email attempts are capped at 20 per minute and 9,000 per UTC day. A queue entry can contain up to 400 email/text recipient records. The server rechecks consent, suppression, contact identity and active membership immediately before sending. Unknown results and interrupted attempts require provider review instead of automatic retries. Twilio callbacks are signed and tied to a specific attempt. Microsoft acceptance is shown separately from confirmed SMS delivery.
+
+The bulletin uses one deterministic message ID per Lord's Day. New PDF versions receive distinct preview IDs. Storage generation pinning prevents a changed file from replacing a queued attachment. Shareable bulletin download links are off by default and are issued only when explicitly enabled for bulletin texting. An email unsubscribe GET shows a confirmation page; only a signed-token POST changes consent. The setup guide documents real Microsoft/Twilio configuration, large-attachment mailbox limitations and live checks that cannot be replaced by emulators.
 
 ## 5. Screens
 
