@@ -2,7 +2,7 @@
 
 A Windows desktop program with member and staff web access for Sycamore Reformed Presbyterian Church (sycamorerpc.org). It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and supports church administration and shepherding. Giving and tithing are left out on purpose.
 
-Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records coverage and acceptance criteria. Phase 7 security/account implementation is now included; its live setup and staging checks are separate. Phases 8 through 12 remain planned. Earlier milestone notes describe their implemented baseline, subject to the Phase 7 security changes.
+Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records coverage and acceptance criteria. Phase 7 security/account and Phase 8 shepherding implementations are now included; their live setup and staging checks are separate. Phases 9 through 12 remain planned. Earlier milestone notes describe their implemented baseline, subject to the Phase 7 security changes.
 
 ## 1. Goals
 
@@ -216,6 +216,10 @@ visitRounds/{roundId}        name, startDate, endDate, archived, revision, creat
 shepherdingSettings/church   historyStart, defaultContactDays, districtContactDays{}, trackedStatuses[],
                              countPersonalMessages, revision, updatedAt, updatedBy   (Session API only)
 shepherdingSettings/geography geocoder (none | census), revision, updatedAt, updatedBy   (Session API only)
+shepherdingSettings/health   indicators[], attendanceWeeks, attendanceBelowPercent, visitWithinDays,
+                             labels[{id, name}], revision, updatedAt, updatedBy   (Session API only)
+flockAssessments/{id}        personId, labelId, encrypted{reasons}, assessedOn, reviewOn, authorUid,
+                             revision, createdAt, updatedAt, updatedBy   (Session API only)
 householdLocations/{householdId} lat, lng, provenance (census | manual), matchedAddress, addressHash, verified,
                              verifiedBy, verifiedAt, revision, updatedAt, updatedBy   (Session API only)
 
@@ -428,7 +432,7 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Private-record encryption, legacy migration and key rotation
 * Security dashboard with scoped authentication, read-access and change history
 
-**Phase 8, Shepherding workspace (in progress; see docs/PHASE_8.md)**
+**Phase 8, Shepherding workspace (implemented; live checks required, see docs/PHASE_8.md)**
 * Household visit scheduling, assignments, completion and officer workload
 * Congregation map, directions and ordered visit routes
 * Contact-gap detection, configurable absence alerts and consented shepherding digests
@@ -496,7 +500,7 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is in progress; household visits, workload, contact gaps, shepherding digests and household locations with routes are implemented, and flock health remains. Phases 9 through 12 remain open. Existing live provisioning and Windows release work remain required.
+Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is implemented; verify live digest delivery and, if the Session enables lookups, the Census geocoder on staging. Phase 9 care workflows and diaconal ministry is the next implementation milestone. Phases 9 through 12 remain open. Existing live provisioning and Windows release work remain required.
 
 ### Phase 7 implementation details
 
@@ -504,7 +508,7 @@ See `docs/PHASE_7.md`. Staff functions check live Auth identities, role intersec
 
 ### Phase 8 implementation details
 
-See `docs/PHASE_8.md`. Visit plans and rounds are Session-only documents served by audited callables, with the visit purpose and cancellation reason sealed like note bodies. A plan is never contact; only completion counts, and completion is a separate one-time action allowed after the start time. It can create or link a Session visit record. Invited deacons receive only time, place, household and officer names. Visit reminders carry no household or purpose, use a revision-bound message ID and are rechecked at dispatch against the current plan, status and the recipient's live role. Contact gaps combine completed visits, recorded visits, calls and conversations, text replies and, by policy, personal messages from a Session officer to three or fewer people that were delivered (text) or accepted (email). Notes, plans, bulletins, group messages and failed or waiting messages are not contact. A person without contact stays unknown until complete records cover their threshold. The contact API returns dates and sources only. The fixed Monday absence email is replaced by a configurable weekly district digest (absence, contact gaps and the elder's visits) and an optional daily officer summary (visits and follow-ups due). Both use church-local schedules, deterministic per-date message IDs, the existing consent checks and Session-only dispatch rechecks. Texts carry counts only and no digest carries note text, purposes or follow-up titles. Household coordinates come from a Census lookup on an explicit click (only when the Session has turned lookups on, sending only the address) or manual entry. Lookups wait for confirmation, and a changed address marks the location for review. Only confirmed locations are plotted, on an offline sketch with an equivalent list. Directions open in the system browser through a named preload method after a preview; the main process builds the Google Maps link from addresses alone.
+See `docs/PHASE_8.md`. Visit plans and rounds are Session-only documents served by audited callables, with the visit purpose and cancellation reason sealed like note bodies. A plan is never contact; only completion counts, and completion is a separate one-time action allowed after the start time. It can create or link a Session visit record. Invited deacons receive only time, place, household and officer names. Visit reminders carry no household or purpose, use a revision-bound message ID and are rechecked at dispatch against the current plan, status and the recipient's live role. Contact gaps combine completed visits, recorded visits, calls and conversations, text replies and, by policy, personal messages from a Session officer to three or fewer people that were delivered (text) or accepted (email). Notes, plans, bulletins, group messages and failed or waiting messages are not contact. A person without contact stays unknown until complete records cover their threshold. The contact API returns dates and sources only. The fixed Monday absence email is replaced by a configurable weekly district digest (absence, contact gaps and the elder's visits) and an optional daily officer summary (visits and follow-ups due). Both use church-local schedules, deterministic per-date message IDs, the existing consent checks and Session-only dispatch rechecks. Texts carry counts only and no digest carries note text, purposes or follow-up titles. Household coordinates come from a Census lookup on an explicit click (only when the Session has turned lookups on, sending only the address) or manual entry. Lookups wait for confirmation, and a changed address marks the location for review. Only confirmed locations are plotted, on an offline sketch with an equivalent list. Directions open in the system browser through a named preload method after a preview; the main process builds the Google Maps link from addresses alone. Flock health indicators restate recorded facts (Phase 6 attendance, involvement, contact and household visits; communion and relationships stay unknown until Phase 11) against Session thresholds, with missing inputs unknown. Session assessments use a Session-maintained label list, carry encrypted reasons and a review date, and never change membership or start discipline.
 
 ### Phase 5 implementation details
 

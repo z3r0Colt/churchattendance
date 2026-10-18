@@ -17,6 +17,7 @@ import { db } from "../admin.js";
 import { parse, requireRoles } from "../access.js";
 import { getChurchZone } from "../communications/queue.js";
 import { securityEvent } from "../security/audit.js";
+import { healthSettings } from "./health.js";
 
 export async function contactPolicy() {
   const row = await db.doc("shepherdingSettings/church").get();
@@ -200,5 +201,5 @@ export const getContactHistory = onCall(async (request) => {
   const policy = await contactPolicy();
   const result = await contactEvents(policy?.countPersonalMessages ?? true);
   await securityEvent(actor.uid, "contact.read", "success", "session");
-  return { policy, ...result };
+  return { policy, health: await healthSettings(), ...result };
 });

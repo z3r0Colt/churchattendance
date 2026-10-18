@@ -4,7 +4,7 @@ Attendance and communication for the Windows desktop app described in `PLAN.md` 
 
 ## Approved expansion
 
-All ten feature areas from the October 18 TendFlock comparison are in scope. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) maps them to Phases 7 through 12. Phase 7 implements staff MFA/passkey access, encrypted private records and account/security administration. Read [Phase 7 setup](docs/PHASE_7.md) before staging or deployment. Shepherding and the other approved features remain planned. Live configuration and release checks below still apply.
+All ten feature areas from the October 18 TendFlock comparison are in scope. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) maps them to Phases 7 through 12. Phase 7 implements staff MFA/passkey access, encrypted private records and account/security administration. Read [Phase 7 setup](docs/PHASE_7.md) before staging or deployment. Phase 8 implements the Session shepherding workspace. Phases 9 through 12 remain planned. Live configuration and release checks below still apply.
 
 ## Run locally
 
@@ -79,3 +79,7 @@ Reports now reconstructs categories from dated membership history and flags uncl
 ## Phase 7 security and accounts
 
 Staff access now requires verified email and completed MFA or a server-verified passkey session. Account security provides staff setup, role changes, revocation/recovery, scoped access history and Session-administrator encryption migration. The separate portal security page supports passkey registration/sign-in and a one-time browser approval for the desktop. The local seed uses guarded synthetic assurance for fictional accounts; it is not a live MFA demonstration. Read [Phase 7 setup and limits](docs/PHASE_7.md) for staging and rollout requirements.
+
+## Phase 8 shepherding workspace
+
+The Session-only Shepherding page plans household visits with invited deacons, tracks officer workload and visit rounds, and shows explainable contact gaps. Communication settings configure the weekly district digest and the daily officer summary. Locations and routes keep confirmed household coordinates and preview directions before anything leaves the app, and Flock health shows recorded-fact indicators beside dated Session assessments. Read [Phase 8 workflows and limits](docs/PHASE_8.md). Address lookups are off until the Session turns them on, and live delivery checks still apply.

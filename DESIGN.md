@@ -237,7 +237,7 @@ Reports provides a report selector and shared date, service type, historical mem
 
 ## Approved Phase 7 through Phase 12 screens
 
-Phase 7 security screens are implemented as described in `docs/PHASE_7.md`; their live deployment checks remain open. Phase 8 Shepherding is in progress: the Visits, Workload, Visit rounds, Contact gaps and Locations and routes tabs and the Settings digest controls are implemented (see `docs/PHASE_8.md`). The remaining Phase 8 through Phase 12 screens below remain future requirements. Scope and acceptance criteria live in [Expanded feature requirements](docs/FEATURE_EXPANSION.md).
+Phase 7 security screens are implemented as described in `docs/PHASE_7.md`; their live deployment checks remain open. Phase 8 Shepherding screens are implemented: the Visits, Workload, Visit rounds, Contact gaps, Locations and routes and Flock health tabs, deacon joint visits and the Settings digest controls (see `docs/PHASE_8.md`). Phase 9 through Phase 12 screens below remain future requirements. Scope and acceptance criteria live in [Expanded feature requirements](docs/FEATURE_EXPANSION.md).
 
 ### Security and accounts
 

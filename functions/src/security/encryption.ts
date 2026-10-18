@@ -86,6 +86,7 @@ const protectedFields: Record<string, string[]> = {
   sessionPrivate: ["disciplineFlag", "disciplineHistory"],
   auditLog: ["before", "after"],
   pastoralVisits: ["purpose", "cancelReason"],
+  flockAssessments: ["reasons"],
 };
 export const protectedFieldNames = (collection: string) =>
   protectedFields[collection] ?? [];

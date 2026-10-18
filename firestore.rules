@@ -76,6 +76,7 @@ service cloud.firestore {
     match /visitRounds/{id} { allow read, write: if false; }
     match /shepherdingSettings/{id} { allow read, write: if false; }
     match /householdLocations/{id} { allow read, write: if false; }
+    match /flockAssessments/{id} { allow read, write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {

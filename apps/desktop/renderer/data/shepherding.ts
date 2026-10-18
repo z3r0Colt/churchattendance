@@ -2,16 +2,20 @@ import { useEffect, useState } from "react";
 import {
   SESSION_ROLES,
   completeVisitSchema,
+  assessmentSchema,
   contactPolicySchema,
+  healthSettingsSchema,
   geographySettingsSchema,
   householdLocationActionSchema,
   householdLocationSchema,
   hasRole,
   visitRoundSchema,
   visitSchema,
+  type Assessment,
   type CareNote,
   type ContactEvent,
   type ContactPolicy,
+  type HealthSettings,
   type HouseholdLocation,
   type PastoralVisit,
   type Role,
@@ -94,6 +98,7 @@ export const completeVisit = (value: unknown) =>
   chmsCall("completeVisit", completeVisitSchema.parse(value));
 export type ContactHistory = {
   policy: ContactPolicy | null;
+  health: HealthSettings;
   events: ContactEvent[];
   rollEntry: Record<string, string>;
   today: string;
@@ -176,3 +181,9 @@ export const confirmHouseholdLocation = (value: unknown) =>
   );
 export const saveHouseholdLocation = (value: unknown) =>
   chmsCall("saveHouseholdLocation", householdLocationSchema.parse(value));
+export const useAssessments = (enabled: boolean) =>
+  usePrivateRecords<Assessment>("flockAssessments", enabled);
+export const saveHealthSettings = (value: unknown) =>
+  chmsCall("saveHealthSettings", healthSettingsSchema.parse(value));
+export const saveAssessment = (value: unknown) =>
+  chmsCall("saveAssessment", assessmentSchema.parse(value));

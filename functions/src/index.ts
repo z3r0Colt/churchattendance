@@ -40,6 +40,7 @@ export * from "./security/passkeys.js";
 export * from "./shepherding/visits.js";
 export * from "./shepherding/contact.js";
 export * from "./shepherding/geography.js";
+export * from "./shepherding/health.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
@@ -334,6 +335,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "visitRounds",
         "shepherdingSettings",
         "householdLocations",
+        "flockAssessments",
       ].includes(event.params.collection) ||
       !event.data
     )
@@ -370,6 +372,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "pastoralVisits",
         "visitRounds",
         "householdLocations",
+        "flockAssessments",
       ].includes(event.params.collection)
         ? "session"
         : "security",

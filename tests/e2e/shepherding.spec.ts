@@ -77,6 +77,7 @@ test.beforeEach(async () => {
     "communicationSuppressions",
     "shepherdingSettings",
     "householdLocations",
+    "flockAssessments",
     "smsInbox",
   ])
     await db.recursiveDelete(db.collection(name));
@@ -894,5 +895,114 @@ test("plots only confirmed households and previews the addresses before opening 
       expect(opened.href).not.toContain("Calder");
       expect(opened.href).not.toContain("Baker");
     },
+  );
+});
+
+test("keeps assessments Session only, encrypted and separate from membership", async ({
+  request,
+}) => {
+  const assessment = {
+    id: "p8-assessment",
+    personId: "john",
+    labelId: "stray",
+    reasons: "Fictional assessment reasons",
+    assessedOn: daysAgo(1),
+    reviewOn: daysAgo(-90),
+  };
+  for (const account of ["p8-admin", "p8-deacon"]) {
+    await call(request, "saveAssessment", assessment, 403, account);
+    await call(
+      request,
+      "saveHealthSettings",
+      { labels: [{ id: "x", name: "X" }] },
+      403,
+      account,
+    );
+    await call(
+      request,
+      "getPrivateRecords",
+      { collection: "flockAssessments" },
+      403,
+      account,
+    );
+  }
+  // Labels come only from the Session's own list.
+  await call(request, "saveAssessment", assessment, 400);
+  await call(request, "saveHealthSettings", {
+    labels: [
+      { id: "healthy", name: "Healthy" },
+      { id: "stray", name: "Stray" },
+    ],
+  });
+  await call(
+    request,
+    "saveAssessment",
+    { ...assessment, reviewOn: daysAgo(5) },
+    400,
+  );
+  const before = (await db.doc("people/john").get()).data();
+  await call(request, "saveAssessment", assessment);
+  const stored = (await db.doc("flockAssessments/p8-assessment").get()).data()!;
+  expect(stored.reasons).toBeUndefined();
+  expect(JSON.stringify(stored)).not.toContain("Fictional assessment");
+  expect((await db.doc("people/john").get()).data()).toEqual(before);
+  const rows = (
+    await call(request, "getPrivateRecords", { collection: "flockAssessments" })
+  ).rows;
+  expect(rows[0]).toMatchObject({
+    reasons: "Fictional assessment reasons",
+    labelId: "stray",
+    authorUid: "p8-elder",
+    revision: 1,
+  });
+  await call(request, "saveAssessment", assessment, 409);
+  const history = await call(request, "getContactHistory", {});
+  expect(history.health.labels).toHaveLength(2);
+  expect(JSON.stringify(history)).not.toContain("Fictional assessment");
+});
+test("shows indicators as recorded facts and records a dated Session assessment", async ({
+  page,
+  request,
+}) => {
+  await db.recursiveDelete(db.collection("flockAssessments"));
+  await call(request, "saveContactPolicy", {
+    historyStart: daysAgo(400),
+    defaultContactDays: 30,
+  });
+  await login(page);
+  await page
+    .getByRole("button", { name: "Shepherding · Session only", exact: true })
+    .click();
+  await page.getByRole("tab", { name: "Flock health" }).click();
+  await expect(
+    page.getByText("They do not describe anyone's spiritual condition"),
+  ).toBeVisible();
+  const john = page.getByRole("row", { name: /John Baker/ });
+  await expect(john).toContainText("Below policy");
+  await expect(john).toContainText("Unknown");
+  await expect(john).toContainText("None recorded");
+  await page
+    .getByRole("button", {
+      name: "Adopt suggested labels: Healthy, Weak, Stray, Lost",
+    })
+    .click();
+  await page.getByRole("button", { name: "John Baker" }).click();
+  await expect(
+    page.getByRole("cell", { name: /No qualifying contact for/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Record assessment" }).click();
+  await page.getByLabel("Label", { exact: true }).selectOption("stray");
+  await page
+    .getByLabel("Reasons · Session only")
+    .fill("Fictional reasons for review");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(john).toContainText(`Stray · ${daysAgo(0)}`);
+  await page.screenshot({
+    path: "test-results/phase8-flock-health.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  expect((await db.doc("people/john").get()).get("membershipStatus")).toBe(
+    "adherent",
   );
 });

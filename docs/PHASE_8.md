@@ -1,6 +1,6 @@
 # Phase 8 shepherding workspace
 
-Phase 8 adds a Session-only Shepherding workspace. It is being built in four slices. This file records what each slice implements and its limits. Scope and acceptance criteria are in [Expanded feature requirements](FEATURE_EXPANSION.md).
+Phase 8 adds a Session-only Shepherding workspace. It was built in four slices and is implemented in code. Live checks are listed at the end. This file records what each slice implements and its limits. Scope and acceptance criteria are in [Expanded feature requirements](FEATURE_EXPANSION.md).
 
 | Slice | Scope | Status |
 |---|---|---|
@@ -8,7 +8,7 @@ Phase 8 adds a Session-only Shepherding workspace. It is being built in four sli
 | 2 | Contact timeline and contact-gap thresholds | Implemented |
 | 3 | Configurable absence alerts and consented shepherding digests | Implemented |
 | 4a | Household locations and visit routes | Implemented |
-| 4b | Flock health indicators and Session assessments | Planned |
+| 4b | Flock health indicators and Session assessments | Implemented |
 
 Decisions made before implementation: geocoding uses the US Census geocoder only on an explicit staff action, directions open in the system browser after a preview, and flock assessment labels are a Session-maintained list.
 
@@ -63,6 +63,29 @@ A route holds two to ten confirmed households. Stops can be added by hand or fro
 
 `householdLocations` and `shepherdingSettings/geography` are server-owned and denied to every direct client. The location callables are Session only and record Session-scope security events, with the household path and never the address. Under the emulators a deterministic fictional geocoder is used, so tests never call the Census Bureau.
 
+## Flock health
+
+Flock health lists everyone on the roll who is not a visitor, former or deceased. Each enabled indicator reads Within policy, Below policy, Recorded (information only) or Unknown, with the recorded facts that produced it. Status is always written in words.
+
+- **Attendance** uses the Phase 6 shepherding calculation over the configured number of weeks (default 12) and every recorded service type. Missing or inconsistent membership history, or no recorded services, is Unknown. The policy is a minimum percentage (default 50).
+- **Involvement** shows active group memberships and serving assignments in the last 90 days, as information. It is Unknown while no groups or serving schedule exist.
+- **Contact** follows the contact gaps rules above. A person not covered by the contact policy is Unknown.
+- **Household visit** uses the latest completed visit to the person's household against a policy in days (default 365). Without one, it is Below policy only after visit records have covered the whole policy period, and Unknown before that.
+- **Communion** and **Relationships** stay Unknown until Phase 11 records them.
+
+The Session chooses which indicators to show and the thresholds. Indicators restate recorded facts for pastoral review. They do not describe anyone's spiritual condition, and nothing on this screen changes membership, starts discipline or sends a message.
+
+A Session officer can record a dated assessment for a person, with reasons, a review date and an optional label. Labels come only from the Session's own list, which starts empty. Adopt suggested labels adds Healthy, Weak, Stray and Lost in one explicit step, and the Session can rename or remove any label. Existing labels keep their IDs so past assessments still read correctly. Assessments show their author and dates separately from the indicators. The reasons are sealed with the private key ring like note bodies and are included in key migration. `flockAssessments` and `shepherdingSettings/health` are server-owned. Assessments are read through the audited private-records API, Session only.
+
 ## Verification
 
-Unit tests cover plan validation, visit states, workload date ranges in the church time zone, round coverage and the reminder window. Rules tests confirm that Session, an invited deacon and every other role are denied direct access to both collections. Browser and emulator tests cover deacon logistics isolation, Admin denial, encrypted storage, one-time completion with a new visit record, refusal to complete a future visit, and reminder suppression after a reschedule and a cancellation. A desktop workflow test plans a round visit, opens it from workload and completes it. Contact tests seed delivered, failed, queued, bulletin, broadcast and non-Session messages, replies including a HELP keyword, a note and a call, and confirm only qualifying contact is returned with no private text. Admin and Deacon accounts are denied contact history and policy changes. A desktop test shows Unknown before records cover the rule, a known gap with its rule after the policy changes, and Current after recording a call. Digest unit tests cover church-local scheduling across the UTC date boundary, configurable absence runs, setting bounds, merge-field safety and counts-only text. Emulator tests confirm one weekly email and text per district across repeated ticks, names only in email, an email opt-out that still allows the text, no digest once the elder's account no longer links to a Session role, and a daily summary that excludes the follow-up title and visit purpose. A desktop test saves the digest settings. Location unit tests cover review states, address comparison, coordinate bounds, route ordering, directions links built from addresses alone and plot bounds. Emulator tests confirm Admin and Deacon denial, no lookup while lookups are off, failure for a missing address or no match, confirmation, a changed address returning to review and refusing confirmation, manual entry and address-free security events. A desktop test plots only confirmed households, reorders a route, previews the exact addresses and opens a link containing no household names. All data is fictional and no real messages are sent.
+Unit tests cover plan validation, visit states, workload date ranges in the church time zone, round coverage and the reminder window. Rules tests confirm that Session, an invited deacon and every other role are denied direct access to both collections. Browser and emulator tests cover deacon logistics isolation, Admin denial, encrypted storage, one-time completion with a new visit record, refusal to complete a future visit, and reminder suppression after a reschedule and a cancellation. A desktop workflow test plans a round visit, opens it from workload and completes it. Contact tests seed delivered, failed, queued, bulletin, broadcast and non-Session messages, replies including a HELP keyword, a note and a call, and confirm only qualifying contact is returned with no private text. Admin and Deacon accounts are denied contact history and policy changes. A desktop test shows Unknown before records cover the rule, a known gap with its rule after the policy changes, and Current after recording a call. Digest unit tests cover church-local scheduling across the UTC date boundary, configurable absence runs, setting bounds, merge-field safety and counts-only text. Emulator tests confirm one weekly email and text per district across repeated ticks, names only in email, an email opt-out that still allows the text, no digest once the elder's account no longer links to a Session role, and a daily summary that excludes the follow-up title and visit purpose. A desktop test saves the digest settings. Location unit tests cover review states, address comparison, coordinate bounds, route ordering, directions links built from addresses alone and plot bounds. Emulator tests confirm Admin and Deacon denial, no lookup while lookups are off, failure for a missing address or no match, confirmation, a changed address returning to review and refusing confirmation, manual entry and address-free security events. A desktop test plots only confirmed households, reorders a route, previews the exact addresses and opens a link containing no household names. Health unit tests cover each indicator against policy, unknown inputs, a missing visit before and after records cover the period, enabled indicators, label uniqueness and assessment dates. Emulator tests confirm Admin and Deacon denial, labels limited to the Session's list, encrypted reasons, no change to the person record, revision checks and no reasons in the contact history response. A desktop test shows the review disclaimer and indicator states, adopts the suggested labels and records a dated assessment.
+
+## Live checks and limits
+
+- Digests and visit reminders use the existing Microsoft Graph and Twilio delivery. Verify a digest and a reminder reach a staging officer, and that opt-outs suppress them, before relying on them.
+- If the Session turns on address lookups, check a few known church addresses against the live Census geocoder on staging. It covers US addresses only, and a lookup can fail or match imprecisely, which is why every lookup waits for confirmation.
+- Directions open Google Maps in the system browser. Check that the packaged Windows app opens the browser and never an app window.
+- The plot is a sketch, not a street map, and does not replace navigation.
+- Contact history is read in full on each request. That is fine for a congregation of this size but would need paging for a much larger church.
+- Communion and relationship indicators stay Unknown until Phase 11. All data is fictional and no real messages are sent.

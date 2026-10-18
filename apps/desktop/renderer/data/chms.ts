@@ -68,6 +68,8 @@ export async function chmsCall<T = unknown>(
       "lookupHouseholdLocation",
       "confirmHouseholdLocation",
       "saveHouseholdLocation",
+      "saveHealthSettings",
+      "saveAssessment",
     ].includes(name)
   )
     window.dispatchEvent(new Event("private-records-changed"));
