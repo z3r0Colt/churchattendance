@@ -3,6 +3,12 @@ import {
   Badge,
   Button,
   Checkbox,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
   DrawerBody,
   DrawerFooter,
   DrawerHeader,
@@ -347,6 +353,10 @@ function Workspace({
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [navOpen]);
+  // A lock waiting on unsaved marks finishes by itself once they reach the records.
+  useEffect(() => {
+    if (lockWarning && !data.pending) void signOutUser();
+  }, [lockWarning, data.pending]);
   function lock() {
     if (staffWeb && data.pending) setLockWarning(true);
     else void signOutUser();
@@ -621,19 +631,33 @@ function Workspace({
           />
         </NavGroup>
       </nav>
+      {/* A dialog stays in view however far down the roll the person has scrolled. */}
+      <Dialog
+        open={lockWarning}
+        modalType="alert"
+        onOpenChange={(_, state) => {
+          if (!state.open) setLockWarning(false);
+        }}
+      >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Marks still saving</DialogTitle>
+            <DialogContent>
+              Some marks have not reached the church records yet. Locking now
+              loses them. The lock finishes by itself once they save.
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="primary" onClick={() => void signOutUser()}>
+                Lock anyway
+              </Button>
+              <Button onClick={() => setLockWarning(false)}>
+                Keep working
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
       <main className="content">
-        {lockWarning && (
-          <MessageBar intent="warning">
-            Some marks have not reached the church records yet. Locking now
-            loses them.{" "}
-            <Button size="small" onClick={() => void signOutUser()}>
-              Lock anyway
-            </Button>{" "}
-            <Button size="small" onClick={() => setLockWarning(false)}>
-              Keep working
-            </Button>
-          </MessageBar>
-        )}
         {!data.online && (
           <MessageBar intent="warning">
             {staffWeb && page !== "attendance"

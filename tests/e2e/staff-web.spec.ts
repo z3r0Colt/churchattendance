@@ -302,6 +302,78 @@ test("a lock whose reload is held back shows no records", async ({
   await expect(page.getByRole("button", { name: "Lock now" })).toHaveCount(0);
   await context.close();
 });
+// Far down the roll on a phone, the top of the page is out of view.
+async function scrollToBottom(page: Page) {
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  );
+  await expect(
+    page.getByRole("heading", { name: "Take attendance" }),
+  ).not.toBeInViewport();
+}
+test("Lock now with an unsaved mark warns in view and locks once the mark saves", async ({
+  browser,
+}) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  const dialogs = recordDialogs(page);
+  await signIn(page, "volunteer@example.test");
+  await openRoll(page);
+  await markOffline(page, context, "Eli Moss");
+  await scrollToBottom(page);
+  await page.getByRole("button", { name: "Lock now" }).click();
+  const warning = page.getByRole("alertdialog", { name: "Marks still saving" });
+  await expect(warning).toBeVisible();
+  await expect(warning).toBeInViewport();
+  await expect(
+    warning.getByRole("button", { name: "Lock anyway" }),
+  ).toBeInViewport();
+  await expect(
+    warning.getByRole("button", { name: "Keep working" }),
+  ).toBeInViewport();
+  // The connection returns, the mark saves and the lock finishes by itself.
+  await context.setOffline(false);
+  await expect(warning).toBeHidden();
+  await expectLocked(page, dialogs);
+  const services = await getFirestore()
+    .collection("services")
+    .where("date", "==", date)
+    .get();
+  expect(services.docs.some((row) => row.data().present?.eli)).toBe(true);
+  await context.close();
+});
+test("Keep working closes the Lock now warning and stays signed in after the marks save", async ({
+  browser,
+}) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  const dialogs = recordDialogs(page);
+  await signIn(page, "volunteer@example.test");
+  await openRoll(page);
+  await markOffline(page, context, "Grace Calder");
+  await scrollToBottom(page);
+  await page.getByRole("button", { name: "Lock now" }).click();
+  const warning = page.getByRole("alertdialog", { name: "Marks still saving" });
+  await expect(warning).toBeInViewport();
+  await warning.getByRole("button", { name: "Keep working" }).click();
+  await expect(warning).toBeHidden();
+  // Clearing the mark again leaves the roll as other tests expect it.
+  await page.getByRole("button", { name: "Grace Calder, present" }).click();
+  await context.setOffline(false);
+  await expect(page.getByText("Online", { exact: true })).toBeVisible();
+  // The cancelled lock must not finish once the marks save. A short wait gives
+  // a lock that wrongly finished the time to reach the sign-in page.
+  await page.waitForTimeout(1500);
+  await expect(
+    page.getByRole("heading", { name: "Take attendance" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Grace Calder, absent" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Lock now" })).toBeVisible();
+  expect(dialogs).toEqual([]);
+  await context.close();
+});
 test("a staff member signs in to the staff web with a passkey", async ({
   browser,
 }) => {
