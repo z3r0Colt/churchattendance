@@ -26,6 +26,8 @@ import { staffWeb } from "../platform";
 import { passkeySignIn } from "./passkey";
 
 type Pending = { resolve: () => void; reject: (cause: Error) => void };
+const cancelled = () =>
+  new Error("Confirmation cancelled. Nothing was changed.");
 // The browser confirmation's own plain reasons, such as another account approving.
 function browserReason(cause: unknown) {
   const value = cause as { code?: unknown; message?: unknown };
@@ -61,14 +63,25 @@ export function ReauthHost() {
     setError("");
     setNotice("");
   }
-  useEffect(() => hostReauth(show), []);
+  useEffect(() => {
+    const release = hostReauth(show);
+    // Closing with a request still waiting, such as when its form closes, cancels it
+    // so the calls waiting on it are never left hanging.
+    return () => {
+      release();
+      const request = shown.current;
+      running.current?.abort();
+      running.current = null;
+      shown.current = null;
+      request?.reject(cancelled());
+    };
+  }, []);
   const email = auth.currentUser?.email || "";
   function finish(outcome: "done" | "cancel", request = shown.current) {
     if (!request || request !== shown.current) return;
     show(null);
     if (outcome === "done") request.resolve();
-    else
-      request.reject(new Error("Confirmation cancelled. Nothing was changed."));
+    else request.reject(cancelled());
   }
   async function attempt(
     action: (signal: AbortSignal) => Promise<unknown>,

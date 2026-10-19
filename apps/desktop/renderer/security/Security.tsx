@@ -166,8 +166,11 @@ export function Security({ roles }: { roles: Role[] }) {
             here.
           </p>
           <Field label="Log scope">
+            {/* Changing scope starts a load, so it waits like the buttons do; one
+                finishing load must not re-enable buttons while another still runs. */}
             <Select
               value={scope}
+              disabled={busy}
               onChange={(e) => setScope(e.target.value as typeof scope)}
             >
               <option value="security">Account security</option>
