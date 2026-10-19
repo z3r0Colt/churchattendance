@@ -284,6 +284,9 @@ test("limits setup by role and rejects stale forms and invalid districts", async
   await call(request, "saveServiceType", service, 403, "phase5-reader");
   await call(request, "saveServiceType", service);
   await call(request, "saveServiceType", { ...service, name: "Stale" }, 409);
+  // An active midweek service would become the next service on Lord's Day
+  // evenings and change the default in later attendance specs.
+  await db.doc("serviceTypes/phase5-midweek").delete();
   await db.doc("elderDistricts/phase5-north").delete();
   await call(
     request,
