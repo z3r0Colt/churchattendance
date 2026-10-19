@@ -136,37 +136,37 @@ Centered card with the church name, email, password, and a "Keep this PC signed 
 
 ```
 +--------------------------------------------------------------------------------+
-|  Lord's Day Morning  [v]     Nov 1, 2026  [<] [>]          Present  87 of 142 |
-|  -------------------------------------------------------------------------------|
-|  [ Search name or family...                        ]   [+ Add visitor]         |
-|  Show: (All) (Members) (Adherents) (Visitors)   Sort: Last name  [v]           |
-|  -------------------------------------------------------------------------------|
-|  CALDER                                                    [Mark all 5]        |
-|   [x] James  Pastor  Communicant                                               |
-|   [x] Ruth           Communicant                                               |
-|   [x] Caleb          Baptized                                                  |
-|   [ ] Grace          Baptized                                                  |
-|   [x] Hannah         Baptized                                                  |
-|  -------------------------------------------------------------------------------|
-|  BAKER                                                     [Mark all 2]        |
-|   [ ] John           Adherent                                                  |
-|   [ ] Mary           Adherent                                                  |
-|  -------------------------------------------------------------------------------|
-|  ...                                                                           |
+|  Lord's Day, November 1, 2026                                    [Add visitor] |
+|  Take attendance                                                               |
+|  Lord's Day Morning · Children are counted with their families.               |
+|  Service [Lord's Day Morning v]   Date [<] [11/01/2026] [>]                     |
+|  +----------+ +---------+ +-----------+ +----------+ +-----------+              |
+|  | Present  | | Members | | Adherents | | Visitors | | Last time |              |
+|  | 3 of 10  | | 2       | | 1         | | 0        | | 4  Oct 25 |              |
+|  +----------+ +---------+ +-----------+ +----------+ +-----------+              |
+|  Find a name or family [ Type a name             ]   All Members Adherents ... |
+|  +----------------------------------------------------------------------------+ |
+|  | Baker      [o John  ] [o Mary  ]                                Mark all 2 | |
+|  | 1 of 2     Adherent   Adherent                                             | |
+|  | Calder     [o Grace ] [v James ] [v Ruth  ]                     Mark all 3 | |
+|  | 2 of 3     Baptized   Communicant Communicant                              | |
+|  +----------------------------------------------------------------------------+ |
 +--------------------------------------------------------------------------------+
-|  Members 71   Adherents 9   Visitors 7   Children counted in families          |
+|  Members 71   Adherents 9   Visitors 7              Children counted in families |
 +--------------------------------------------------------------------------------+
 ```
 
-* Opens to today's service automatically when a service type matches the day and time, otherwise to the next upcoming one.
-* Households are cards in last name order. Each row is a 48px tall toggle. Clicking anywhere on the row toggles it.
+* Opens to today's service automatically when a service type matches the day and time, otherwise to the next upcoming one. The arrows beside the date move a week at a time.
+* Tiles across the top show Present (the lead tile, filled green, with "of N on the active roll"), Members, Adherents, Visitors and Last time (the previous service of the same type).
+* The roll is one panel. Each household is a row: the family name in the display font with "2 of 3 here", then one name chip per person, then "Mark all N" or "Clear household".
+* A chip shows a check circle, the first (or preferred) name and the membership status in small text. Its accessible name is the full name and "present" or "absent". Chips are at least 52px tall. Clicking anywhere on the chip toggles it.
 * "Mark all" marks every active person in the household. Clicking again clears them.
-* Present rows get a green check, a light green fill, and bold names. Changes save instantly. There is no Save button.
+* Present chips get a green check, a 2px green outline, the present fill and bold names. Changes save instantly. There is no Save button.
 * The search box filters as you type and matches first, last, or preferred name. Pressing Enter toggles the first match and clears the search, so a volunteer can type "bak", Enter, "mck", Enter quickly.
-* Keyboard support uses arrow keys to move, Space to toggle, Ctrl+F to search, and Ctrl+N to add a visitor.
+* Keyboard support uses arrow keys to move between chips, Space to toggle, Ctrl+F to search, and Ctrl+N to add a visitor.
 * Add visitor opens a small side panel with first name, last name, phone, email, "first time here" (checked by default), and an optional "with household". Saving creates the person as Visitor and marks them present.
 * The sticky footer shows live counts by category.
-* Former and deceased people never appear. People away (non-resident) appear in a collapsed "Non-resident" section at the bottom.
+* Former and deceased people never appear. People away (non-resident) appear in a collapsed "Non-resident members" section at the bottom.
 
 ### 5.3 Dashboard
 

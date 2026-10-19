@@ -22,8 +22,11 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import { OverlayDrawer } from "@fluentui/react-components";
+import { DateTime } from "luxon";
 import {
   AddRegular,
+  ChevronLeftRegular,
+  ChevronRightRegular,
   CheckmarkCircleRegular,
   CheckmarkRegular,
   DismissRegular,
@@ -494,9 +497,13 @@ function Workspace({
           <>
             <div className="page-heading">
               <div>
-                <span className="eyebrow">NAME BY NAME</span>
+                <span className="eyebrow">{dateLine(date)}</span>
                 <Title3 as="h1">Take attendance</Title3>
-                <p>Children are counted with their families.</p>
+                <p>
+                  {data.types.find((type) => type.id === selectedType)?.name ||
+                    "Choose a service"}{" "}
+                  · Children are counted with their families.
+                </p>
               </div>
               <Button
                 icon={<AddRegular />}
@@ -506,7 +513,7 @@ function Workspace({
                 Add visitor
               </Button>
             </div>
-            <div className="service-bar surface">
+            <div className="service-bar">
               <Field label="Service">
                 <Dropdown
                   aria-label="Service"
@@ -529,17 +536,31 @@ function Workspace({
                 </Dropdown>
               </Field>
               <Field label="Date">
-                <Input
-                  type="date"
-                  aria-label="Service date"
-                  value={date}
-                  onChange={(_, value) => setDate(value.value)}
-                />
+                <div className="date-stepper">
+                  <Tooltip content="A week earlier" relationship="label">
+                    <Button
+                      appearance="subtle"
+                      icon={<ChevronLeftRegular />}
+                      disabled={!date}
+                      onClick={() => setDate(shiftWeeks(date, -1))}
+                    />
+                  </Tooltip>
+                  <Input
+                    type="date"
+                    aria-label="Service date"
+                    value={date}
+                    onChange={(_, value) => setDate(value.value)}
+                  />
+                  <Tooltip content="A week later" relationship="label">
+                    <Button
+                      appearance="subtle"
+                      icon={<ChevronRightRegular />}
+                      disabled={!date}
+                      onClick={() => setDate(shiftWeeks(date, 1))}
+                    />
+                  </Tooltip>
+                </div>
               </Field>
-              <div className="service-date">
-                {date &&
-                  `${new Date(`${date}T12:00:00Z`).getUTCDay() === 0 ? "Lord's Day, " : ""}${new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`}
-              </div>
             </div>
             {!data.loaded ? (
               <Spinner label="Loading the roll" />
@@ -837,77 +858,123 @@ function RollCall({
             (householdPeople[0].membershipStatus === "nonResident"),
       );
       const allPresent = family.every((person) => !!service.present[person.id]);
+      const here = family.filter((person) => !!service.present[person.id]);
       return (
-        <section className="household surface" key={id}>
-          <div className="household-heading">
-            <Subtitle2>{householdPeople[0].householdName}</Subtitle2>
-            <Button
-              size="small"
-              disabled={!editable}
-              onClick={() => {
-                family.forEach((person) =>
-                  data.mark(service.id, person.id, !allPresent),
-                );
-                if (allPresent)
-                  setUndo({
-                    ids: family.map((person) => person.id),
-                    expires: Date.now() + 8000,
-                  });
-              }}
-            >
-              {allPresent ? "Clear household" : `Mark all ${family.length}`}
-            </Button>
+        <section className="household" key={id}>
+          <div className="household-name">
+            <h2>{householdPeople[0].householdName}</h2>
+            <span className="muted">
+              {here.length
+                ? `${here.length} of ${family.length} here`
+                : "None here yet"}
+            </span>
           </div>
-          {householdPeople.map((person) => (
-            <ToggleButton
-              key={person.id}
-              data-roll-row
-              checked={!!service.present[person.id]}
-              disabled={!editable}
-              className={`person-row ${service.present[person.id] ? "present" : ""}`}
-              onClick={() =>
-                data.mark(service.id, person.id, !service.present[person.id])
-              }
-              aria-label={`${person.firstName} ${person.lastName}, ${service.present[person.id] ? "present" : "absent"}`}
-            >
-              <span className="check-box" aria-hidden="true">
-                {service.present[person.id] ? <CheckmarkRegular /> : null}
-              </span>
-              <span className="person-name">
-                {person.preferredName || person.firstName}{" "}
-                <span className="muted">{person.lastName}</span>
-              </span>
-              <Badge
-                appearance={
-                  person.membershipStatus === "communicant"
-                    ? "filled"
-                    : "outline"
+          <div className="household-people">
+            {householdPeople.map((person) => (
+              <ToggleButton
+                key={person.id}
+                data-roll-row
+                checked={!!service.present[person.id]}
+                disabled={!editable}
+                className={`person-chip ${service.present[person.id] ? "present" : ""}`}
+                onClick={() =>
+                  data.mark(service.id, person.id, !service.present[person.id])
                 }
-                color={
-                  person.membershipStatus === "visitor"
-                    ? "warning"
-                    : person.membershipStatus === "adherent"
-                      ? "informative"
-                      : "brand"
-                }
+                aria-label={`${person.firstName} ${person.lastName}, ${service.present[person.id] ? "present" : "absent"}`}
               >
-                {statusLabels[person.membershipStatus]}
-              </Badge>
-            </ToggleButton>
-          ))}
+                <span className="check-dot" aria-hidden="true">
+                  {service.present[person.id] ? <CheckmarkRegular /> : null}
+                </span>
+                <span className="chip-text">
+                  <span className="chip-name">
+                    {person.preferredName || person.firstName}
+                  </span>
+                  <span className="chip-status">
+                    {statusLabels[person.membershipStatus]}
+                  </span>
+                </span>
+              </ToggleButton>
+            ))}
+          </div>
+          <Button
+            appearance="subtle"
+            className="household-action"
+            disabled={!editable}
+            onClick={() => {
+              family.forEach((person) =>
+                data.mark(service.id, person.id, !allPresent),
+              );
+              if (allPresent)
+                setUndo({
+                  ids: family.map((person) => person.id),
+                  expires: Date.now() + 8000,
+                });
+            }}
+          >
+            {allPresent ? "Clear household" : `Mark all ${family.length}`}
+          </Button>
         </section>
       );
     });
   }
+  const previous = data.services
+    .filter(
+      (row) =>
+        row.serviceTypeId === service.serviceTypeId && row.date < service.date,
+    )
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  const resident = filtered.filter(
+    (person) => person.membershipStatus !== "nonResident",
+  );
+  const away = filtered.filter(
+    (person) => person.membershipStatus === "nonResident",
+  );
   return (
     <>
-      <div className="roll-layout">
-        <section className="roll-list">
-          <div className="roll-toolbar">
+      <div className="tiles" role="group" aria-label="Present today">
+        <div className="tile lead">
+          <span>Present</span>
+          <strong aria-live="polite" data-testid="present-count">
+            {counts.total}
+          </strong>
+          <small>of {onRoll.length} on the active roll</small>
+        </div>
+        <div className="tile">
+          <span>Members</span>
+          <strong>
+            {counts.communicant + counts.baptized + counts.nonResident}
+          </strong>
+        </div>
+        <div className="tile">
+          <span>Adherents</span>
+          <strong>{counts.adherent}</strong>
+        </div>
+        <div className="tile">
+          <span>Visitors</span>
+          <strong>{counts.visitor}</strong>
+        </div>
+        <div className="tile">
+          <span>Last time</span>
+          <strong>
+            {previous ? Object.keys(previous.present || {}).length : "–"}
+          </strong>
+          <small>
+            {previous
+              ? DateTime.fromISO(previous.date).toFormat("LLL d")
+              : "No earlier service"}
+          </small>
+        </div>
+      </div>
+      <section className="roll-list">
+        <div className="roll-toolbar">
+          <Field
+            label="Find a name or family"
+            hint="Enter marks the first match · Ctrl+F jumps here"
+          >
             <Input
               ref={input}
               aria-label="Search name or family"
-              placeholder="Search name or family…"
+              placeholder="Type a name"
               value={search}
               onChange={(_, value) => setSearch(value.value)}
               onKeyDown={(event) => {
@@ -921,8 +988,7 @@ function RollCall({
                 }
               }}
             />
-            <span className="muted">Enter to mark · Ctrl+F to search</span>
-          </div>
+          </Field>
           <TabList
             selectedValue={filter}
             onTabSelect={(_, value) => setFilter(String(value.value))}
@@ -932,67 +998,32 @@ function RollCall({
             <Tab value="adherent">Adherents</Tab>
             <Tab value="visitor">Visitors</Tab>
           </TabList>
-          {groupRows(
-            filtered.filter(
-              (person) => person.membershipStatus !== "nonResident",
-            ),
-          )}
-          {filtered.some(
-            (person) => person.membershipStatus === "nonResident",
-          ) && (
-            <details className="non-resident">
-              <summary>Non-resident members</summary>
-              {groupRows(
-                filtered.filter(
-                  (person) => person.membershipStatus === "nonResident",
-                ),
-              )}
-            </details>
-          )}
-          {!filtered.length && (
-            <div className="empty surface">
-              <PersonRegular fontSize={32} />
-              <Subtitle2>No people match this list</Subtitle2>
-              <p>
-                {data.people.length
-                  ? "Try another name or membership filter."
-                  : "Add a household from People to begin building the roll."}
-              </p>
-            </div>
-          )}
-        </section>
-        <aside className="attendance-aside">
-          <div className="surface total-card">
-            <span className="eyebrow">PRESENT TODAY</span>
-            <strong aria-live="polite" data-testid="present-count">
-              {counts.total}
-            </strong>
-            <span>of {onRoll.length} on the active roll</span>
-            <hr />
-            <dl>
-              <div>
-                <dt>Members</dt>
-                <dd>
-                  {counts.communicant + counts.baptized + counts.nonResident}
-                </dd>
-              </div>
-              <div>
-                <dt>Adherents</dt>
-                <dd>{counts.adherent}</dd>
-              </div>
-              <div>
-                <dt>Visitors</dt>
-                <dd>{counts.visitor}</dd>
-              </div>
-            </dl>
+        </div>
+        {!!resident.length && (
+          <div className="roll-panel surface">{groupRows(resident)}</div>
+        )}
+        {!!away.length && (
+          <details className="non-resident">
+            <summary>Non-resident members</summary>
+            <div className="roll-panel surface">{groupRows(away)}</div>
+          </details>
+        )}
+        {!filtered.length && (
+          <div className="empty surface">
+            <PersonRegular fontSize={32} />
+            <Subtitle2>No people match this list</Subtitle2>
+            <p>
+              {data.people.length
+                ? "Try another name or membership filter."
+                : "Add a household from People to begin building the roll."}
+            </p>
           </div>
-          <p className="aside-note">
-            Each check saves as you go.
-            <br />
-            Space toggles the focused name.
-          </p>
-        </aside>
-      </div>
+        )}
+        <p className="aside-note">
+          Each check saves as you go, even without a connection. Space marks the
+          focused name.
+        </p>
+      </section>
       {undo && (
         <MessageBar className="undo" intent="info">
           Household cleared.{" "}
@@ -1296,4 +1327,14 @@ function HouseholdDrawer({ date, close }: { date: string; close: () => void }) {
       </form>
     </OverlayDrawer>
   );
+}
+
+// "Lord's Day, November 1, 2026" for Sundays, otherwise the weekday.
+function dateLine(date: string) {
+  const day = DateTime.fromISO(date);
+  if (!date || !day.isValid) return "Choose a date";
+  return `${day.weekday === 7 ? "Lord's Day" : day.toFormat("cccc")}, ${day.toFormat("LLLL d, yyyy")}`;
+}
+function shiftWeeks(date: string, weeks: number) {
+  return DateTime.fromISO(date).plus({ weeks }).toISODate() || date;
 }

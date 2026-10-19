@@ -611,3 +611,163 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .records-empty {
   color: var(--colorNeutralForeground2);
 }
+
+/* Attendance (DESIGN.md 5.2): tiles, then one panel of household rows of name chips. */
+.app .service-bar {
+  padding: 0;
+  margin-bottom: 20px;
+  align-items: flex-end;
+}
+.date-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--colorNeutralStroke1);
+  background: var(--colorNeutralBackground1);
+}
+.tile > span {
+  font-size: 13px;
+  color: var(--colorNeutralForeground2);
+}
+.tile > strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.tile > small {
+  font-size: 12px;
+  color: var(--colorNeutralForeground2);
+}
+.tile.lead {
+  border-color: #2f6b4f;
+  background: #2f6b4f;
+  color: #ffffff;
+}
+.tile.lead > span,
+.tile.lead > small {
+  color: #dff3ea;
+}
+.app .roll-toolbar {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.app .roll-toolbar > .fui-Field {
+  flex: 1 1 320px;
+}
+.app .roll-toolbar .fui-Input {
+  min-height: 46px;
+  font-size: 16px;
+}
+.roll-panel {
+  padding: 4px 24px;
+  margin-bottom: 16px;
+}
+.app .household {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--colorNeutralStroke2);
+  overflow: visible;
+}
+.app .household:last-child {
+  border-bottom: 0;
+}
+.household-name {
+  flex: 0 0 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.household-name h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+}
+.household-name .muted {
+  font-size: 12px;
+}
+.household-people {
+  flex: 1 1 360px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.app .person-chip {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--colorNeutralStroke1);
+  background: var(--colorNeutralBackground1);
+  color: var(--colorNeutralForeground1);
+  font-weight: 400;
+}
+.app .person-chip.present {
+  border: 2px solid #2f6b4f;
+  padding: 5px 13px 5px 9px;
+  background: var(--present-bg);
+  color: var(--present-fg);
+}
+.check-dot {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--colorNeutralForeground3);
+}
+.present .check-dot {
+  background: #2f6b4f;
+  border-color: #2f6b4f;
+  color: #ffffff;
+}
+.chip-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  text-align: left;
+}
+.chip-name {
+  font-size: 16px;
+  font-weight: 500;
+}
+.present .chip-name {
+  font-weight: 700;
+}
+.chip-status {
+  font-size: 11px;
+  color: var(--colorNeutralForeground2);
+}
+.app .household-action {
+  color: var(--colorBrandForeground1);
+}
+.app .aside-note {
+  margin: 4px 0 0;
+}
