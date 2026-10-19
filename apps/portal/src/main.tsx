@@ -26,6 +26,7 @@ import {
   getDirectory,
   getMe,
   getMemberEvents,
+  getPhoto,
   getPublicEvents,
   local,
   portalConfigured,
@@ -43,6 +44,7 @@ import {
 import "./style.css";
 import { StaffSecurity } from "./StaffSecurity";
 import { AccountSettings, FinishSignIn, SignIn } from "./Account";
+import { MyDetails } from "./Profile";
 // Read once at load: the link is removed from the address bar before React renders.
 const initialLink =
   location.pathname === "/staff-security" ? null : pendingSignInLink();
@@ -347,14 +349,17 @@ function Member() {
       clearInterval(timer);
     };
   }, [uid]);
-  async function perform(action: () => Promise<unknown>, message: string) {
+  async function perform(
+    action: () => Promise<unknown>,
+    message: string | ((result: unknown) => string),
+  ) {
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      await action();
+      const result = await action();
       await refresh();
-      setNotice(message);
+      setNotice(typeof message === "string" ? message : message(result));
     } catch (error) {
       setError(portalError(error));
     } finally {
@@ -416,6 +421,7 @@ function Member() {
           >
             <Tab value="directory">Directory</Tab>
             <Tab value="events">Events & my RSVPs</Tab>
+            <Tab value="profile">My details</Tab>
             <Tab value="privacy">My sharing choices</Tab>
             <Tab value="account">Account</Tab>
           </TabList>
@@ -444,6 +450,7 @@ function Member() {
                   )
                   .map((row) => (
                     <article className="card" key={row.id}>
+                      {row.hasPhoto && <DirectoryPhoto entry={row} />}
                       <h2>{row.name}</h2>
                       {row.email && (
                         <p>
@@ -467,6 +474,18 @@ function Member() {
             </>
           ) : tab === "account" ? (
             <AccountSettings />
+          ) : tab === "profile" ? (
+            <MyDetails
+              key={JSON.stringify([
+                profile.contact,
+                profile.household,
+                profile.hasPhoto,
+              ])}
+              profile={profile}
+              personId={profile.person.id}
+              busy={busy}
+              perform={perform}
+            />
           ) : tab === "privacy" ? (
             <Sharing
               key={profile.preferences.expectedRevision}
@@ -544,6 +563,23 @@ function Member() {
     </>
   );
 }
+function DirectoryPhoto({ entry }: { entry: DirectoryEntry }) {
+  const [photo, setPhoto] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getPhoto(entry.id)
+      .then((value) => {
+        if (active) setPhoto(value);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [entry.id]);
+  return photo ? (
+    <img className="member-photo" src={photo} alt={`Photo of ${entry.name}`} />
+  ) : null;
+}
 function Sharing({
   value,
   busy,
@@ -567,6 +603,7 @@ function Sharing({
           ["shareEmail", "Share my email with members"],
           ["sharePhone", "Share my mobile phone with members"],
           ["shareAddress", "Share my household address with members"],
+          ["sharePhoto", "Share my photo with members"],
         ] as const
       ).map(([key, label]) => (
         <Checkbox

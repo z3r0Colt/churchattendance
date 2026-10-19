@@ -26,6 +26,7 @@ import {
   personInputSchema,
   membershipEventSchema,
   toRoster,
+  isAdultOn,
   type ChurchEvent,
   type Person,
   type Household,
@@ -38,8 +39,8 @@ const origin = defineString("PORTAL_ORIGIN", {
   default: "https://not-configured.invalid",
 });
 const rateKey = defineSecret("PORTAL_RATE_LIMIT_KEY");
-const portalOptions = { enforceAppCheck: !emulatorMode() };
-function portalRequest(request: CallableRequest) {
+export const portalOptions = { enforceAppCheck: !emulatorMode() };
+export function portalRequest(request: CallableRequest) {
   if (!emulatorMode() && request.rawRequest.header("origin") !== origin.value())
     throw new HttpsError(
       "permission-denied",
@@ -53,7 +54,7 @@ const eventView = (document: DocumentSnapshot) =>
     start: document.get("start").toDate().toISOString(),
     end: document.get("end").toDate().toISOString(),
   }) as ChurchEvent;
-async function member(request: CallableRequest) {
+export async function member(request: CallableRequest) {
   portalRequest(request);
   if (!request.auth)
     throw new HttpsError(
@@ -202,25 +203,45 @@ export const portalMemberEvents = onCall(portalOptions, async (request) => {
 });
 export const portalMe = onCall(portalOptions, async (request) => {
   const current = await member(request);
-  const [preferences, responses] = await Promise.all([
+  const [preferences, responses, household, zone] = await Promise.all([
     db.doc(`directoryPreferences/${current.person.id}`).get(),
     db
       .collectionGroup("rsvps")
       .where("personId", "==", current.person.id)
       .get(),
+    db.doc(`households/${current.person.householdId}`).get(),
+    getChurchZone(),
   ]);
   return {
     person: {
+      id: current.person.id,
       name: `${current.person.firstName} ${current.person.lastName}`,
       email: current.person.email,
       phone: current.person.mobilePhone,
     },
+    contact: {
+      preferredName: current.person.preferredName || "",
+      email: current.person.email || "",
+      mobilePhone: current.person.mobilePhone || "",
+      smsOptIn: current.person.smsOptIn === true,
+    },
+    household: {
+      name: String(household.get("name") || ""),
+      address: String(household.get("address") || ""),
+      homePhone: String(household.get("homePhone") || ""),
+      canEdit: isAdultOn(
+        current.person.birthDate || "",
+        DateTime.now().setZone(zone).toISODate()!,
+      ),
+    },
+    hasPhoto: !!current.person.photoPath,
     preferences: {
       ...directoryPreferencesSchema.parse({
         listed: preferences.get("listed") || false,
         shareEmail: preferences.get("shareEmail") || false,
         sharePhone: preferences.get("sharePhone") || false,
         shareAddress: preferences.get("shareAddress") || false,
+        sharePhoto: preferences.get("sharePhoto") || false,
       }),
       expectedRevision: Number(preferences.get("revision") || 0),
     },
@@ -254,6 +275,7 @@ export const portalDirectory = onCall(portalOptions, async (request) => {
           shareEmail: preference.get("shareEmail") || false,
           sharePhone: preference.get("sharePhone") || false,
           shareAddress: preference.get("shareAddress") || false,
+          sharePhoto: preference.get("sharePhoto") || false,
         }),
       );
       return entry ? [entry] : [];

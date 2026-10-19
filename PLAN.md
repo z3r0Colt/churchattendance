@@ -293,7 +293,7 @@ bulletinLinks/{token}        path, generation, week, createdAt (server only)
 automationStatus/church     bulletinError, absenceError, servingError, queueError, checkedAt
 
 portalAccess/{uid}           personId, enabled, revision, updatedAt, updatedBy (Admin/Pastor read)
-directoryPreferences/{personId} listed, shareEmail, sharePhone, shareAddress, revision, updatedAt, updatedBy
+directoryPreferences/{personId} listed, shareEmail, sharePhone, shareAddress, sharePhoto, revision, updatedAt, updatedBy
                              (server-only, member accesses own preferences through validated APIs)
 eventPublications/{eventId}  portalVisible, publicRegistration, description, revision, updatedAt, updatedBy
 onlineSubmissions/{requestId} kind, firstName, lastName, email, mobilePhone, message, eventId, date,

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { memberReturnTab, safeReturnPath } from "./index";
+import {
+  isAdultOn,
+  memberContactSchema,
+  memberReturnTab,
+  photoMatchesType,
+  safeReturnPath,
+} from "./index";
 
 describe("member sign-in return path", () => {
   it("keeps only known portal tabs on the portal origin", () => {
@@ -21,5 +27,45 @@ describe("member sign-in return path", () => {
       "/?tab=EVENTS",
     ])
       expect(safeReturnPath(value)).toBe("/");
+  });
+});
+
+describe("member self-service rules", () => {
+  it("needs a recorded birth date of eighteen years for household edits", () => {
+    expect(isAdultOn("2008-10-18", "2026-10-18")).toBe(true);
+    expect(isAdultOn("2008-10-19", "2026-10-18")).toBe(false);
+    expect(isAdultOn("", "2026-10-18")).toBe(false);
+    expect(isAdultOn("not-a-date", "2026-10-18")).toBe(false);
+    // A leap-day birthday reaches eighteen on Feb 28.
+    expect(isAdultOn("2008-02-29", "2026-02-28")).toBe(true);
+    expect(isAdultOn("2008-02-29", "2026-02-27")).toBe(false);
+  });
+  it("checks image bytes against the declared type", () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0]);
+    const webp = new Uint8Array([...Buffer.from("RIFF0000WEBPVP8 ")]);
+    expect(photoMatchesType(jpeg, "image/jpeg")).toBe(true);
+    expect(photoMatchesType(jpeg, "image/png")).toBe(false);
+    expect(photoMatchesType(webp, "image/webp")).toBe(true);
+    expect(
+      photoMatchesType(new Uint8Array([...Buffer.from("<svg>")]), "image/jpeg"),
+    ).toBe(false);
+  });
+  it("pairs every changed contact field with its starting value", () => {
+    const ok = memberContactSchema.safeParse({
+      changes: { mobilePhone: "2025550101" },
+      expected: { mobilePhone: "" },
+    });
+    expect(ok.success).toBe(true);
+    for (const value of [
+      { changes: {}, expected: {} },
+      { changes: { email: "a@example.test" }, expected: {} },
+      { changes: { smsOptIn: true }, expected: { smsOptIn: false } },
+      {
+        changes: { email: "a@example.test" },
+        expected: { email: "" },
+        personId: "other",
+      },
+    ])
+      expect(memberContactSchema.safeParse(value).success).toBe(false);
   });
 });

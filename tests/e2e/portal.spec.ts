@@ -59,16 +59,14 @@ test.beforeAll(async ({ request }) => {
     ["unlinked", true],
     ["unverified", false],
   ] as const) {
-    const user = await auth
-      .getUser(id)
-      .catch(() =>
-        auth.createUser({
-          uid: id,
-          email: `${id}@example.test`,
-          password: "LocalDemo123!",
-          emailVerified: verified,
-        }),
-      );
+    const user = await auth.getUser(id).catch(() =>
+      auth.createUser({
+        uid: id,
+        email: `${id}@example.test`,
+        password: "LocalDemo123!",
+        emailVerified: verified,
+      }),
+    );
     await auth.updateUser(user.uid, {
       emailVerified: verified,
       disabled: false,
@@ -96,38 +94,32 @@ test.beforeEach(async () => {
   await db
     .doc("portalAccess/unverified")
     .set({ personId: "james", enabled: true, revision: 1 });
-  await db
-    .doc("people/james")
-    .update({
-      isDeceased: false,
-      membershipStatus: "communicant",
-      email: "pastor@example.test",
-      mobilePhone: "+12025550101",
-      emailOptIn: false,
-      smsOptIn: false,
-    });
-  await db
-    .doc("people/ruth")
-    .update({
-      isDeceased: false,
-      membershipStatus: "communicant",
-      email: "ruth@example.test",
-      mobilePhone: "+12025550102",
-    });
-  await db
-    .doc("events/meal")
-    .set({
-      title: "Congregational meal",
-      start: Timestamp.fromDate(day.toJSDate()),
-      end: Timestamp.fromDate(day.plus({ hours: 2 }).toJSDate()),
-      recurrence: "none",
-      interval: 1,
-      until: "",
-      location: "Fellowship hall",
-      capacity: 1,
-      cancelled: false,
-      revision: 1,
-    });
+  await db.doc("people/james").update({
+    isDeceased: false,
+    membershipStatus: "communicant",
+    email: "pastor@example.test",
+    mobilePhone: "+12025550101",
+    emailOptIn: false,
+    smsOptIn: false,
+  });
+  await db.doc("people/ruth").update({
+    isDeceased: false,
+    membershipStatus: "communicant",
+    email: "ruth@example.test",
+    mobilePhone: "+12025550102",
+  });
+  await db.doc("events/meal").set({
+    title: "Congregational meal",
+    start: Timestamp.fromDate(day.toJSDate()),
+    end: Timestamp.fromDate(day.plus({ hours: 2 }).toJSDate()),
+    recurrence: "none",
+    interval: 1,
+    until: "",
+    location: "Fellowship hall",
+    capacity: 1,
+    cancelled: false,
+    revision: 1,
+  });
 });
 const visitor = (overrides: Record<string, unknown> = {}) => ({
   requestId: crypto.randomUUID(),
@@ -206,10 +198,11 @@ test("starts directory sharing off, returns only consented fields and prevents w
       email: "ruth@example.test",
       phone: "",
       address: "",
+      hasPhoto: false,
     },
   ]);
   expect(JSON.stringify(rows)).not.toMatch(
-    /birthDate|membershipStatus|discipline/,
+    /birthDate|membershipStatus|discipline|photoPath/,
   );
   await call(
     request,

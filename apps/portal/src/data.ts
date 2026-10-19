@@ -25,6 +25,9 @@ import {
 } from "firebase/app-check";
 import {
   directoryPreferencesSchema,
+  memberContactSchema,
+  memberHouseholdSchema,
+  memberPhotoSchema,
   memberRsvpSchema,
   onlineFormSchema,
   safeReturnPath,
@@ -66,7 +69,20 @@ export const callPortal = async <T>(
 ): Promise<T> => (await httpsCallable<unknown, T>(functions, name)(input)).data;
 export type PortalEvent = Occurrence & { description: string; zone: string };
 export type MemberProfile = {
-  person: { name: string; email: string; phone: string };
+  person: { id: string; name: string; email: string; phone: string };
+  contact: {
+    preferredName: string;
+    email: string;
+    mobilePhone: string;
+    smsOptIn: boolean;
+  };
+  household: {
+    name: string;
+    address: string;
+    homePhone: string;
+    canEdit: boolean;
+  };
+  hasPhoto: boolean;
   preferences: DirectoryPreferences;
   rsvps: { eventId: string; date: string; status: string }[];
 };
@@ -178,6 +194,38 @@ export const rsvp = (value: unknown) =>
   callPortal("portalRsvp", memberRsvpSchema.parse(value));
 export const submitForm = (value: unknown) =>
   callPortal("submitOnlineForm", onlineFormSchema.parse(value));
+export const saveContact = (value: unknown) =>
+  callPortal<{ saved: boolean; textsStopped: boolean }>(
+    "saveMyContact",
+    memberContactSchema.parse(value),
+  );
+export const saveHousehold = (value: unknown) =>
+  callPortal("saveMyHousehold", memberHouseholdSchema.parse(value));
+export const getPhoto = async (personId: string) =>
+  (await callPortal<{ photo: string | null }>("portalPhoto", { personId }))
+    .photo;
+export const removePhoto = () =>
+  callPortal("removeMyPhoto", { expectedPhoto: true });
+// Photos are scaled down in the browser so uploads stay small and drop
+// any location or camera details the original file carried.
+export async function uploadPhoto(file: File, expectedPhoto: boolean) {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))
+    throw new Error("Choose a JPEG, PNG or WebP photo.");
+  const image = await createImageBitmap(file).catch(() => {
+    throw new Error("That photo could not be read. Choose another.");
+  });
+  const scale = Math.min(1, 600 / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.width * scale);
+  canvas.height = Math.round(image.height * scale);
+  canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
+  image.close();
+  const data = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+  return callPortal(
+    "saveMyPhoto",
+    memberPhotoSchema.parse({ contentType: "image/jpeg", data, expectedPhoto }),
+  );
+}
 export function portalError(error: unknown) {
   return error instanceof Error && !error.message.startsWith("[")
     ? error.message

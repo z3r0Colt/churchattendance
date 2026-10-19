@@ -1,7 +1,9 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
+import { DateTime } from "luxon";
 if (
   !process.env.FIRESTORE_EMULATOR_HOST ||
   !process.env.FIREBASE_AUTH_EMULATOR_HOST
@@ -58,6 +60,21 @@ const linkSignIn = (
   request.post(`${identity}/accounts:signInWithEmailLink?key=demo-key`, {
     data: { email, oobCode, returnSecureToken: true },
   });
+async function memberToken(request: APIRequestContext, uid: string) {
+  const link = await sendLink(request, `${uid}@example.test`);
+  const response = await linkSignIn(request, `${uid}@example.test`, link.code);
+  expect(response.status()).toBe(200);
+  return (await response.json()).idToken as string;
+}
+// A 1x1 PNG, which the browser can decode and scale.
+const png = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+const jpeg = Buffer.concat([
+  Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+  Buffer.alloc(64, 1),
+]);
 async function call(
   request: APIRequestContext,
   token: string,
@@ -73,7 +90,25 @@ async function call(
   expect(response.status(), JSON.stringify(json)).toBe(status);
   return json.result;
 }
+const saved = new Map<string, FirebaseFirestore.DocumentData | undefined>();
+const restored = [
+  "people/james",
+  "people/grace",
+  "households/calder",
+  "attendanceRoster/james",
+  "directoryPreferences/james",
+  "directoryPreferences/grace",
+];
+test.afterAll(async () => {
+  for (const path of restored) {
+    const data = saved.get(path);
+    if (data) await db.doc(path).set(data);
+    else await db.doc(path).delete();
+  }
+});
 test.beforeAll(async () => {
+  for (const path of restored)
+    saved.set(path, (await db.doc(path).get()).data());
   for (const uid of ["link-member", "link-other"]) {
     if (!(await auth.getUser(uid).catch(() => null)))
       await auth.createUser({
@@ -228,5 +263,267 @@ test("requests a sign-in link from the portal without revealing whether the acco
     path: "test-results/phase10-sign-in-link.png",
     fullPage: true,
     animations: "disabled",
+  });
+});
+
+test.describe("member details", () => {
+  test.beforeEach(async () => {
+    await db.doc("portalAccess/link-other").set({
+      personId: "grace",
+      enabled: true,
+      revision: 1,
+    });
+    await db.doc("people/james").update({
+      preferredName: "",
+      email: "james@example.test",
+      mobilePhone: "+12025550101",
+      emailOptIn: true,
+      smsOptIn: true,
+      birthDate: "1980-05-01",
+      photoPath: FieldValue.delete(),
+    });
+    await db.doc("people/grace").update({
+      isDeceased: false,
+      membershipStatus: "baptized",
+      birthDate: DateTime.now().minus({ years: 10 }).toISODate(),
+      photoPath: FieldValue.delete(),
+    });
+    await db
+      .doc("households/calder")
+      .update({ address: "1 Fictional Way", homePhone: "" });
+    await db.doc("directoryPreferences/james").delete();
+  });
+
+  test("changes only the member's own contact fields and never turns texts on", async ({
+    request,
+  }) => {
+    const token = await memberToken(request, "link-member");
+    const result = await call(request, token, "saveMyContact", {
+      changes: { mobilePhone: "(202) 555-0199", preferredName: "Jim" },
+      expected: { mobilePhone: "+12025550101", preferredName: "" },
+    });
+    expect(result.textsStopped).toBe(true);
+    const james = (await db.doc("people/james").get()).data()!;
+    expect(james).toMatchObject({
+      mobilePhone: "+12025550199",
+      preferredName: "Jim",
+      smsOptIn: false,
+      emailOptIn: true,
+      updatedBy: "link-member",
+    });
+    expect(
+      (await db.doc("attendanceRoster/james").get()).get("preferredName"),
+    ).toBe("Jim");
+    const consent = await db
+      .collection("consentEvents")
+      .where("personId", "==", "james")
+      .where("actor", "==", "link-member")
+      .get();
+    expect(consent.docs.map((row) => row.get("optedIn"))).toContain(false);
+
+    // A stale form for the same field is refused.
+    await call(
+      request,
+      token,
+      "saveMyContact",
+      {
+        changes: { mobilePhone: "+12025550188" },
+        expected: { mobilePhone: "+12025550101" },
+      },
+      409,
+    );
+    // Consent, status, another person or unknown fields cannot be sent.
+    for (const data of [
+      { changes: { smsOptIn: true }, expected: { smsOptIn: false } },
+      {
+        changes: { membershipStatus: "former" },
+        expected: { membershipStatus: "communicant" },
+      },
+      {
+        personId: "ruth",
+        changes: { email: "x@example.test" },
+        expected: { email: "ruth@example.test" },
+      },
+    ])
+      await call(request, token, "saveMyContact", data, 400);
+    // Changing the email keeps email consent and is a plain field edit.
+    await call(request, token, "saveMyContact", {
+      changes: { email: "James.New@Example.test" },
+      expected: { email: "james@example.test" },
+    });
+    expect((await db.doc("people/james").get()).data()).toMatchObject({
+      email: "james.new@example.test",
+      emailOptIn: true,
+      smsOptIn: false,
+    });
+  });
+
+  test("lets an adult change the household address and refuses a child", async ({
+    request,
+  }) => {
+    const adult = await memberToken(request, "link-member");
+    const child = await memberToken(request, "link-other");
+    expect((await call(request, adult, "portalMe")).household.canEdit).toBe(
+      true,
+    );
+    expect((await call(request, child, "portalMe")).household.canEdit).toBe(
+      false,
+    );
+    await call(
+      request,
+      child,
+      "saveMyHousehold",
+      {
+        changes: { address: "9 Elsewhere Road" },
+        expected: { address: "1 Fictional Way" },
+      },
+      403,
+    );
+    await call(request, adult, "saveMyHousehold", {
+      changes: { address: "22 New Street" },
+      expected: { address: "1 Fictional Way" },
+    });
+    expect((await db.doc("households/calder").get()).data()).toMatchObject({
+      address: "22 New Street",
+      updatedBy: "link-member",
+    });
+    await call(
+      request,
+      adult,
+      "saveMyHousehold",
+      {
+        changes: { address: "23 New Street" },
+        expected: { address: "1 Fictional Way" },
+      },
+      409,
+    );
+    // Without a recorded birth date the church office makes the change.
+    await db.doc("people/james").update({ birthDate: "" });
+    await call(
+      request,
+      adult,
+      "saveMyHousehold",
+      {
+        changes: { homePhone: "2025550111" },
+        expected: { homePhone: "" },
+      },
+      403,
+    );
+  });
+
+  test("validates photos and shows them to other members only while shared", async ({
+    request,
+  }) => {
+    const james = await memberToken(request, "link-member");
+    const grace = await memberToken(request, "link-other");
+    const upload = (data: Buffer, contentType = "image/jpeg") =>
+      call(
+        request,
+        james,
+        "saveMyPhoto",
+        { contentType, data: data.toString("base64"), expectedPhoto: false },
+        400,
+      );
+    await upload(Buffer.from("<html>not an image</html>"));
+    await upload(png, "image/jpeg");
+    await upload(Buffer.concat([jpeg, Buffer.alloc(1024 * 1024)]));
+    await call(request, james, "saveMyPhoto", {
+      contentType: "image/jpeg",
+      data: jpeg.toString("base64"),
+      expectedPhoto: false,
+    });
+    const first = (await db.doc("people/james").get()).get("photoPath");
+    expect(first).toMatch(/^photos\/james\/[a-f0-9-]+\.jpg$/);
+    expect(
+      (await call(request, james, "portalPhoto", { personId: "james" })).photo,
+    ).toMatch(/^data:image\/jpeg;base64,/);
+    expect(
+      (await call(request, grace, "portalPhoto", { personId: "james" })).photo,
+    ).toBeNull();
+    await db
+      .doc("directoryPreferences/james")
+      .set({ listed: true, sharePhoto: true, revision: 1 });
+    expect(
+      (await call(request, grace, "portalPhoto", { personId: "james" })).photo,
+    ).toMatch(/^data:image\/jpeg;base64,/);
+    const directory = await call(request, grace, "portalDirectory");
+    expect(
+      directory.find((row: { id: string }) => row.id === "james").hasPhoto,
+    ).toBe(true);
+    // Replacing removes the old file; a stale replacement is refused.
+    await call(request, james, "saveMyPhoto", {
+      contentType: "image/png",
+      data: png.toString("base64"),
+      expectedPhoto: true,
+    });
+    const [exists] = await getStorage().bucket().file(first).exists();
+    expect(exists).toBe(false);
+    await call(
+      request,
+      james,
+      "saveMyPhoto",
+      {
+        contentType: "image/png",
+        data: png.toString("base64"),
+        expectedPhoto: false,
+      },
+      409,
+    );
+    await call(request, james, "removeMyPhoto", { expectedPhoto: true });
+    expect((await db.doc("people/james").get()).get("photoPath")).toBe(
+      undefined,
+    );
+    expect(
+      (await call(request, grace, "portalPhoto", { personId: "james" })).photo,
+    ).toBeNull();
+  });
+
+  test("edits details and a photo on a phone-sized screen", async ({
+    page,
+    request,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const link = await sendLink(
+      request,
+      "link-member@example.test",
+      "/?tab=profile",
+    );
+    await page.goto(link.url);
+    await page.getByLabel("Email").fill("link-member@example.test");
+    await page
+      .getByRole("button", { name: "Finish signing in", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "My contact details" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Texts stop if you change this number."),
+    ).toBeVisible();
+    await page.getByLabel("Mobile phone").fill("2025550177");
+    await page
+      .getByRole("button", { name: "Save contact details", exact: true })
+      .click();
+    await expect(
+      page.getByText(/Texts are off for your new number/),
+    ).toBeVisible();
+    await page
+      .getByLabel("Add a photo")
+      .setInputFiles({ name: "me.png", mimeType: "image/png", buffer: png });
+    await expect(page.getByText("Your photo was saved.")).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "My current photo" }),
+    ).toBeVisible();
+    await page.getByLabel("Household address").fill("5 Garden Row");
+    await page
+      .getByRole("button", { name: "Save household details", exact: true })
+      .click();
+    await expect(
+      page.getByText("Your household details were saved."),
+    ).toBeVisible();
+    await page.screenshot({
+      path: "test-results/phase10-member-details.png",
+      fullPage: true,
+      animations: "disabled",
+    });
   });
 });

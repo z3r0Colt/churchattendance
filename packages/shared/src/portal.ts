@@ -14,6 +14,7 @@ export const directoryPreferencesSchema = z
     shareEmail: z.boolean().default(false),
     sharePhone: z.boolean().default(false),
     shareAddress: z.boolean().default(false),
+    sharePhoto: z.boolean().default(false),
     expectedRevision: z.number().int().nonnegative().default(0),
   })
   .strict();
@@ -74,13 +75,14 @@ export type DirectoryEntry = {
   email: string;
   phone: string;
   address: string;
+  hasPhoto: boolean;
 };
 export function portalDirectoryEntry(
   person: Person,
   household: Household | undefined,
   preferences: Pick<
     DirectoryPreferences,
-    "listed" | "shareEmail" | "sharePhone" | "shareAddress"
+    "listed" | "shareEmail" | "sharePhone" | "shareAddress" | "sharePhoto"
   >,
 ): DirectoryEntry | null {
   if (
@@ -97,5 +99,6 @@ export function portalDirectoryEntry(
     email: preferences.shareEmail ? person.email : "",
     phone: preferences.sharePhone ? person.mobilePhone : "",
     address: preferences.shareAddress ? household?.address || "" : "",
+    hasPhoto: preferences.sharePhoto && !!person.photoPath,
   };
 }

@@ -32,6 +32,7 @@ describe("member portal privacy", () => {
       shareEmail: false,
       sharePhone: false,
       shareAddress: false,
+      sharePhoto: false,
       expectedRevision: 0,
     });
     expect(
