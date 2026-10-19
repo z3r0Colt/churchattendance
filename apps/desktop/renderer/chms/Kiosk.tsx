@@ -18,6 +18,7 @@ import {
 } from "../data/chms";
 import { lightTheme } from "../theme/brand";
 import { friendlyError } from "./Common";
+import { native } from "../platform";
 export function Kiosk() {
   const [search, setSearch] = useState("");
   const [result, setResult] = useState<KioskResult | null>(null);
@@ -29,12 +30,12 @@ export function Kiosk() {
   const [pin, setPin] = useState("");
   const [date, setDate] = useState("");
   useEffect(() => {
-    void window.desktop?.setKioskMode(true);
+    void native?.setKioskMode(true);
     void chmsCall<{ date: string }>("kioskInfo", {})
       .then((row) => setDate(row.date))
       .catch((error) => setError(friendlyError(error)));
     return () => {
-      void window.desktop?.setKioskMode(false);
+      void native?.setKioskMode(false);
     };
   }, []);
   useEffect(() => {

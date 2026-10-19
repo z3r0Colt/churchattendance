@@ -32,6 +32,7 @@ import {
   type useShepherdingData,
 } from "../data/shepherding";
 import { Records, RecordEditor, StatusPill, friendlyError } from "./Common";
+import { native } from "../platform";
 
 export function Locations({
   data,
@@ -105,7 +106,7 @@ export function Locations({
   }
   async function openDirections() {
     const addresses = stops.map((row) => row!.address);
-    if (window.desktop) await window.desktop.openDirections(addresses);
+    if (native) await native.openDirections(addresses);
     else window.open(directionsUrl(addresses), "_blank", "noopener,noreferrer");
     setPreview(false);
   }

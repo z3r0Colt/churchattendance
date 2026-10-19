@@ -15,6 +15,7 @@ import {
 } from "@sycamore/shared";
 import { db } from "./firebase";
 import { chmsCall } from "./chms";
+import { native } from "../platform";
 export function useChurchSettings() {
   const [value, setValue] = useState<ChurchSettings | null>(null),
     [error, setError] = useState("");
@@ -126,8 +127,8 @@ export async function exportAdministration(
     throw new Error(
       "The archive exceeds the 10 MB desktop save limit. Ask an administrator for a managed export.",
     );
-  if (window.desktop)
-    return window.desktop.saveXlsx(Array.from(buffer), "sycamore-archive.xlsx");
+  if (native)
+    return native.saveXlsx(Array.from(buffer), "sycamore-archive.xlsx");
   const url = URL.createObjectURL(
     new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -24,7 +24,14 @@ import {
   type TotpSecret,
 } from "firebase/auth";
 
-export function StaffPasswordForm({ auth }: { auth: Auth }) {
+// tabOnly keeps the sign-in to this browser tab, as the staff web requires.
+export function StaffPasswordForm({
+  auth,
+  tabOnly = false,
+}: {
+  auth: Auth;
+  tabOnly?: boolean;
+}) {
   const [resolver, setResolver] = useState<MultiFactorResolver | null>(null),
     [factor, setFactor] = useState(""),
     [error, setError] = useState(""),
@@ -46,7 +53,9 @@ export function StaffPasswordForm({ auth }: { auth: Auth }) {
       else {
         await setPersistence(
           auth,
-          keep ? browserLocalPersistence : browserSessionPersistence,
+          keep && !tabOnly
+            ? browserLocalPersistence
+            : browserSessionPersistence,
         );
         await signInWithEmailAndPassword(
           auth,
@@ -114,11 +123,13 @@ export function StaffPasswordForm({ auth }: { auth: Auth }) {
               required
             />
           </Field>
-          <Checkbox
-            label="Keep this PC signed in"
-            checked={keep}
-            onChange={(_, data) => setKeep(data.checked === true)}
-          />
+          {!tabOnly && (
+            <Checkbox
+              label="Keep this PC signed in"
+              checked={keep}
+              onChange={(_, data) => setKeep(data.checked === true)}
+            />
+          )}
         </>
       )}
       {error && <MessageBar intent="error">{error}</MessageBar>}

@@ -13,3 +13,4 @@ interface Window {
     openDirections(stops: string[]): Promise<void>;
   };
 }
+declare const __STAFF_WEB__: boolean;

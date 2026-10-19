@@ -6,6 +6,7 @@ export default defineConfig({
   envDir: fileURLToPath(new URL("../../", import.meta.url)),
   base: "./",
   plugins: [react()],
+  define: { __STAFF_WEB__: "false" },
   resolve: { preserveSymlinks: true },
   optimizeDeps: {
     exclude: ["@sycamore/shared"],

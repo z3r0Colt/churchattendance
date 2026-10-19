@@ -18,10 +18,11 @@
     "test": "vitest run --configLoader runner",
     "test:rules": "firebase emulators:exec --project demo-sycamore --only firestore,storage \"vitest run --config vitest.rules.config.ts --configLoader runner\"",
     "test:e2e": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/seed.mjs && playwright test\"",
-    "build": "npm run build -w @sycamore/shared && npm run build -w @sycamore/desktop && npm run build -w @sycamore/portal && npm run build -w @sycamore/functions",
+    "build": "npm run build -w @sycamore/shared && npm run build -w @sycamore/desktop && npm run build -w @sycamore/portal && npm run build:web -w @sycamore/desktop && npm run build -w @sycamore/functions",
     "dist": "npm run build && npm exec -w @sycamore/desktop -- electron-builder --win nsis --publish never",
     "dev:portal": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/portal-dev.mjs\"",
-    "dev:portal:ui": "npm run dev -w @sycamore/portal"
+    "dev:portal:ui": "npm run dev -w @sycamore/portal",
+    "dev:staff": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/staff-web-dev.mjs\""
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

@@ -6,11 +6,13 @@
   "author": "Sycamore RPC",
   "main": "dist/main.cjs",
   "scripts": {
-    "build": "vite build --config vite.config.ts --configLoader runner && node build.mjs"
+    "build": "vite build --config vite.config.ts --configLoader runner && node build.mjs",
+    "build:web": "vite build --config vite.web.config.ts --configLoader runner"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.74.9",
     "@fluentui/react-icons": "^2.0.300",
+    "@simplewebauthn/browser": "^13.2.2",
     "@sycamore/shared": "0.1.0",
     "chart.js": "^4.5.1",
     "electron-updater": "^6.6.2",

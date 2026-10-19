@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { signInWithCustomToken } from "firebase/auth";
-import { auth, functions, emulators } from "./firebase";
+import { auth, functions } from "./firebase";
+import { native, staffSecurityUrl } from "../platform";
 export const securityCall = async <T = unknown>(
   name: string,
   input: unknown = {},
@@ -19,12 +20,9 @@ export async function browserStaffSignIn(notice: (text: string) => void) {
   const challenge = Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
-  const configured =
-    import.meta.env.VITE_STAFF_AUTH_ORIGIN ||
-    (emulators ? "http://localhost:5174" : "");
-  const url = new URL("/staff-security", configured);
+  const url = new URL(staffSecurityUrl());
   url.hash = new URLSearchParams({ id, challenge }).toString();
-  if (window.desktop) await window.desktop.openStaffSecurity(id, challenge);
+  if (native) await native.openStaffSecurity(id, challenge);
   else window.open(url.href, "_blank", "noopener,noreferrer");
   notice(
     `Finish sign-in in your browser. Approve only if it shows this code: ${id.slice(-8)}.`,

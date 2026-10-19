@@ -11,6 +11,7 @@ import {
   PointElement,
 } from "chart.js";
 import { directoryPhoto } from "./chms";
+import { native } from "../platform";
 Chart.register(
   BarController,
   BarElement,
@@ -75,7 +76,7 @@ export function reportHtml(title: string, period: string, content: string) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${escapeHtml(title)}</title><style>@page{size:letter;margin:0.45in}body{font:11px 'Segoe UI',sans-serif;color:#1f2321}h1{font-size:20px}h2{font-size:14px}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:5px;border-bottom:1px solid #dadfdc;vertical-align:top}th{background:#eef3ef}thead{display:table-header-group}tr,.directory-family{break-inside:avoid}.chart{width:100%;height:170px;object-fit:contain}.directory{display:grid;grid-template-columns:1fr 1fr;gap:16px}.directory-family{border:1px solid #dadfdc;padding:12px}.portrait{width:60px;height:75px;object-fit:cover;float:right;margin:0 0 6px 8px}footer{font-size:10px;color:#5b625e}.page-break{break-before:page}</style></head><body><strong>SYCAMORE REFORMED PRESBYTERIAN CHURCH</strong><h1>${escapeHtml(title)}</h1><p>${escapeHtml(period)}</p>${content}<footer>Church records · Review the source data before distribution.</footer></body></html>`;
 }
 export async function savePdf(title: string, html: string) {
-  if (window.desktop) return window.desktop.saveReportPdf(title, html);
+  if (native) return native.saveReportPdf(title, html);
   const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
   const popup = window.open(url, "_blank");
   if (!popup)
@@ -125,7 +126,7 @@ export async function exportReportWorkbook(
     }
   }
   const bytes = new Uint8Array(await book.xlsx.writeBuffer());
-  if (window.desktop) await window.desktop.saveXlsx(Array.from(bytes));
+  if (native) await native.saveXlsx(Array.from(bytes));
   else {
     const url = URL.createObjectURL(
       new Blob([bytes], {

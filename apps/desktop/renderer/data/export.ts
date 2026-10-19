@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { native } from "../platform";
 export type ExportRow = Record<string, string | number>;
 function download(data: BlobPart, type: string, filename: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -10,7 +11,7 @@ function download(data: BlobPart, type: string, filename: string) {
 }
 export async function exportCsv(rows: ExportRow[]) {
   const csv = Papa.unparse(rows, { escapeFormulae: true });
-  if (window.desktop) await window.desktop.saveCsv(csv);
+  if (native) await native.saveCsv(csv);
   else download("\uFEFF" + csv, "text/csv;charset=utf-8", "attendance.csv");
 }
 export async function exportXlsx(rows: ExportRow[]) {
@@ -52,7 +53,7 @@ export async function exportXlsx(rows: ExportRow[]) {
       };
   }
   const bytes = new Uint8Array(await book.xlsx.writeBuffer());
-  if (window.desktop) await window.desktop.saveXlsx(Array.from(bytes));
+  if (native) await native.saveXlsx(Array.from(bytes));
   else
     download(
       bytes,

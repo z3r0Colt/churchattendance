@@ -1480,3 +1480,183 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   gap: 8px 16px;
   margin: 8px 0 16px;
 }
+
+/* Staff web and narrow windows (DESIGN.md, Staff web layout): below 760px the sidebar
+   becomes a labelled menu over the page, the top bar keeps the sync state in view and
+   attendance touch targets are at least 48px. */
+.app .menu-button,
+.nav-user,
+.nav-scrim,
+.footer-service {
+  display: none;
+}
+@media (max-width: 760px) {
+  .app .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+  .app .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    min-height: 56px;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .app .menu-button {
+    display: inline-flex;
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .app .topbar .wordmark {
+    flex: 1;
+    font-size: 19px;
+  }
+  .app .topbar .wordmark span,
+  .topbar-user {
+    display: none;
+  }
+  .app .topbar-right {
+    gap: 2px;
+  }
+  .app .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: min(300px, 85vw);
+    overflow-y: auto;
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition:
+      transform 0.18s ease,
+      visibility 0.18s;
+    box-shadow: var(--shadow16);
+  }
+  .app .workspace.nav-open .sidebar {
+    visibility: visible;
+    transform: none;
+  }
+  .app .sidebar .nav-item {
+    min-height: 48px;
+  }
+  .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    border: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.35);
+  }
+  .nav-user {
+    display: block;
+    padding: 0 12px;
+    font-weight: 600;
+  }
+  .nav-user small {
+    display: block;
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--colorNeutralForeground2);
+  }
+  /* Wide grids scroll inside the page rather than widening it, which would
+     shift the fixed menu and footer on phones. */
+  .app .content {
+    padding: 16px 16px 120px;
+    overflow-x: auto;
+  }
+  .app .page-heading {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .app .service-bar {
+    gap: 12px;
+  }
+  .app .service-bar > .fui-Field,
+  .app .service-bar .fui-Dropdown {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .date-stepper .fui-Input {
+    flex: 1;
+  }
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .tile.lead {
+    grid-column: 1 / -1;
+  }
+  .tile {
+    padding: 12px 14px;
+  }
+  .tile > strong {
+    font-size: 28px;
+  }
+  .app .roll-toolbar .fui-TabList {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .app .roll-toolbar .fui-Tab {
+    min-height: 48px;
+  }
+  .roll-panel {
+    padding: 4px 12px;
+  }
+  .household-name {
+    flex: 1 1 100%;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .household-people {
+    flex: 1 1 100%;
+  }
+  .app .person-chip {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    min-height: 56px;
+  }
+  .chip-text {
+    min-width: 0;
+  }
+  .chip-name,
+  .chip-status {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app .household-action {
+    min-height: 48px;
+    margin-left: auto;
+  }
+  .app .roll-footer {
+    left: 0;
+    padding: 10px 16px;
+    gap: 6px 14px;
+    flex-wrap: wrap;
+  }
+  .app .roll-footer > span.muted {
+    display: none;
+  }
+  .footer-service {
+    display: block;
+    flex-basis: 100%;
+    font-weight: 600;
+  }
+  .undo {
+    left: 16px;
+    right: 16px;
+    bottom: 96px;
+  }
+  .app .center {
+    padding: 16px;
+  }
+  .app .signin {
+    width: 100%;
+    padding: 24px 20px;
+  }
+}

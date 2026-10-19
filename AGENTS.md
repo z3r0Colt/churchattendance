@@ -50,7 +50,8 @@ These are created in Phase 1. Keep the names stable.
 | `npm test` | Vitest unit tests |
 | `npm run test:rules` | Security rule tests inside `firebase emulators:exec` |
 | `npm run test:e2e` | Playwright tests against the emulators |
-| `npm run build` | Build renderer, main, preload and functions |
+| `npm run dev:staff` | Start the emulators and serve the staff web at http://localhost:5175/staff/ |
+| `npm run build` | Build renderer, main, preload, portal, staff web and functions |
 | `npm run dist` | Build the Windows installer |
 
 Before every commit run `npm run lint`, `npm run typecheck` and `npm test`. If you touched `firestore.rules`, `storage.rules`, roles, or anything under `sessionPrivate`, `careNotes`, `followUps`, `diaconalTasks`, `pastoralVisits`, `visitRounds`, `shepherdingSettings`, `householdLocations`, `flockAssessments`, `bereavementDates`, `importantDates`, `memberRequests`, `workflows`, `workflowVersions`, `workflowRuns`, `officerPolicies`, `officerDecisions`, `quorumPolicies`, `quorumMeetings`, `communionDecisions`, `communionRecords` or any `mercy*` collection, also run `npm run test:rules`.

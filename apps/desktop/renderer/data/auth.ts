@@ -11,8 +11,10 @@ import {
 import { roleSchema, type Role } from "@sycamore/shared";
 import { auth, privateCacheReady } from "./firebase";
 import { securityCall } from "./security";
+import { staffWeb } from "../platform";
 export function useAuth() {
   const generation = useRef(0);
+  const signedInUid = useRef("");
   const [state, setState] = useState<{
     loading: boolean;
     user: User | null;
@@ -32,6 +34,17 @@ export function useAuth() {
   useEffect(
     () =>
       onIdTokenChanged(auth, async (user) => {
+        // The staff web holds records only in memory. Reloading on sign-out or a change of
+        // account drops every listener and cached document before anyone else signs in.
+        if (
+          staffWeb &&
+          signedInUid.current &&
+          user?.uid !== signedInUid.current
+        ) {
+          location.reload();
+          return;
+        }
+        signedInUid.current = user?.uid || "";
         const attempt = ++generation.current;
         try {
           await privateCacheReady;

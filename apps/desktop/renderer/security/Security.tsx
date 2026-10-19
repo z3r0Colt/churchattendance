@@ -24,6 +24,7 @@ import {
   type SecurityEvent,
 } from "@sycamore/shared";
 import { securityCall, browserStaffSignIn } from "../data/security";
+import { staffSecurityUrl, staffWeb } from "../platform";
 import { RecordEditor, Records, friendlyError } from "../chms/Common";
 export function Security({ roles }: { roles: Role[] }) {
   const [accounts, setAccounts] = useState<StaffAccount[]>([]),
@@ -92,12 +93,22 @@ export function Security({ roles }: { roles: Role[] }) {
         Staff records require a verified account and completed MFA or passkey
         sign-in. Security changes require a sign-in within five minutes.
       </p>
-      <Button
-        disabled={busy}
-        onClick={() => void run(() => browserStaffSignIn(setNotice))}
-      >
-        Open browser sign-in and passkeys
-      </Button>
+      {staffWeb ? (
+        <Button
+          onClick={() =>
+            window.open(staffSecurityUrl(), "_blank", "noopener,noreferrer")
+          }
+        >
+          Manage passkeys and authenticators
+        </Button>
+      ) : (
+        <Button
+          disabled={busy}
+          onClick={() => void run(() => browserStaffSignIn(setNotice))}
+        >
+          Open browser sign-in and passkeys
+        </Button>
+      )}
       {error && <MessageBar intent="error">{error}</MessageBar>}
       {notice && <MessageBar intent="info">{notice}</MessageBar>}
       {setupLink && (

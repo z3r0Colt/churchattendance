@@ -31,6 +31,7 @@ import {
   CheckmarkCircleRegular,
   CheckmarkRegular,
   DismissRegular,
+  NavigationRegular,
   PersonRegular,
   WeatherMoonRegular,
 } from "@fluentui/react-icons";
@@ -90,7 +91,9 @@ import { Communion } from "./chms/Communion";
 import { Imports } from "./chms/Imports";
 import { StaffPasswordForm, StaffEnrollment } from "./security/Factors";
 import { Security } from "./security/Security";
-import { browserStaffSignIn } from "./data/security";
+import { PasskeySignIn } from "./security/PasskeySignIn";
+import { browserStaffSignIn, securityCall } from "./data/security";
+import { staffWeb } from "./platform";
 
 type AttendanceData = ReturnType<typeof useAttendanceData>;
 type Page =
@@ -155,6 +158,8 @@ export function App() {
         <main className="center">
           <Spinner label="Opening Sycamore RPC" />
         </main>
+      ) : authSession.kiosk && staffWeb ? (
+        <KioskElsewhere />
       ) : authSession.kiosk ? (
         <Kiosk />
       ) : !authSession.user ? (
@@ -195,28 +200,71 @@ function SignIn() {
             Firebase setup is needed before this app can connect.
           </MessageBar>
         )}
-        <StaffPasswordForm auth={auth} />
-        <Button
-          disabled={busy || !configured}
-          onClick={() => {
-            setBusy(true);
-            setError("");
-            void browserStaffSignIn(setNotice)
-              .catch((cause) =>
-                setError(
-                  cause instanceof Error
-                    ? cause.message
-                    : "Browser sign-in failed.",
-                ),
-              )
-              .finally(() => setBusy(false));
-          }}
-        >
-          Sign in with browser or passkey
-        </Button>
+        <StaffPasswordForm auth={auth} tabOnly={staffWeb} />
+        {staffWeb ? (
+          <>
+            <PasskeySignIn auth={auth} call={securityCall} />
+            <p>
+              This sign-in lasts until you close this tab. Nothing from the
+              church records is kept in the browser.
+            </p>
+          </>
+        ) : (
+          <SignInWithBrowser
+            busy={busy}
+            setBusy={setBusy}
+            setError={setError}
+            setNotice={setNotice}
+          />
+        )}
         {notice && <MessageBar intent="info">{notice}</MessageBar>}
         {error && <MessageBar intent="error">{error}</MessageBar>}
         <small>Sycamore Reformed Presbyterian Church</small>
+      </section>
+    </main>
+  );
+}
+// The desktop opens the church security page in the system browser and waits for its approval.
+function SignInWithBrowser({
+  busy,
+  setBusy,
+  setError,
+  setNotice,
+}: {
+  busy: boolean;
+  setBusy: (value: boolean) => void;
+  setError: (value: string) => void;
+  setNotice: (value: string) => void;
+}) {
+  return (
+    <Button
+      disabled={busy || !configured}
+      onClick={() => {
+        setBusy(true);
+        setError("");
+        void browserStaffSignIn(setNotice)
+          .catch((cause) =>
+            setError(
+              cause instanceof Error
+                ? cause.message
+                : "Browser sign-in failed.",
+            ),
+          )
+          .finally(() => setBusy(false));
+      }}
+    >
+      Sign in with browser or passkey
+    </Button>
+  );
+}
+// A kiosk sign-in belongs on the church kiosk PC, never in a browser tab.
+function KioskElsewhere() {
+  return (
+    <main className="center">
+      <section className="signin surface">
+        <Title3>The kiosk runs on the church PC</Title3>
+        <p>Household check-in is not available in a browser.</p>
+        <Button onClick={() => void signOutUser()}>Sign out</Button>
       </section>
     </main>
   );
@@ -244,6 +292,10 @@ function Workspace({
   const [selectedType, setSelectedType] = useState("");
   const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false);
+  // On narrow screens the sidebar becomes a menu that opens over the page.
+  const [navOpen, setNavOpen] = useState(false);
+  const [lockWarning, setLockWarning] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
   const editor = hasRole(roles, EDITOR_ROLES);
   const volunteer = roles.length === 1 && roles[0] === "attendanceVolunteer";
   const unreadTexts = useUnreadSms(editor);
@@ -270,13 +322,37 @@ function Workspace({
       window.removeEventListener("keydown", reset);
     };
   }, []);
+  // Marks on the staff web live only in this tab's memory until they reach the server.
+  useEffect(() => {
+    if (!staffWeb || !data.pending) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [data.pending]);
+  useEffect(() => {
+    if (!navOpen) return;
+    document.querySelector<HTMLElement>("#main-nav .nav-item")?.focus();
+    const close = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setNavOpen(false);
+      menuButton.current?.focus();
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [navOpen]);
+  function lock() {
+    if (staffWeb && data.pending) setLockWarning(true);
+    else void signOutUser();
+  }
   const service = data.services.find(
     (row) => row.serviceTypeId === selectedType && row.date === date,
   );
   const sync = data.error
     ? "Some changes did not save"
     : !data.online
-      ? "Offline, changes saved on this PC"
+      ? staffWeb
+        ? "Offline, keep this tab open"
+        : "Offline, changes saved on this PC"
       : data.pending
         ? "Saving"
         : data.cacheOnly
@@ -305,8 +381,18 @@ function Workspace({
       </main>
     );
   return (
-    <div className="workspace">
+    <div className={`workspace${navOpen ? " nav-open" : ""}`}>
       <header className="topbar">
+        <Button
+          ref={menuButton}
+          appearance="subtle"
+          className="menu-button"
+          icon={<NavigationRegular />}
+          aria-label="Menu"
+          aria-expanded={navOpen}
+          aria-controls="main-nav"
+          onClick={() => setNavOpen(!navOpen)}
+        />
         <div className="wordmark">
           Sycamore
           <span>REFORMED PRESBYTERIAN</span>
@@ -325,7 +411,7 @@ function Workspace({
           >
             {sync}
           </Badge>
-          <span>
+          <span className="topbar-user">
             {name}
             <small>{roles.map((role) => roleNames[role]).join(", ")}</small>
           </span>
@@ -337,12 +423,32 @@ function Workspace({
               onClick={() => changeTheme(theme === "dark" ? "light" : "dark")}
             />
           </Tooltip>
-          <Button appearance="subtle" onClick={() => void signOutUser()}>
+          <Button appearance="subtle" onClick={lock}>
             Lock now
           </Button>
         </div>
       </header>
-      <nav aria-label="Main navigation" className="sidebar">
+      {navOpen && (
+        <button
+          className="nav-scrim"
+          aria-label="Close menu"
+          tabIndex={-1}
+          onClick={() => setNavOpen(false)}
+        />
+      )}
+      <nav
+        aria-label="Main navigation"
+        className="sidebar"
+        id="main-nav"
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest(".nav-item"))
+            setNavOpen(false);
+        }}
+      >
+        <div className="nav-user">
+          {name}
+          <small>{roles.map((role) => roleNames[role]).join(", ")}</small>
+        </div>
         <NavGroup label="WORSHIP">
           {!volunteer && (
             <NavItem
@@ -509,10 +615,23 @@ function Workspace({
         </NavGroup>
       </nav>
       <main className="content">
+        {lockWarning && (
+          <MessageBar intent="warning">
+            Some marks have not reached the church records yet. Locking now
+            loses them.{" "}
+            <Button size="small" onClick={() => void signOutUser()}>
+              Lock anyway
+            </Button>{" "}
+            <Button size="small" onClick={() => setLockWarning(false)}>
+              Keep working
+            </Button>
+          </MessageBar>
+        )}
         {!data.online && (
           <MessageBar intent="warning">
-            You are offline. Attendance changes stay on this PC until the
-            connection returns.
+            {staffWeb
+              ? "You are offline. Marks are kept in this tab until the connection returns, so keep this tab open."
+              : "You are offline. Attendance changes stay on this PC until the connection returns."}
           </MessageBar>
         )}
         {data.error && (
@@ -705,13 +824,17 @@ function Workspace({
           <>
             <div className="page-heading">
               <div>
-                <span className="eyebrow">THIS PC AND THE CHURCH</span>
+                <span className="eyebrow">
+                  {staffWeb
+                    ? "THIS DEVICE AND THE CHURCH"
+                    : "THIS PC AND THE CHURCH"}
+                </span>
                 <Title3 as="h1">Settings</Title3>
               </div>
             </div>
             <nav className="jump-links" aria-label="Settings sections">
               {[
-                ["settings-pc", "This PC", true],
+                ["settings-pc", staffWeb ? "This device" : "This PC", true],
                 [
                   "settings-church",
                   "Church, services and districts",
@@ -721,7 +844,7 @@ function Workspace({
                 [
                   "settings-kiosk",
                   "Kiosk",
-                  hasRole(roles, ["admin", "pastor"]),
+                  !staffWeb && hasRole(roles, ["admin", "pastor"]),
                 ],
               ]
                 .filter(([, , shown]) => shown)
@@ -740,12 +863,12 @@ function Workspace({
                 ))}
             </nav>
             <section className="surface settings" id="settings-pc">
-              <Subtitle2>This PC</Subtitle2>
+              <Subtitle2>{staffWeb ? "This device" : "This PC"}</Subtitle2>
               <Field label="Theme">
                 <Dropdown
                   value={
                     theme === "system"
-                      ? "Match Windows"
+                      ? systemThemeName
                       : theme === "dark"
                         ? "Dark"
                         : "Light"
@@ -755,7 +878,7 @@ function Workspace({
                     changeTheme(option.optionValue || "system")
                   }
                 >
-                  <Option value="system">Match Windows</Option>
+                  <Option value="system">{systemThemeName}</Option>
                   <Option value="light">Light</Option>
                   <Option value="dark">Dark</Option>
                 </Dropdown>
@@ -780,7 +903,7 @@ function Workspace({
                 />
               </div>
             )}
-            {hasRole(roles, ["admin", "pastor"]) && (
+            {!staffWeb && hasRole(roles, ["admin", "pastor"]) && (
               <section
                 className="surface communication-panel"
                 id="settings-kiosk"
@@ -1140,6 +1263,11 @@ function RollCall({
         </MessageBar>
       )}
       <footer className="roll-footer" aria-live="polite">
+        <span className="footer-service">
+          {data.types.find((type) => type.id === service.serviceTypeId)?.name}
+          {" · "}
+          {DateTime.fromISO(service.date).toFormat("LLL d")}
+        </span>
         Members {counts.communicant + counts.baptized + counts.nonResident}{" "}
         <span>Adherents {counts.adherent}</span>{" "}
         <span>Visitors {counts.visitor}</span>
@@ -1433,6 +1561,7 @@ function HouseholdDrawer({ date, close }: { date: string; close: () => void }) {
 }
 
 // "Lord's Day, November 1, 2026" for Sundays, otherwise the weekday.
+const systemThemeName = staffWeb ? "Match this device" : "Match Windows";
 function dateLine(date: string) {
   const day = DateTime.fromISO(date);
   if (!date || !day.isValid) return "Choose a date";

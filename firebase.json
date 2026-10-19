@@ -45,6 +45,14 @@
         "function": { "functionId": "calendarFeed", "region": "us-central1" }
       },
       {
+        "source": "/staff",
+        "destination": "/staff/index.html"
+      },
+      {
+        "source": "/staff/**",
+        "destination": "/staff/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

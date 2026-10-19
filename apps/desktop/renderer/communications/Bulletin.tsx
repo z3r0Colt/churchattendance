@@ -26,6 +26,7 @@ import {
 } from "../data/communications";
 import { ExportButton } from "../components/ExportButton";
 import { DeliveryBar } from "../components/DeliveryBar";
+import { native } from "../platform";
 export function Bulletin({ roles }: { roles: Role[] }) {
   const data = useCommunicationData(roles);
   const [week, setWeek] = useState("");
@@ -184,8 +185,7 @@ export function Bulletin({ roles }: { roles: Role[] }) {
                   await (await fetch(url)).arrayBuffer(),
                 );
                 URL.revokeObjectURL(url);
-                if (window.desktop)
-                  await window.desktop.previewPdf(Array.from(bytes));
+                if (native) await native.previewPdf(Array.from(bytes));
                 else {
                   const blob = URL.createObjectURL(
                     new Blob([bytes], { type: "application/pdf" }),

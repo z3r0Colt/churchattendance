@@ -2,26 +2,17 @@ import { useEffect, useState } from "react";
 import {
   Button,
   Checkbox,
-  Field,
   FluentProvider,
-  Input,
   MessageBar,
   Title3,
 } from "@fluentui/react-components";
+import { onIdTokenChanged, signOut } from "firebase/auth";
 import {
-  onIdTokenChanged,
-  signInWithCustomToken,
-  signOut,
-} from "firebase/auth";
-import {
-  startAuthentication,
   startRegistration,
-  type PublicKeyCredentialRequestOptionsJSON,
   type PublicKeyCredentialCreationOptionsJSON,
 } from "@simplewebauthn/browser";
 import {
   emptySecuritySchema,
-  passkeyBeginSchema,
   passkeyFinishSchema,
   passkeyRemoveSchema,
   handoffApproveSchema,
@@ -30,6 +21,7 @@ import {
   StaffPasswordForm,
   StaffEnrollment,
 } from "../../desktop/renderer/security/Factors";
+import { PasskeySignIn } from "../../desktop/renderer/security/PasskeySignIn";
 import { lightTheme } from "../../desktop/renderer/theme/brand";
 import { auth, callPortal } from "./data";
 export function StaffSecurity() {
@@ -39,7 +31,6 @@ export function StaffSecurity() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [email, setEmail] = useState(""),
     [keys, setKeys] = useState<{ id: string; createdAt: string }[]>([]),
     [compared, setCompared] = useState(false),
     [refresh, setRefresh] = useState(0);
@@ -129,43 +120,7 @@ export function StaffSecurity() {
         {!user ? (
           <>
             <StaffPasswordForm auth={auth} />
-            <section className="surface communication-panel">
-              <Field label="Passkey account email">
-                <Input
-                  type="email"
-                  autoComplete="username webauthn"
-                  value={email}
-                  onChange={(_, data) => setEmail(data.value)}
-                />
-              </Field>
-              <Button
-                disabled={busy || !email}
-                onClick={() =>
-                  void run(async () => {
-                    const begin = await callPortal<{
-                      id: string;
-                      options: PublicKeyCredentialRequestOptionsJSON;
-                    }>(
-                      "beginPasskeySignIn",
-                      passkeyBeginSchema.parse({ email }),
-                    );
-                    const response = await startAuthentication({
-                      optionsJSON: begin.options,
-                    });
-                    const result = await callPortal<{ token: string }>(
-                      "finishPasskeySignIn",
-                      passkeyFinishSchema.parse({
-                        challengeId: begin.id,
-                        response,
-                      }),
-                    );
-                    await signInWithCustomToken(auth, result.token);
-                  })
-                }
-              >
-                Sign in with passkey
-              </Button>
-            </section>
+            <PasskeySignIn auth={auth} call={callPortal} />
           </>
         ) : !eligible ? (
           <Button onClick={() => void signOut(auth)}>Sign out</Button>

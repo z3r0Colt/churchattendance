@@ -38,12 +38,15 @@ const securityRp = defineString("STAFF_AUTH_RP_ID", {
 });
 const opaque = () => randomBytes(32).toString("hex");
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
+// In production the portal and the staff web (/staff/) share one origin. Locally they are
+// separate Vite servers on the same "localhost" relying party.
 function origin(request: CallableRequest) {
-  const expected = emulatorMode()
-    ? "http://localhost:5174"
-    : securityOrigin.value();
+  const allowed = emulatorMode()
+    ? ["http://localhost:5174", "http://localhost:5175"]
+    : [securityOrigin.value()];
+  const expected = request.rawRequest.header("origin") || "";
   if (
-    request.rawRequest.header("origin") !== expected ||
+    !allowed.includes(expected) ||
     (!emulatorMode() && !expected.startsWith("https://"))
   )
     throw new HttpsError(
