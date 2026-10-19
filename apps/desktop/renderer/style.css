@@ -771,3 +771,135 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .app .aside-note {
   margin: 4px 0 0;
 }
+
+/* Dashboard (DESIGN.md 5.3): clickable tiles, Lord's Day bars, one This week list. */
+.app .heading-tools {
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.app .heading-tools .fui-Field {
+  min-width: 220px;
+}
+.app .tile-button.fui-Button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 132px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  text-align: left;
+  font-weight: 400;
+}
+.app .tile-button.lead.fui-Button:hover {
+  background: #27583f;
+  color: #ffffff;
+}
+.app .dashboard-columns {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  margin-bottom: 20px;
+}
+.app .dashboard-columns > .surface {
+  margin-top: 0;
+}
+.week-bars {
+  height: 180px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--colorNeutralStroke1);
+}
+.week-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--colorNeutralForeground2);
+  font-variant-numeric: tabular-nums;
+}
+.week-bar .bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: #b9d6c5;
+}
+.week-bar .bar.latest {
+  background: #2f6b4f;
+}
+[data-theme="dark"] .week-bar .bar {
+  background: #3d6b54;
+}
+[data-theme="dark"] .week-bar .bar.latest {
+  background: #6fb592;
+}
+.week-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.week-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.week-list li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--colorNeutralStroke2);
+}
+.week-list li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.date-badge {
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: var(--colorNeutralBackground2);
+}
+.date-badge small {
+  font-size: 10px;
+  color: var(--colorNeutralForeground2);
+}
+.date-badge strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+}
+.session-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+}
+.session-strip p {
+  flex: 1 1 300px;
+  margin: 0;
+  font-size: 15px;
+}
+@media (max-width: 1199px) {
+  .app .dashboard-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.app .week-bar {
+  flex: 0 1 48px;
+}
+.app .content > .fui-MessageBar {
+  margin-bottom: 16px;
+}

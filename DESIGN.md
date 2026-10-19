@@ -171,21 +171,27 @@ Centered card with the church name, email, password, and a "Keep this PC signed 
 ### 5.3 Dashboard
 
 ```
++--------------------------------------------------------------------------------+
+|  Monday, October 19, 2026                 Dashboard service type [v] [Refresh] |
+|  The week ahead                                                                |
 +-------------------+-------------------+-------------------+-------------------+
-| Last Lord's Day   | 4 week average    | Visitors this     | Absent 3+ weeks   |
-| AM 121  PM 88     | AM 118  PM 84     | month  9          | 6 people          |
+| Last recorded     | Prior 4 week      | Visitors this     | Absent 3+         |
+| Lord's Day  4     | average  3.5      | month  1          | Lord's Days  1    |
 +-------------------+-------------------+-------------------+-------------------+
-| Attendance, last 12 months (line chart, AM and PM)                            |
-+---------------------------------------+---------------------------------------+
-| Needs attention                       | This week                             |
-|  6 absent 3+ Lord's Days   [View]     |  Birthdays and anniversaries          |
-|  3 visitors not followed up [View]    |  Serving schedule gaps                |
-|  2 follow-ups due  # Session only     |  Bulletin status: waiting for file    |
-+---------------------------------------+---------------------------------------+
+| Lord's Day attendance (last 12 bars)      | This week                         |
+|  ▂ ▃ ▃ ▅ ▃ ▆ ▃ ▅ ▂ ▃ ▅ █                   |  [Wed 21] Midweek prayer          |
+|                                           |  [Thu 22] Ruth Calder's birthday  |
+|                                           |  [Lord's Day 25] Usher needed     |
++-------------------------------------------+-----------------------------------+
+| [lock Session only]  1 follow-up is due today or earlier.  [Open pastoral care] |
++--------------------------------------------------------------------------------+
 ```
 
-* Stat tiles are clickable and open the matching report already filtered.
-* Session only items show only for Session roles.
+* The title is "The week ahead" with the full date above it.
+* Tiles are clickable and open the matching report already filtered. The first tile is the lead tile.
+* The bar chart shows people present on the last twelve recorded Lord's Days of the selected service type, newest bar in brand green. Its accessible name lists every date and count.
+* This week merges calendar occurrences, birthdays and unfilled serving slots into one list ordered by date and time, each with a date badge. An empty week says so in one sentence.
+* The Session strip shows only for Session roles. It gives counts only, never names or note text.
 
 ### 5.4 People list
 Data grid with columns for Name, Status, Household, Elder district, Mobile, Email, and Last attended. Filters for Status, Elder district, Group, and "absent X weeks" sit above the grid. Saved lists appear as chips. Toolbar holds Add person, Add household, Export (CSV / XLSX), and Message these people.

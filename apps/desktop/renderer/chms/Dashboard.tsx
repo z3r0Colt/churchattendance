@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Badge,
   Button,
   MessageBar,
   Spinner,
@@ -12,14 +11,15 @@ import { DateTime } from "luxon";
 import {
   attendanceReport,
   churchDate,
+  eventOccurrences,
   historicalMembership,
+  type ChurchEvent,
   type Role,
   type Serving,
 } from "@sycamore/shared";
 import { useAttendanceReports } from "../data/attendance-reports";
 import { useCollection } from "../data/chms";
-import { reportChart } from "../data/reports";
-import { Picker, Records } from "./Common";
+import { Picker } from "./Common";
 import type { ReportRequest } from "./AttendanceReports";
 export function Dashboard({
   roles,
@@ -30,14 +30,14 @@ export function Dashboard({
   roles: Role[];
   timeZone: string;
   report: (request: ReportRequest) => void;
-  open: (page: "care" | "serving" | "people") => void;
+  open: (page: "care" | "serving" | "people" | "calendar") => void;
 }) {
   const data = useAttendanceReports(roles),
-    serving = useCollection<Serving>("serving");
+    serving = useCollection<Serving>("serving"),
+    events = useCollection<ChurchEvent>("events");
   const today = churchDate(new Date(), timeZone),
     date = DateTime.fromISO(today, { zone: "utc" });
-  const [typeId, setType] = useState<string | null>(null),
-    [chart, setChart] = useState("");
+  const [typeId, setType] = useState<string | null>(null);
   const defaultType =
     [...data.types]
       .filter((row) => row.dayOfWeek === 0 && row.isActive)
@@ -64,38 +64,6 @@ export function Dashboard({
       data.followUps,
       data.careNotes,
     ],
-  );
-  const year = useMemo(
-    () =>
-      attendanceReport(data, {
-        ...filter,
-        from: date.minus({ months: 11 }).startOf("month").toISODate()!,
-      }),
-    [
-      data.people,
-      data.households,
-      data.history,
-      data.sacraments,
-      data.services,
-      data.types,
-      selected,
-      today,
-    ],
-  );
-  useEffect(
-    () =>
-      setChart(
-        reportChart(
-          year.monthly.map((row) => row.Month),
-          year.monthly.map((row) =>
-            typeof row.Average === "number" ? row.Average : null,
-          ),
-          undefined,
-          "Average recorded attendance",
-          "line",
-        ),
-      ),
-    [year],
   );
   const sunday = result.summary
     .filter((row) => DateTime.fromISO(row.Date, { zone: "utc" }).weekday === 7)
@@ -161,6 +129,46 @@ export function Dashboard({
   );
   const due =
     data.followUps?.filter((row) => !row.done && row.dueDate <= today) || [];
+  // The last twelve recorded Lord's Days for the selected service type.
+  const weeks = result.summary
+    .filter((row) => DateTime.fromISO(row.Date, { zone: "utc" }).weekday === 7)
+    .slice(-12)
+    .map((row) => ({ date: String(row.Date), total: Number(row.Total) || 0 }));
+  const peak = Math.max(1, ...weeks.map((row) => row.total));
+  const weekEnd = date.plus({ days: 6 }).toISODate()!;
+  // One date-ordered list of what is coming up this week.
+  const week = [
+    ...events.rows.flatMap((event) =>
+      eventOccurrences(event, today, weekEnd, timeZone).map((row) => {
+        const start = DateTime.fromISO(row.start).setZone(timeZone);
+        return {
+          key: row.id,
+          date: start.toISODate()!,
+          sort: start.toFormat("HH:mm"),
+          title: row.title,
+          detail: [start.toFormat("h:mm a"), row.location]
+            .filter(Boolean)
+            .join(" · "),
+        };
+      }),
+    ),
+    ...birthdays.map((row) => ({
+      key: `birthday_${row.Name}`,
+      date: row.Birthday,
+      sort: "00:00",
+      title: `${row.Name}'s birthday`,
+      detail: "Birthday",
+    })),
+    ...gaps.map((row) => ({
+      key: `serving_${row.id}`,
+      date: row.date,
+      sort: row.time,
+      title: `${row.role} needed`,
+      detail: [row.time, row.location, "not yet filled"]
+        .filter(Boolean)
+        .join(" · "),
+    })),
+  ].sort((a, b) => `${a.date}${a.sort}`.localeCompare(`${b.date}${b.sort}`));
   const canExtendedReport = roles.some((role) =>
     ["admin", "pastor", "clerk", "elder", "readOnly"].includes(role),
   );
@@ -173,21 +181,24 @@ export function Dashboard({
     <>
       <div className="page-heading">
         <div>
-          <Title3 as="h1">Dashboard</Title3>
-          <p>Recorded attendance and the week ahead</p>
+          <span className="eyebrow">{dayLine(date)}</span>
+          <Title3 as="h1">The week ahead</Title3>
+          <p>Recorded attendance and what is coming up.</p>
         </div>
-        <Button onClick={data.refresh}>Refresh history</Button>
+        <div className="actions heading-tools">
+          <Picker
+            label="Dashboard service type"
+            value={selected}
+            choices={data.types.map((row) => ({ id: row.id, name: row.name }))}
+            empty="All recorded types"
+            onChange={(value) => setType(value)}
+          />
+          <Button onClick={data.refresh}>Refresh history</Button>
+        </div>
       </div>
       {(data.error || serving.error) && (
         <MessageBar intent="error">{data.error || serving.error}</MessageBar>
       )}
-      <Picker
-        label="Dashboard service type"
-        value={selected}
-        choices={data.types.map((row) => ({ id: row.id, name: row.name }))}
-        empty="All recorded types"
-        onChange={(value) => setType(value)}
-      />
       {!data.loaded ? (
         <Spinner label="Loading dashboard" />
       ) : (
@@ -198,9 +209,9 @@ export function Dashboard({
               include only people whose recorded history supports them.
             </MessageBar>
           )}
-          <div className="dashboard-grid">
+          <div className="tiles">
             <Button
-              className="dashboard-tile"
+              className="tile tile-button lead"
               onClick={() =>
                 go(
                   "summary",
@@ -214,13 +225,15 @@ export function Dashboard({
               }
             >
               <span>Last recorded Lord's Day</span>
-              <strong>{sunday ? sunday.Total : "No record"}</strong>
+              <strong>{sunday ? sunday.Total : "–"}</strong>
               <small>
-                {sunday?.Date || "No service recorded in the last three months"}
+                {sunday
+                  ? DateTime.fromISO(String(sunday.Date)).toFormat("LLLL d")
+                  : "None in the last three months"}
               </small>
             </Button>
             <Button
-              className="dashboard-tile"
+              className="tile tile-button"
               onClick={() =>
                 go(
                   "summary",
@@ -242,15 +255,13 @@ export function Dashboard({
               }
             >
               <span>Prior 4 week average</span>
-              <strong>
-                {sunday?.["Prior 4 week average"] ?? "No records"}
-              </strong>
+              <strong>{sunday?.["Prior 4 week average"] ?? "–"}</strong>
               <small>Recorded services only</small>
             </Button>
             {canExtendedReport && (
               <>
                 <Button
-                  className="dashboard-tile"
+                  className="tile tile-button"
                   onClick={() =>
                     go("visitors", {}, { ...filter, from: monthStart })
                   }
@@ -260,7 +271,7 @@ export function Dashboard({
                   <small>Distinct people with visitor history</small>
                 </Button>
                 <Button
-                  className="dashboard-tile"
+                  className="tile tile-button"
                   onClick={() => go("shepherding", { absentOnly: true })}
                 >
                   <span>Absent 3+ recorded Lord's Days</span>
@@ -270,60 +281,106 @@ export function Dashboard({
               </>
             )}
           </div>
-          <section className="surface communication-panel">
-            <Subtitle2>Attendance over twelve months</Subtitle2>
-            {chart && (
-              <img
-                className="report-chart"
-                src={chart}
-                alt="Twelve month average recorded attendance"
-              />
-            )}
-            <p>
-              Missing months have no plotted value. The selected service type
-              applies to the attendance tiles and chart.
-            </p>
-          </section>
           <div className="dashboard-columns">
             <section className="surface communication-panel">
               <div className="section-heading">
-                <Subtitle2>Birthdays in the next seven days</Subtitle2>
-                <Button onClick={() => open("people")}>Open people</Button>
+                <Subtitle2>Lord's Day attendance</Subtitle2>
+                <span className="muted">Last 12 recorded · present</span>
               </div>
-              <Records rows={birthdays} />
+              {weeks.length ? (
+                <>
+                  <div
+                    className="week-bars"
+                    role="img"
+                    aria-label={`Present on the last ${weeks.length} recorded Lord's Days: ${weeks.map((row) => `${DateTime.fromISO(row.date).toFormat("LLL d")} ${row.total}`).join(", ")}`}
+                  >
+                    {weeks.map((row, index) => (
+                      <div key={row.date} className="week-bar">
+                        <span>{row.total}</span>
+                        <div
+                          className={
+                            index === weeks.length - 1 ? "bar latest" : "bar"
+                          }
+                          style={{ height: `${(row.total / peak) * 140}px` }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="week-axis muted">
+                    <span>
+                      {DateTime.fromISO(weeks[0].date).toFormat("LLL d")}
+                    </span>
+                    <span>
+                      {DateTime.fromISO(weeks.at(-1)!.date).toFormat("LLL d")}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="records-empty">
+                  No Lord's Day services are recorded for this service type in
+                  the last three months.
+                </p>
+              )}
             </section>
             <section className="surface communication-panel">
               <div className="section-heading">
-                <Subtitle2>Serving gaps in the next seven days</Subtitle2>
-                <Button onClick={() => open("serving")}>Open serving</Button>
+                <Subtitle2>This week</Subtitle2>
               </div>
-              <Records
-                rows={gaps.map((row) => ({
-                  Date: row.date,
-                  Time: row.time,
-                  Role: row.role,
-                  Location: row.location,
-                }))}
-              />
+              {week.length ? (
+                <ul className="week-list">
+                  {week.map((row) => {
+                    const day = DateTime.fromISO(row.date);
+                    return (
+                      <li key={row.key}>
+                        <span className="date-badge" aria-hidden="true">
+                          <small>
+                            {day.weekday === 7
+                              ? "Lord's Day"
+                              : day.toFormat("ccc")}
+                          </small>
+                          <strong>{day.day}</strong>
+                        </span>
+                        <span>
+                          <strong>{row.title}</strong>
+                          <small className="muted">
+                            {day.toFormat("cccc, LLLL d")}
+                            {row.detail ? ` · ${row.detail}` : ""}
+                          </small>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="records-empty">
+                  No gatherings, birthdays or open serving slots this week.
+                </p>
+              )}
+              <div className="actions">
+                <Button appearance="subtle" onClick={() => open("calendar")}>
+                  Open calendar
+                </Button>
+                <Button appearance="subtle" onClick={() => open("serving")}>
+                  Open serving
+                </Button>
+              </div>
             </section>
           </div>
           {data.session && (
-            <section className="surface communication-panel session-panel">
-              <Badge
-                icon={<LockClosedRegular />}
-                color="important"
-                appearance="outline"
-              >
-                Session only
-              </Badge>
-              <h2>Follow-ups due</h2>
+            <section className="surface session-strip session-panel">
+              <span className="session-badge">
+                <LockClosedRegular aria-hidden /> Session only
+              </span>
               {data.careError ? (
                 <MessageBar intent="error">{data.careError}</MessageBar>
               ) : !data.careReady ? (
                 <Spinner label="Loading Session follow-ups" />
               ) : (
                 <p>
-                  {due.length} open follow-ups are due on or before {today}.
+                  {due.length === 1
+                    ? "1 follow-up is due"
+                    : `${due.length} follow-ups are due`}{" "}
+                  today or earlier.
                 </p>
               )}
               <Button onClick={() => open("care")}>Open pastoral care</Button>
@@ -333,4 +390,8 @@ export function Dashboard({
       )}
     </>
   );
+}
+// "Monday, October 19, 2026", with Sunday named the Lord's Day.
+function dayLine(date: DateTime) {
+  return `${date.weekday === 7 ? "Lord's Day" : date.toFormat("cccc")}, ${date.toFormat("LLLL d, yyyy")}`;
 }

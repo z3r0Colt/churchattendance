@@ -335,7 +335,7 @@ test("opens dashboard totals as filtered reports and hides private panels from D
   await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByLabel("Dashboard service type").selectOption(typeId);
   await expect(
-    page.getByText("1 open follow-ups are due", { exact: false }),
+    page.getByText("1 follow-up is due today or earlier.", { exact: false }),
   ).toBeVisible();
   await page
     .getByRole("button", {
@@ -382,7 +382,10 @@ test("opens dashboard totals as filtered reports and hides private panels from D
   await login(page, "phase6-deacon@example.test");
   await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Follow-ups due" }),
+    page.getByRole("heading", { name: "The week ahead" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open pastoral care" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Reports", exact: true }).click();
   await expect(
