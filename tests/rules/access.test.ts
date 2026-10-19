@@ -200,12 +200,25 @@ describe("member portal accounts", () => {
       auth_time: Math.floor(Date.now() / 1000),
       firebase: { sign_in_provider: "password", identities: {} },
     });
+  it("keeps calendar feed tokens server only, even from administrators", async () => {
+    for (const role of ["admin", "pastor"]) {
+      await assertFails(
+        getDoc(doc(auth(role).firestore(), "calendarFeeds/private")),
+      );
+      await assertFails(
+        setDoc(doc(auth(role).firestore(), "calendarFeeds/private"), {
+          uid: role,
+        }),
+      );
+    }
+  });
   it("cannot read or write people, requests or photos directly", async () => {
     for (const path of [
       "people/alex",
       "memberRequests/private",
       "mercyRequests/private",
       "directoryPreferences/alex",
+      "calendarFeeds/private",
     ]) {
       await assertFails(getDoc(doc(member().firestore(), path)));
       await assertFails(

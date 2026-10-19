@@ -216,3 +216,26 @@ form.card p {
 form > * {
   min-width: 0;
 }
+.toolbar.wrap {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 4px;
+  background: #2f6b4f;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+.feed-link {
+  display: grid;
+  gap: 8px;
+}
+.feed-link code {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}

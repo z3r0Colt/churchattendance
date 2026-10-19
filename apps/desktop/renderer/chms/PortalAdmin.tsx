@@ -32,6 +32,7 @@ type Publication = {
   eventId: string;
   portalVisible: boolean;
   publicRegistration: boolean;
+  publicCalendar?: boolean;
   description: string;
   revision: number;
 };
@@ -123,6 +124,11 @@ export function PortalAdministration({ roles }: { roles: Role[] }) {
     {
       key: "publicRegistration",
       label: "Publish event details and a request form to everyone",
+      kind: "checkbox",
+    },
+    {
+      key: "publicCalendar",
+      label: "List its dates on the public calendar and public feed",
       kind: "checkbox",
     },
   ];
@@ -246,6 +252,7 @@ export function PortalAdministration({ roles }: { roles: Role[] }) {
                   description: "",
                   portalVisible: false,
                   publicRegistration: false,
+                  publicCalendar: false,
                 },
               })
             }
@@ -262,6 +269,9 @@ export function PortalAdministration({ roles }: { roles: Role[] }) {
                 Event: event.title,
                 Members: publication?.portalVisible ? "Visible" : "Hidden",
                 PublicForm: publication?.publicRegistration ? "Open" : "Closed",
+                PublicCalendar: publication?.publicCalendar
+                  ? "Listed"
+                  : "Not listed",
               };
             })}
             choose={(index) => {
@@ -277,6 +287,7 @@ export function PortalAdministration({ roles }: { roles: Role[] }) {
                   description: current?.description || "",
                   portalVisible: current?.portalVisible || false,
                   publicRegistration: current?.publicRegistration || false,
+                  publicCalendar: current?.publicCalendar || false,
                 },
               });
             }}

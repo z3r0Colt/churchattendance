@@ -47,6 +47,11 @@ import {
   type MemberRequest,
   type Sacrament,
   memberRequestStatusSchema,
+  eventFromRecord,
+  occurrenceChangeSchema,
+  createCalendarFeedSchema,
+  revokeCalendarFeedSchema,
+  type CalendarFeed,
 } from "@sycamore/shared";
 import { auth, db, functions, storage } from "./firebase";
 import { usePrivateRecords } from "./private";
@@ -123,16 +128,9 @@ export function useCollection<T>(
         setRows(
           snapshot.docs.map(
             (row) =>
-              ({
-                ...row.data(),
-                id: row.id,
-                ...(name === "events"
-                  ? {
-                      start: row.get("start").toDate().toISOString(),
-                      end: row.get("end").toDate().toISOString(),
-                    }
-                  : {}),
-              }) as T,
+              (name === "events"
+                ? eventFromRecord(row.id, row.data())
+                : { ...row.data(), id: row.id }) as T,
           ),
         );
         setLoaded(true);
@@ -284,6 +282,17 @@ export const markGroupAttendance = (value: unknown) =>
   chmsCall("markGroupAttendance", groupMarkSchema.parse(value));
 export const saveChurchEvent = (value: unknown) =>
   chmsCall("saveChurchEvent", eventSchema.parse(value));
+export const changeEventOccurrence = (value: unknown) =>
+  chmsCall("changeEventOccurrence", occurrenceChangeSchema.parse(value));
+export const createStaffCalendarFeed = (label: string) =>
+  chmsCall<{ url: string }>(
+    "createStaffCalendarFeed",
+    createCalendarFeedSchema.parse({ label }),
+  );
+export const staffCalendarFeeds = () =>
+  chmsCall<CalendarFeed[]>("staffCalendarFeeds", {});
+export const revokeStaffCalendarFeed = (id: string) =>
+  chmsCall("revokeStaffCalendarFeed", revokeCalendarFeedSchema.parse({ id }));
 export const recordRsvp = (value: unknown) =>
   chmsCall("recordRsvp", rsvpSchema.parse(value));
 export const saveServingAssignment = (value: unknown) =>

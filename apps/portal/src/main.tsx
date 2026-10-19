@@ -46,6 +46,7 @@ import { StaffSecurity } from "./StaffSecurity";
 import { AccountSettings, FinishSignIn, SignIn } from "./Account";
 import { MyDetails } from "./Profile";
 import { Requests } from "./Requests";
+import { PublicCalendarView, Subscriptions } from "./Calendar";
 // Read once at load: the link is removed from the address bar before React renders.
 const initialLink =
   location.pathname === "/staff-security" ? null : pendingSignInLink();
@@ -109,6 +110,7 @@ function App() {
               onTabSelect={(_, row) => setTab(String(row.value))}
             >
               <Tab value="events">Church events</Tab>
+              <Tab value="calendar">Calendar</Tab>
               <Tab value="visit">Plan a visit</Tab>
               <Tab value="signin">Member sign in</Tab>
             </TabList>
@@ -116,6 +118,8 @@ function App() {
               <SignIn returnTo={`/?tab=${initialTab}`} />
             ) : tab === "visit" ? (
               <OnlineForm kind="visitor" />
+            ) : tab === "calendar" ? (
+              <PublicCalendarView />
             ) : (
               <PublicEvents />
             )}
@@ -424,6 +428,7 @@ function Member() {
             <Tab value="events">Events & my RSVPs</Tab>
             <Tab value="profile">My details</Tab>
             <Tab value="requests">Requests</Tab>
+            <Tab value="calendar">Calendar links</Tab>
             <Tab value="privacy">My sharing choices</Tab>
             <Tab value="account">Account</Tab>
           </TabList>
@@ -478,6 +483,8 @@ function Member() {
             <AccountSettings />
           ) : tab === "requests" ? (
             <Requests />
+          ) : tab === "calendar" ? (
+            <Subscriptions />
           ) : tab === "profile" ? (
             <MyDetails
               key={JSON.stringify([

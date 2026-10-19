@@ -15,6 +15,7 @@ export const memberTabs = [
   "events",
   "profile",
   "requests",
+  "calendar",
   "privacy",
   "account",
 ] as const;

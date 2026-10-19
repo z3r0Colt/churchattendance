@@ -264,7 +264,8 @@ services/{serviceId}
 groups/{groupId}             name, type, leaderPersonId, memberIds[], schedule, archived, revision, updatedAt, updatedBy
   meetings/{meetingId}       date, present{}, updatedAt, updatedBy
 events/{eventId}             title, start/end (Timestamp), recurrence (none | weekly | monthly), interval, until,
-                             location, capacity, cancelled, revision, rsvpVersion, updatedAt, updatedBy
+                             location, capacity, cancelled, revision, rsvpVersion, updatedAt, updatedBy,
+                             exceptions{date: {cancelled} | {start, end (Timestamp), location}}
   rsvps/{date_personId}      eventId, date, personId, status (yes | maybe | no), updatedAt, updatedBy
 serving/{scheduleId}         role, date, time, personId, location, reminderHours, cancelled, revision,
                              reminderMessageId, updatedAt, updatedBy
@@ -299,10 +300,11 @@ automationStatus/church     bulletinError, absenceError, servingError, queueErro
 portalAccess/{uid}           personId, enabled, revision, updatedAt, updatedBy (Admin/Pastor read)
 directoryPreferences/{personId} listed, shareEmail, sharePhone, shareAddress, sharePhoto, revision, updatedAt, updatedBy
                              (server-only, member accesses own preferences through validated APIs)
-eventPublications/{eventId}  portalVisible, publicRegistration, description, revision, updatedAt, updatedBy
+eventPublications/{eventId}  portalVisible, publicRegistration, publicCalendar, description, revision, updatedAt, updatedBy
 onlineSubmissions/{requestId} kind, firstName, lastName, email, mobilePhone, message, eventId, date,
                              status (pending | approved | declined), approvedPersonId, createdAt, reviewedAt, reviewedBy
-portalBudgets/{hashedIp_hour} count, expiresAt (server only)
+portalBudgets/{hashedIp_hour} count, expiresAt (server only; also member_{personId}_{date} request counters)
+calendarFeeds/{sha256(token)} uid, scope (member | staff), personId, label, createdAt, expiresAt, lastUsedAt (server only)
 
 users/{uid}                  personId, displayName, roles[]
 auditLog/{id}                uid, collection, docId, action, encrypted{before, after}, at   (server-owned, Session API only)

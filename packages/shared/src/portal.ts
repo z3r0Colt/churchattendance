@@ -24,6 +24,7 @@ export const eventPublicationSchema = z
     eventId: idSchema,
     portalVisible: z.boolean(),
     publicRegistration: z.boolean(),
+    publicCalendar: z.boolean().default(false),
     description: z.string().trim().max(2000),
     expectedRevision: z.number().int().nonnegative().default(0),
   })
@@ -31,6 +32,10 @@ export const eventPublicationSchema = z
   .refine(
     (row) => !row.publicRegistration || row.portalVisible,
     "Make the event visible before opening public registration",
+  )
+  .refine(
+    (row) => !row.publicCalendar || row.portalVisible,
+    "Make the event visible to members before listing it publicly",
   );
 export const memberRsvpSchema = z
   .object({

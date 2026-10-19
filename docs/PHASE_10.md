@@ -7,7 +7,7 @@ Phase 10 extends the member portal from Phase 4 with passwordless sign-in, self-
 | 1 | Email-link sign-in, safe return targets, sign-in email change | Implemented |
 | 2 | Member contact, photo and household address editing | Implemented |
 | 3 | Prayer and pastoral requests to the Session, practical-help requests to the deacons | Implemented |
-| 4 | Occurrence changes, public calendar and calendar subscriptions | Planned |
+| 4 | Occurrence changes, public calendar and calendar subscriptions | Implemented |
 | 5 | Per-event reminders | Planned |
 
 Decisions made before implementation: sign-in links are sent by Firebase Authentication's own email sender. Prayer and pastoral requests always go to the whole Session. Members change their own photo, and an adult in a household changes the household address, without staff review.
@@ -64,3 +64,23 @@ The **Requests** tab lets a linked member send a prayer request, a pastoral care
 **Duplicates and abuse.** Each draft carries a random request ID, so a retried send is stored once. An ID that already exists returns the same confirmation without revealing the other record. A member can send five requests per church-local day; the counter lives in `portalBudgets` with the existing TTL. Requests take no attachments, and the form asks members not to include others' details without their agreement.
 
 **Daily summary.** The Session daily summary from Phase 8 adds **New prayer and pastoral requests**, listing each waiting request by kind and date only ("Prayer request from Mar 20"). It never includes the member's name or words. Because every Session officer may read these requests, the section goes to every officer who receives the daily summary.
+
+## Calendar changes, public calendar and subscriptions
+
+**Changing one date.** On **Calendar**, an organizer (Admin, Session officer or deacon) chooses a date of a series and can **Cancel this date**, **Change this date** (new start, end and place) or **Restore this date**. The change is stored on the event under `exceptions.{date}` with a revision check, so a stale form is refused. The occurrence keeps its original date as its identity, so existing RSVPs, reminders and calendar entries stay attached to it. A cancelled date stays listed in the desktop, marked Cancelled, so it can be restored; it is closed to new RSVPs and registration requests. Editing the whole series keeps per-date changes. Recurrence is still evaluated in the church time zone, so every date keeps its wall time across daylight-saving changes.
+
+**Public calendar.** Under **Portal & online requests**, an Editor can tick **List its dates on the public calendar and public feed** for an event that is already visible to members. Nothing is listed by default. The portal's **Calendar** tab shows the next 90 days of listed dates and offers **Subscribe to the church calendar** (a `webcal:` link) and a download of the same file. Listings contain the title, time, place and the published online description only.
+
+**Private subscriptions.** A member can create up to five private calendar links under **Calendar links**; a staff member can do the same under **Calendar, My calendar link** in the desktop. A link carries a random 256-bit token that is shown once. Only its SHA-256 hash is stored, in the server-only `calendarFeeds` collection, so the database never holds a usable link. The URL is a feed capability, not an account credential: it cannot sign anyone in or call any other API. Links expire after one year and can be stopped at any time; another person cannot list or stop them.
+
+- A **member feed** lists the dates of events shown to members and the member's own serving assignments.
+- A **staff feed** lists every church event and the account's own serving assignments. It is available to the roles that can read the calendar in the desktop (not the attendance volunteer role).
+- **Never included:** RSVPs or who responded, rosters, attendance, care or deacon visits, and private notes.
+
+On every fetch the server checks that the link exists and has not expired, and that its owner is still eligible: an enabled, verified portal mapping to a living active member, or enabled, unlocked staff access with a calendar role. Turning off portal or staff access stops the feed at once. Unknown, expired and refused links all return the same 404. A link records when it was last used, at most hourly.
+
+**Feed format.** Feeds are RFC 5545 iCalendar files. Each occurrence is its own `VEVENT` with a stable UID (`{eventId}_{date}@sycamorerpc.org`), UTC start and end times expanded in the church time zone, and `SEQUENCE` set to the event revision so changes replace the earlier copy. Cancelled dates stay in the feed with `STATUS:CANCELLED`, so subscribed calendars remove them. The window runs from 30 days ago to a year ahead. Text is escaped and lines are folded at 75 octets.
+
+### Live setup for calendars
+
+Hosting rewrites `/calendar/**` on the portal domain to the `calendarFeed` function, and private links are built from `PORTAL_ORIGIN`. Check on staging that `https://<portal>/calendar/public.ics` opens in Outlook, Google Calendar and Apple Calendar, that a cancelled date disappears after the next refresh, and that a stopped link returns 404. Calendar apps refresh on their own schedule (often several hours), so changes are not instant. Request logs on the hosting platform include the feed path; treat project log access as able to see feed links, and stop a link if it may have been exposed.

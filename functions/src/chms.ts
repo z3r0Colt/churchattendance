@@ -8,6 +8,7 @@ import {
   groupSchema,
   groupMarkSchema,
   eventSchema,
+  eventFromRecord,
   eventOccurrences,
   rsvpSchema,
   servingSchema,
@@ -19,7 +20,6 @@ import {
   sacramentSchema,
   reminderWindow,
   reportLabelsSchema,
-  type ChurchEvent,
   type Serving,
 } from "@sycamore/shared";
 import { db } from "./admin.js";
@@ -194,12 +194,7 @@ export const recordRsvp = onCall(async (request) => {
     if (
       !event.exists ||
       !eventOccurrences(
-        {
-          ...event.data(),
-          id: event.id,
-          start: event.get("start").toDate().toISOString(),
-          end: event.get("end").toDate().toISOString(),
-        } as ChurchEvent,
+        eventFromRecord(event.id, event.data()!),
         input.date,
         input.date,
         zone,

@@ -21,13 +21,13 @@ import {
   onlineFormSchema,
   reviewSubmissionSchema,
   portalDirectoryEntry,
+  eventFromRecord,
   eventOccurrences,
   normalizePhone,
   personInputSchema,
   membershipEventSchema,
   toRoster,
   isAdultOn,
-  type ChurchEvent,
   type Person,
   type Household,
 } from "@sycamore/shared";
@@ -48,12 +48,7 @@ export function portalRequest(request: CallableRequest) {
     );
 }
 const eventView = (document: DocumentSnapshot) =>
-  ({
-    ...document.data(),
-    id: document.id,
-    start: document.get("start").toDate().toISOString(),
-    end: document.get("end").toDate().toISOString(),
-  }) as ChurchEvent;
+  eventFromRecord(document.id, document.data()!);
 export async function member(request: CallableRequest) {
   portalRequest(request);
   if (!request.auth)

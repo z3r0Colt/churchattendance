@@ -34,6 +34,7 @@ import {
   safeReturnPath,
   type DirectoryEntry,
   type DirectoryPreferences,
+  type CalendarFeed,
   type MyRequest,
   type Occurrence,
 } from "@sycamore/shared";
@@ -231,6 +232,27 @@ export async function uploadPhoto(file: File, expectedPhoto: boolean) {
 export const submitRequest = (value: unknown) =>
   callPortal("submitMemberRequest", memberRequestSchema.parse(value));
 export const getMyRequests = () => callPortal<MyRequest[]>("myMemberRequests");
+export type PublicCalendar = {
+  zone: string;
+  occurrences: {
+    id: string;
+    title: string;
+    start: string;
+    end: string;
+    location: string;
+    description: string;
+  }[];
+};
+export const getPublicCalendar = () =>
+  callPortal<PublicCalendar>("portalPublicCalendar");
+export const publicFeedUrl = local
+  ? "http://127.0.0.1:5001/demo-sycamore/us-central1/calendarFeed/public.ics"
+  : new URL("/calendar/public.ics", location.origin).toString();
+export const createFeed = (label: string) =>
+  callPortal<{ url: string }>("createMyCalendarFeed", { label });
+export const listFeeds = () => callPortal<CalendarFeed[]>("myCalendarFeeds");
+export const revokeFeed = (id: string) =>
+  callPortal("revokeMyCalendarFeed", { id });
 export function portalError(error: unknown) {
   return error instanceof Error && !error.message.startsWith("[")
     ? error.message

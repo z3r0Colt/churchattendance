@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Field,
@@ -14,12 +14,17 @@ import {
   hasRole,
   localSchedule,
   type Role,
+  type CalendarFeed,
   type ChurchEvent,
   type Occurrence,
 } from "@sycamore/shared";
 import {
+  changeEventOccurrence,
   churchLocalInput,
+  createStaffCalendarFeed,
   recordRsvp,
+  revokeStaffCalendarFeed,
+  staffCalendarFeeds,
   saveChurchEvent,
   usePublicChms,
   useRsvps,
@@ -35,7 +40,8 @@ export function Calendar({ roles }: { roles: Role[] }) {
   const data = usePublicChms();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [selected, setSelected] = useState<Occurrence | null>(null);
+  const [picked, setPicked] = useState<Occurrence | null>(null);
+  const [changing, setChanging] = useState<Occurrence | null>(null);
   const [editing, setEditing] = useState<ChurchEvent | "new" | null>(null);
   const [person, setPerson] = useState("");
   const [status, setStatus] = useState("yes");
@@ -46,9 +52,30 @@ export function Calendar({ roles }: { roles: Role[] }) {
     last =
       to ||
       DateTime.fromISO(first).plus({ months: 1 }).endOf("month").toISODate()!;
+  // Cancelled dates stay listed so they can be restored.
   const occurrences = data.events
-    .flatMap((event) => eventOccurrences(event, first, last, data.zone))
+    .flatMap((event) =>
+      eventOccurrences(event, first, last, data.zone, {
+        includeCancelled: true,
+      }),
+    )
     .sort((a, b) => a.start.localeCompare(b.start));
+  const selected =
+    occurrences.find((row) => row.id === picked?.id) ?? picked ?? null;
+  const series = data.events.find((row) => row.id === selected?.eventId);
+  async function change(occurrence: Occurrence, action: "cancel" | "restore") {
+    setError("");
+    try {
+      await changeEventOccurrence({
+        eventId: occurrence.eventId,
+        date: occurrence.date,
+        expectedRevision: occurrence.revision,
+        action,
+      });
+    } catch (failure) {
+      setError(friendlyError(failure));
+    }
+  }
   const responses = useRsvps(selected?.eventId || "");
   const visible = responses.rows.filter((row) => row.date === selected?.date);
   const choices = data.people
@@ -132,8 +159,13 @@ export function Calendar({ roles }: { roles: Role[] }) {
             .toFormat("LLL d, yyyy h:mm a"),
           Ends: DateTime.fromISO(row.end).setZone(data.zone).toFormat("h:mm a"),
           Location: row.location,
+          Status: row.cancelled
+            ? "Cancelled"
+            : row.changed
+              ? "Changed for this date"
+              : "As scheduled",
         }))}
-        choose={(index) => setSelected(occurrences[index])}
+        choose={(index) => setPicked(occurrences[index])}
       />
       {selected && (
         <section className="surface communication-panel">
@@ -141,6 +173,24 @@ export function Calendar({ roles }: { roles: Role[] }) {
             <Subtitle2>
               {selected.title} · {selected.date}
             </Subtitle2>
+            {editable && series && !series.cancelled && (
+              <div className="actions">
+                {selected.cancelled || selected.changed ? (
+                  <Button onClick={() => void change(selected, "restore")}>
+                    Restore this date
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={() => setChanging(selected)}>
+                      Change this date
+                    </Button>
+                    <Button onClick={() => void change(selected, "cancel")}>
+                      Cancel this date
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
             {editable && (
               <Button
                 onClick={() =>
@@ -153,6 +203,11 @@ export function Calendar({ roles }: { roles: Role[] }) {
               </Button>
             )}
           </div>
+          {selected.cancelled && (
+            <MessageBar intent="warning">
+              This date is cancelled. Calendar subscribers see it as cancelled.
+            </MessageBar>
+          )}
           <p>
             {visible.filter((row) => row.status === "yes").length} registered
             {selected.capacity ? ` of ${selected.capacity}` : ""}. Changes to an
@@ -239,6 +294,44 @@ export function Calendar({ roles }: { roles: Role[] }) {
           close={() => setEditing(null)}
         />
       )}
+      {changing && (
+        <RecordEditor
+          title={`Change ${changing.title} on ${changing.date}`}
+          fields={[
+            {
+              key: "start",
+              label: `Starts, ${data.zone}`,
+              kind: "datetime-local",
+              required: true,
+            },
+            {
+              key: "end",
+              label: `Ends, ${data.zone}`,
+              kind: "datetime-local",
+              required: true,
+            },
+            { key: "location", label: "Location" },
+          ]}
+          initial={{
+            start: churchLocalInput(changing.start, data.zone),
+            end: churchLocalInput(changing.end, data.zone),
+            location: changing.location,
+          }}
+          save={(value) =>
+            changeEventOccurrence({
+              eventId: changing.eventId,
+              date: changing.date,
+              expectedRevision: changing.revision,
+              action: "reschedule",
+              start: localSchedule(String(value.start), data.zone),
+              end: localSchedule(String(value.end), data.zone),
+              location: String(value.location || ""),
+            })
+          }
+          close={() => setChanging(null)}
+        />
+      )}
+      <StaffSubscriptions />
       <details>
         <summary>Event series, including cancelled events</summary>
         <Records
@@ -254,5 +347,87 @@ export function Calendar({ roles }: { roles: Role[] }) {
         />
       </details>
     </>
+  );
+}
+
+// A private calendar link for this staff account: all church events and the
+// account's own serving dates. Care visits are never included.
+function StaffSubscriptions() {
+  const [feeds, setFeeds] = useState<CalendarFeed[]>([]);
+  const [created, setCreated] = useState("");
+  const [label, setLabel] = useState("");
+  const [error, setError] = useState("");
+  const refresh = () =>
+    staffCalendarFeeds()
+      .then(setFeeds)
+      .catch((failure) => setError(friendlyError(failure)));
+  useEffect(() => {
+    void refresh();
+  }, []);
+  async function run(action: () => Promise<void>) {
+    setError("");
+    try {
+      await action();
+      await refresh();
+    } catch (failure) {
+      setError(friendlyError(failure));
+    }
+  }
+  return (
+    <section className="surface communication-panel">
+      <div className="section-heading">
+        <Subtitle2>My calendar link</Subtitle2>
+      </div>
+      <p>
+        Subscribe in Outlook or another calendar app to see church events and
+        your serving dates. The link works for one year and can be stopped here.
+        Anyone with the link can see these dates.
+      </p>
+      {error && <MessageBar intent="error">{error}</MessageBar>}
+      <div className="report-filters">
+        <Field label="Name this link">
+          <Input
+            value={label}
+            maxLength={60}
+            onChange={(_, row) => setLabel(row.value)}
+          />
+        </Field>
+        <Button
+          disabled={!label.trim()}
+          onClick={() =>
+            void run(async () => {
+              setCreated((await createStaffCalendarFeed(label.trim())).url);
+              setLabel("");
+            })
+          }
+        >
+          Create calendar link
+        </Button>
+      </div>
+      {created && (
+        <MessageBar intent="success" layout="multiline">
+          Copy this link into your calendar app now. It is shown only once:{" "}
+          <code className="feed-url">{created}</code>
+        </MessageBar>
+      )}
+      <Records
+        rows={feeds.map((feed) => ({
+          id: feed.id,
+          Name: feed.label,
+          Created: feed.createdAt.slice(0, 10),
+          "Works until": feed.expiresAt.slice(0, 10),
+          "Last used": feed.lastUsedAt.slice(0, 10) || "Not yet",
+        }))}
+        choose={(index) =>
+          void run(async () => {
+            await revokeStaffCalendarFeed(feeds[index].id);
+            setCreated("");
+          })
+        }
+      />
+      {feeds.length > 0 && (
+        <p className="muted">Choose a link name to stop that link.</p>
+      )}
+    </section>
   );
 }

@@ -73,10 +73,18 @@ export const eventSchema = z
     (row) => row.recurrence === "none" || !!row.until,
     "Set the final recurrence date",
   );
+// A change to one dated occurrence of a series. The occurrence keeps its
+// original date as its identity, so RSVPs and calendar entries stay attached.
+export type EventException = {
+  cancelled?: boolean;
+  start?: string;
+  end?: string;
+  location?: string;
+};
 export type ChurchEvent = Omit<
   z.infer<typeof eventSchema>,
   "expectedRevision"
-> & { revision: number };
+> & { revision: number; exceptions?: Record<string, EventException> };
 export type Occurrence = {
   id: string;
   eventId: string;
@@ -86,14 +94,49 @@ export type Occurrence = {
   end: string;
   location: string;
   capacity: number;
+  cancelled: boolean;
+  changed: boolean;
+  revision: number;
 };
+type Moment = { toDate(): Date };
+const iso = (value: unknown) =>
+  value && typeof (value as Moment).toDate === "function"
+    ? (value as Moment).toDate().toISOString()
+    : String(value ?? "");
+// Firestore stores event moments as Timestamps; occurrence math uses ISO strings.
+export function eventFromRecord(
+  id: string,
+  data: Record<string, unknown>,
+): ChurchEvent {
+  const exceptions = (data.exceptions || {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  return {
+    ...(data as Omit<ChurchEvent, "id">),
+    id,
+    start: iso(data.start),
+    end: iso(data.end),
+    exceptions: Object.fromEntries(
+      Object.entries(exceptions).map(([date, change]) => [
+        date,
+        {
+          ...change,
+          ...(change.start ? { start: iso(change.start) } : {}),
+          ...(change.end ? { end: iso(change.end) } : {}),
+        } as EventException,
+      ]),
+    ),
+  };
+}
 export function eventOccurrences(
   event: ChurchEvent,
   from: string,
   to: string,
   zone: string,
+  options: { includeCancelled?: boolean } = {},
 ): Occurrence[] {
-  if (event.cancelled) return [];
+  if (event.cancelled && !options.includeCancelled) return [];
   const start = DateTime.fromISO(event.start).setZone(zone);
   const duration = Date.parse(event.end) - Date.parse(event.start);
   const result: Occurrence[] = [];
@@ -107,20 +150,27 @@ export function eventOccurrences(
           : start;
     const day = date.toISODate()!;
     if (day > to || (event.recurrence !== "none" && day > event.until)) break;
+    const change = event.exceptions?.[day];
+    const cancelled = event.cancelled || change?.cancelled === true;
     // A meeting on the 31st does not silently move to the end of a shorter month.
     if (
       (event.recurrence !== "monthly" || date.day === start.day) &&
-      day >= from
+      day >= from &&
+      (!cancelled || options.includeCancelled)
     )
       result.push({
         id: `${event.id}_${day}`,
         eventId: event.id,
         date: day,
         title: event.title,
-        start: date.toUTC().toISO()!,
-        end: date.plus({ milliseconds: duration }).toUTC().toISO()!,
-        location: event.location,
+        start: change?.start || date.toUTC().toISO()!,
+        end:
+          change?.end || date.plus({ milliseconds: duration }).toUTC().toISO()!,
+        location: change?.location ?? event.location,
         capacity: event.capacity,
+        cancelled,
+        changed: !!change,
+        revision: event.revision,
       });
     if (event.recurrence === "none") break;
   }
