@@ -48,3 +48,34 @@ export function attendanceStrip(
     };
   });
 }
+
+const messageStatusWords: Record<string, string> = {
+  queued: "Waiting to send",
+  sending: "Sending",
+  completed: "Finished",
+  cancelled: "Cancelled",
+  failed: "Needs attention",
+};
+export const messageStatusLabel = (status: string) =>
+  messageStatusWords[status] ??
+  status.charAt(0).toUpperCase() + status.slice(1);
+export const channelLabel = (channel: string) =>
+  channel === "sms"
+    ? "Text"
+    : channel === "both"
+      ? "Email and text"
+      : channel === "email"
+        ? "Email"
+        : channel;
+// Delivery totals grouped the way staff read them. Acceptance by Microsoft or
+// Twilio and local simulation count as sent; neither confirms the person read it.
+export function deliveryBreakdown(totals: Record<string, number> = {}) {
+  const count = (...keys: string[]) =>
+    keys.reduce((sum, key) => sum + (Number(totals[key]) || 0), 0);
+  return {
+    sent: count("simulated", "accepted", "delivered", "sent"),
+    waiting: count("pending", "sending", "queued", "unknown"),
+    skipped: count("skipped", "expired"),
+    failed: count("failed", "undelivered"),
+  };
+}

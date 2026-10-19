@@ -214,11 +214,12 @@ Status changes always open a dialog asking for date, method, other church, and r
 ### 5.6 Messages
 * Compose panel with channel (Email, Text, or Both), audience picker (person, household, group, status, elder district, or saved list), a live recipient count with opted out people listed separately, a template picker, merge field chips such as `{FirstName}`, Send now or Schedule, and Send a test to me.
 * Text messages show a character and segment counter.
-* Tabs for Scheduled, Sent (with delivered and failed counts), and Text inbox. Unread replies show a badge on the nav item.
+* Tabs for Scheduled, Delivery log, Text inbox, Contacts & consent and Person history. Unread replies show a count on the nav item.
+* The delivery log reads in plain words: Email, Text or Email and text; Waiting to send, Sending, Finished or Cancelled; and times like "Oct 19, 2026 12:34 AM" in the church time zone. Each message has a small bar of sent (green), waiting (amber), skipped (grey) and failed (red) with the same counts in words. Acceptance by Microsoft or Twilio counts as sent, which does not mean the person read it.
 
 ### 5.7 Bulletin
 * Card for this week showing file name, where it came from (OneDrive folder or upload), preview thumbnail, scheduled send time ("Saturday 6:00 PM"), and status.
-* Status steps read Waiting for file, Preview sent to Pastor, Scheduled, Sending, and Sent to 134 (2 failed).
+* A status chip reads Waiting for file, Preparing, Ready to send, Skipped this week or Sent. Three steps sit below it: File received, Pastor preview and Sent to the congregation, each marked done (green), current (amber) or not yet, with a delivery bar once sending starts. Times read "6:00 PM", never 24-hour.
 * Buttons for Upload PDF, Open in OneDrive, Send test to me, Send now, and Skip this week.
 * History list of past bulletins below.
 

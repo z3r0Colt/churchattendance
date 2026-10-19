@@ -23,7 +23,9 @@ import {
 import { LockClosedRegular, MailRegular } from "@fluentui/react-icons";
 import { DateTime } from "luxon";
 import {
+  channelLabel,
   localSchedule,
+  messageStatusLabel,
   membershipStatuses,
   MERGE_FIELDS,
   messageInputSchema,
@@ -54,6 +56,7 @@ import {
   type PreviewView,
 } from "../data/communications";
 import { ExportButton } from "../components/ExportButton";
+import { DeliveryBar } from "../components/DeliveryBar";
 type Data = ReturnType<typeof useCommunicationData>;
 function messageError(error: unknown) {
   return error instanceof Error && !error.message.startsWith("[")
@@ -702,12 +705,13 @@ function MessageTable({
 }) {
   const rows = messages.map((message) => ({
     Subject: message.subject || "Text message",
-    Channel: message.channel,
-    Status: message.status,
-    Scheduled:
-      message.scheduledFor
-        ?.toDate()
-        .toLocaleString("en-US", { timeZone: zone }) || "",
+    Channel: channelLabel(message.channel),
+    Status: messageStatusLabel(message.status),
+    Scheduled: message.scheduledFor
+      ? DateTime.fromJSDate(message.scheduledFor.toDate())
+          .setZone(zone)
+          .toFormat("LLL d, yyyy h:mm a")
+      : "",
     Simulated: message.totals?.simulated ?? 0,
     Accepted: message.totals?.accepted ?? 0,
     Delivered: message.totals?.delivered ?? 0,
@@ -717,7 +721,9 @@ function MessageTable({
   return (
     <section className="surface table-card communication-panel">
       <div className="section-heading">
-        <Subtitle2>{messages.length} messages</Subtitle2>
+        <Subtitle2>
+          {messages.length === 1 ? "1 message" : `${messages.length} messages`}
+        </Subtitle2>
         <ExportButton rows={rows} />
       </div>
       <table>
@@ -727,7 +733,7 @@ function MessageTable({
             <th>Channel</th>
             <th>Scheduled, church time</th>
             <th>Status</th>
-            <th>Delivery summary</th>
+            <th>Delivery</th>
           </tr>
         </thead>
         <tbody>
@@ -745,19 +751,19 @@ function MessageTable({
                   <Badge appearance="outline">Session only</Badge>
                 )}
               </td>
-              <td>{message.channel}</td>
+              <td>{rows[index].Channel}</td>
               <td>{rows[index].Scheduled}</td>
-              <td>{message.status}</td>
+              <td>{rows[index].Status}</td>
               <td>
-                {Object.entries(message.totals || {})
-                  .map(([name, count]) => `${name} ${count}`)
-                  .join(" · ")}
+                <DeliveryBar totals={message.totals || {}} />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {!messages.length && <p>No messages in this list.</p>}
+      {!messages.length && (
+        <p className="records-empty">No messages here yet.</p>
+      )}
       <p className="muted">
         Microsoft acceptance means the mailbox accepted the request. It does not
         confirm delivery to the recipient.

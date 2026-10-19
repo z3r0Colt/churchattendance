@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { attendanceStrip, columnLabel, displayValue } from "./index";
+import {
+  attendanceStrip,
+  channelLabel,
+  columnLabel,
+  deliveryBreakdown,
+  displayValue,
+  messageStatusLabel,
+} from "./index";
 
 describe("table display", () => {
   it("turns field keys into plain column names", () => {
@@ -38,5 +45,35 @@ describe("attendance strip", () => {
     expect(attendanceStrip(services, "ruth", "2026-10-18", 1)).toEqual([
       { date: "2026-10-18", state: "present" },
     ]);
+  });
+});
+
+describe("message log wording", () => {
+  it("uses plain words for status and channel", () => {
+    expect(messageStatusLabel("queued")).toBe("Waiting to send");
+    expect(messageStatusLabel("completed")).toBe("Finished");
+    expect(messageStatusLabel("paused")).toBe("Paused");
+    expect(channelLabel("sms")).toBe("Text");
+    expect(channelLabel("both")).toBe("Email and text");
+  });
+  it("groups delivery totals into sent, waiting, skipped and failed", () => {
+    expect(
+      deliveryBreakdown({
+        simulated: 2,
+        accepted: 1,
+        delivered: 3,
+        pending: 1,
+        unknown: 1,
+        skipped: 5,
+        failed: 1,
+        undelivered: 2,
+      }),
+    ).toEqual({ sent: 6, waiting: 2, skipped: 5, failed: 3 });
+    expect(deliveryBreakdown()).toEqual({
+      sent: 0,
+      waiting: 0,
+      skipped: 0,
+      failed: 0,
+    });
   });
 });

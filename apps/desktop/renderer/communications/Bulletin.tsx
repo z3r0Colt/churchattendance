@@ -1,3 +1,4 @@
+import { DateTime } from "luxon";
 import { useState } from "react";
 import {
   Button,
@@ -24,6 +25,7 @@ import {
   useCommunicationData,
 } from "../data/communications";
 import { ExportButton } from "../components/ExportButton";
+import { DeliveryBar } from "../components/DeliveryBar";
 export function Bulletin({ roles }: { roles: Role[] }) {
   const data = useCommunicationData(roles);
   const [week, setWeek] = useState("");
@@ -95,11 +97,11 @@ export function Bulletin({ roles }: { roles: Role[] }) {
               onChange={(_, value) => setWeek(value.value)}
             />
           </Field>
-          <strong>
+          <span className="status-chip">
             {message?.status === "completed"
-              ? "Delivery complete"
-              : bulletin?.status || "Waiting for file"}
-          </strong>
+              ? "Sent"
+              : bulletinStatus(bulletin?.status)}
+          </span>
         </div>
         <Subtitle2>
           {bulletin?.file?.name || "No bulletin PDF uploaded"}
@@ -112,26 +114,47 @@ export function Bulletin({ roles }: { roles: Role[] }) {
         <p>
           Automatic delivery{" "}
           {data.settings.bulletinEnabled
-            ? `Saturday at ${data.settings.sendTime}, ${data.zone}`
+            ? `Saturday at ${twelveHour(data.settings.sendTime)}, ${data.zone}`
             : "is turned off"}
-          . Late files can send until {data.settings.cutoffTime} on Saturday.
+          . Late files can send until {twelveHour(data.settings.cutoffTime)} on
+          Saturday.
         </p>
-        {preview && (
-          <p>
-            Pastor preview ·{" "}
-            {Object.entries(preview.totals || {})
-              .map(([status, count]) => `${status} ${count}`)
-              .join(" · ")}
-          </p>
-        )}
-        {message && (
-          <p>
-            Congregational delivery ·{" "}
-            {Object.entries(message.totals || {})
-              .map(([status, count]) => `${status} ${count}`)
-              .join(" · ")}
-          </p>
-        )}
+        <ol className="steps" aria-label="This week's bulletin">
+          <li className={bulletin?.file ? "done" : "current"}>
+            <strong>File received</strong>
+            <span className="muted">
+              {bulletin?.file ? bulletin.file.name : "Waiting for the PDF"}
+            </span>
+          </li>
+          <li className={preview ? "done" : bulletin?.file ? "current" : ""}>
+            <strong>Pastor preview</strong>
+            {preview ? (
+              <DeliveryBar totals={preview.totals || {}} />
+            ) : (
+              <span className="muted">Not sent yet</span>
+            )}
+          </li>
+          <li
+            className={
+              message?.status === "completed"
+                ? "done"
+                : message
+                  ? "current"
+                  : ""
+            }
+          >
+            <strong>Sent to the congregation</strong>
+            {message ? (
+              <DeliveryBar totals={message.totals || {}} />
+            ) : (
+              <span className="muted">
+                {bulletin?.status === "skipped"
+                  ? "Skipped this week"
+                  : "Not sent yet"}
+              </span>
+            )}
+          </li>
+        </ol>
         <Field label="Upload bulletin PDF">
           <input
             aria-label="Upload bulletin PDF"
@@ -265,11 +288,11 @@ export function Bulletin({ roles }: { roles: Role[] }) {
                     appearance="transparent"
                     onClick={() => setWeek(row.week)}
                   >
-                    {row.week}
+                    {DateTime.fromISO(row.week).toFormat("LLL d, yyyy")}
                   </Button>
                 </td>
                 <td>{row.file?.name || "Waiting for file"}</td>
-                <td>{row.status}</td>
+                <td>{bulletinStatus(row.status)}</td>
               </tr>
             ))}
           </tbody>
@@ -308,4 +331,20 @@ export function Bulletin({ roles }: { roles: Role[] }) {
       </Dialog>
     </>
   );
+}
+
+function bulletinStatus(status?: string) {
+  return (
+    {
+      waiting: "Waiting for file",
+      preparing: "Preparing",
+      ready: "Ready to send",
+      skipped: "Skipped this week",
+    }[status || "waiting"] ?? status!.charAt(0).toUpperCase() + status!.slice(1)
+  );
+}
+// Settings keep 24-hour times; people read "6:00 PM".
+function twelveHour(time: string) {
+  const parsed = DateTime.fromFormat(time || "", "HH:mm");
+  return parsed.isValid ? parsed.toFormat("h:mm a") : time;
 }
