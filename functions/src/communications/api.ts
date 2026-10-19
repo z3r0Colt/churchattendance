@@ -23,6 +23,7 @@ import { processServingReminders } from "../chms.js";
 import { processVisitReminders } from "../shepherding/visits.js";
 import { processDeaconDigests } from "../mercy/digest.js";
 import { processDateReminders } from "../care/dates.js";
+import { processEventReminders } from "../events/reminders.js";
 import { processWorkflows } from "../workflows/engine.js";
 import { privateKeys } from "../security/encryption.js";
 import { processShepherdingDigests } from "../shepherding/digests.js";
@@ -390,6 +391,7 @@ export async function communicationTick(now = new Date()) {
     ["deacon", processDeaconDigests],
     ["dates", processDateReminders],
     ["workflow", processWorkflows],
+    ["events", processEventReminders],
   ] as const) {
     try {
       await task(now);

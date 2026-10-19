@@ -24,6 +24,10 @@ import {
   type MessageInput,
   type Person,
 } from "@sycamore/shared";
+import {
+  eventReminderAllowed,
+  type EventReminderRef,
+} from "../events/reminders.js";
 import { db } from "../admin.js";
 import { providerConfig } from "./environment.js";
 import { DeliveryError, providers, type Attachment } from "./providers.js";
@@ -65,6 +69,7 @@ export type StoredMessage = {
     remindUid: string;
   } | null;
   workflowRun?: { id: string; stepId: string } | null;
+  eventReminder?: EventReminderRef | null;
 };
 export const identityHash = (channel: Channel, address: string) =>
   createHash("sha256").update(`${channel}:${address}`).digest("hex");
@@ -189,6 +194,7 @@ export async function queueMessage(
     recipientRole?: "deacon";
     importantDate?: StoredMessage["importantDate"];
     workflowRun?: StoredMessage["workflowRun"];
+    eventReminder?: EventReminderRef;
   } = {},
 ) {
   const settings = await getSettings();
@@ -297,6 +303,7 @@ export async function queueMessage(
       recipientRole: options.recipientRole ?? null,
       importantDate: options.importantDate ?? null,
       workflowRun: options.workflowRun ?? null,
+      eventReminder: options.eventReminder ?? null,
       expiresAt: options.expiresAt
         ? Timestamp.fromDate(options.expiresAt)
         : null,
@@ -628,6 +635,11 @@ export async function dispatchQueue(now = new Date()) {
           if (
             message.workflowRun &&
             !(await workflowMessageAllowed(message.workflowRun))
+          )
+            return false;
+          if (
+            message.eventReminder &&
+            !(await eventReminderAllowed(message.eventReminder, row.personId))
           )
             return false;
           if (

@@ -144,6 +144,8 @@ test.beforeEach(async () => {
     });
 });
 test.afterAll(async () => {
+  // Later specs count Session officers by linked person; unlink this one.
+  await db.doc("users/cal-elder").delete();
   for (const name of [
     "events",
     "eventPublications",
@@ -431,4 +433,284 @@ test("cancels one date from the desktop calendar and keeps it listed for restori
   await expect(
     row.filter({ hasText: "Evening Bible study" }).getByText("As scheduled"),
   ).toBeVisible();
+});
+
+test.describe("event reminders", () => {
+  const people = ["people/james", "people/ruth", "groups/cal-youth"];
+  const saved = new Map<string, FirebaseFirestore.DocumentData | undefined>();
+  test.beforeAll(async ({ request }) => {
+    for (const path of people)
+      saved.set(path, (await db.doc(path).get()).data());
+    tokens.pastor = await login(request, "pastor@example.test");
+    await auth.getUser("cal-deacon").catch(() =>
+      auth.createUser({
+        uid: "cal-deacon",
+        email: "cal-deacon@example.test",
+        password: "LocalDemo123!",
+      }),
+    );
+    await grantTestStaff("cal-deacon", ["deacon"]);
+    tokens["cal-deacon"] = await login(request, "cal-deacon@example.test");
+  });
+  test.afterAll(async () => {
+    for (const path of people) {
+      const data = saved.get(path);
+      if (data) await db.doc(path).set(data);
+      else await db.doc(path).delete();
+    }
+    await db.recursiveDelete(db.collection("emulatorDeliveries"));
+  });
+  test.beforeEach(async () => {
+    for (const [id, email] of [
+      ["james", "james@example.test"],
+      ["ruth", "ruth@example.test"],
+    ])
+      await db.doc(`people/${id}`).update({
+        email,
+        emailOptIn: true,
+        isDeceased: false,
+        membershipStatus: "communicant",
+      });
+    await db.doc("communicationSettings/church").update({ emailEnabled: true });
+    await db.doc("groups/cal-youth").set({
+      name: "Youth leaders",
+      type: "ministry",
+      leaderPersonId: "",
+      memberIds: ["james", "ruth"],
+      schedule: "",
+      archived: false,
+      revision: 1,
+    });
+    await db.recursiveDelete(db.collection("emulatorDeliveries"));
+    for (const row of (
+      await db
+        .collection("messages")
+        .where("source", "==", "event-reminder")
+        .get()
+    ).docs)
+      await db.recursiveDelete(row.ref);
+    for (const [personId, status] of [
+      ["james", "yes"],
+      ["ruth", "maybe"],
+    ])
+      await db.doc(`events/study/rsvps/${dates[0]}_${personId}`).set({
+        eventId: "study",
+        date: dates[0],
+        personId,
+        status,
+      });
+  });
+  const tick = (request: APIRequestContext, at: DateTime) =>
+    call(request, "pastor", "runLocalCommunicationTick", {
+      now: at.toUTC().toISO(),
+    });
+  const reminders = async () =>
+    (
+      await db
+        .collection("messages")
+        .where("source", "==", "event-reminder")
+        .get()
+    ).docs;
+  const delivered = async () =>
+    (await db.collection("emulatorDeliveries").get()).docs.map((row) =>
+      row.data(),
+    );
+  const dayBefore = {
+    id: "day",
+    minutesBefore: 1440,
+    channel: "email",
+    audience: "attending",
+    groupId: "",
+  };
+
+  test("lets only Editors set reminders, for active groups", async ({
+    request,
+  }) => {
+    for (const account of ["cal-deacon", "cal-reader"])
+      await call(
+        request,
+        account,
+        "saveEventReminders",
+        { eventId: "study", expectedRevision: 1, reminders: [dayBefore] },
+        403,
+      );
+    await call(
+      request,
+      "cal-elder",
+      "saveEventReminders",
+      {
+        eventId: "study",
+        expectedRevision: 1,
+        reminders: [{ ...dayBefore, audience: "group", groupId: "missing" }],
+      },
+      400,
+    );
+    await call(request, "cal-elder", "saveEventReminders", {
+      eventId: "study",
+      expectedRevision: 1,
+      reminders: [dayBefore],
+    });
+    await call(
+      request,
+      "cal-elder",
+      "saveEventReminders",
+      { eventId: "study", expectedRevision: 1, reminders: [] },
+      409,
+    );
+  });
+
+  test("sends one reminder per date and version to current attendees with consent", async ({
+    request,
+  }) => {
+    await call(request, "cal-elder", "saveEventReminders", {
+      eventId: "study",
+      expectedRevision: 1,
+      reminders: [dayBefore],
+    });
+    await tick(request, first.minus({ hours: 25 }));
+    expect(await reminders()).toHaveLength(0);
+    await tick(request, first.minus({ hours: 23 }));
+    await tick(request, first.minus({ hours: 22 }));
+    const sent = await reminders();
+    expect(sent).toHaveLength(1);
+    expect(sent[0].id).toMatch(
+      new RegExp(`^event_study_${dates[0]}_day_[a-z0-9]+$`),
+    );
+    expect(sent[0].get("selectedPersonIds")).toEqual(["james"]);
+    const mail = await delivered();
+    expect(mail).toHaveLength(1);
+    expect(mail[0]).toMatchObject({
+      to: "james@example.test",
+      subject: "Reminder: Evening Bible study",
+    });
+    expect(mail[0].body).toContain(
+      "Hello James, a reminder: Evening Bible study is on the Lord's Day,",
+    );
+    expect(mail[0].body).not.toMatch(/Ruth|maybe/);
+  });
+
+  test("stops pending reminders when the date changes, is cancelled or the person no longer attends", async ({
+    request,
+  }) => {
+    await call(request, "cal-elder", "saveEventReminders", {
+      eventId: "study",
+      expectedRevision: 1,
+      reminders: [{ ...dayBefore, audience: "group", groupId: "cal-youth" }],
+    });
+    await tick(request, first.minus({ hours: 23 }));
+    const [original] = await reminders();
+    expect(original.get("selectedPersonIds")).toEqual(["james", "ruth"]);
+    // A copy still waiting to go out stands in for a reminder queued before a change.
+    const pending = async (id: string) => {
+      const copy = db.doc(`messages/${id}`);
+      await copy.set({ ...original.data(), status: "queued", activeCount: 0 });
+      for (const row of (await original.ref.collection("recipients").get())
+        .docs)
+        await copy
+          .collection("recipients")
+          .doc(row.id)
+          .set({
+            ...row.data(),
+            status: "pending",
+            attemptKey: "",
+            providerId: "",
+          });
+      return copy;
+    };
+    const statuses = async (ref: FirebaseFirestore.DocumentReference) =>
+      (await ref.collection("recipients").get()).docs.map((row) => [
+        row.get("personId"),
+        row.get("status"),
+      ]);
+
+    // Ruth leaves the group: her waiting reminder is skipped, James's is sent.
+    const left = await pending("event_copy_left");
+    await db.doc("groups/cal-youth").update({ memberIds: ["james"] });
+    await tick(request, first.minus({ hours: 22 }));
+    expect(await statuses(left)).toEqual(
+      expect.arrayContaining([
+        ["james", expect.not.stringMatching(/pending|skipped/)],
+        ["ruth", "skipped"],
+      ]),
+    );
+
+    // The place changes: the waiting reminder for the old details is skipped
+    // and one new reminder states the new place.
+    const moved = await pending("event_copy_moved");
+    await call(request, "cal-elder", "changeEventOccurrence", {
+      eventId: "study",
+      date: dates[0],
+      expectedRevision: 2,
+      action: "reschedule",
+      start: first.toUTC().toISO(),
+      end: first.plus({ hours: 1 }).toUTC().toISO(),
+      location: "The manse",
+    });
+    await tick(request, first.minus({ hours: 21 }));
+    await tick(request, first.minus({ hours: 20 }));
+    expect(
+      (await statuses(moved)).every(([, status]) => status === "skipped"),
+    ).toBe(true);
+    const current = (await reminders()).filter(
+      (row) => !row.id.startsWith("event_copy") && row.id !== original.id,
+    );
+    expect(current).toHaveLength(1);
+    expect(current[0].get("body")).toContain("The manse");
+
+    // The date is cancelled: nothing waiting goes out and nothing new is queued.
+    const cancelled = await pending("event_copy_cancelled");
+    await call(request, "cal-elder", "changeEventOccurrence", {
+      eventId: "study",
+      date: dates[0],
+      expectedRevision: 3,
+      action: "restore",
+    });
+    await call(request, "cal-elder", "changeEventOccurrence", {
+      eventId: "study",
+      date: dates[0],
+      expectedRevision: 4,
+      action: "cancel",
+    });
+    const before = (await reminders()).length;
+    await tick(request, first.minus({ hours: 19 }));
+    expect(
+      (await statuses(cancelled)).every(([, status]) => status === "skipped"),
+    ).toBe(true);
+    expect(await reminders()).toHaveLength(before);
+  });
+
+  test("sets reminders for an event in the desktop calendar", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByLabel("Email").fill("pastor@example.test");
+    await page.getByLabel("Password").fill("LocalDemo123!");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page.getByRole("button", { name: "Calendar", exact: true }).click();
+    await page.getByLabel("Through").fill(dates[3]);
+    await page
+      .getByRole("button", { name: "Evening Bible study" })
+      .first()
+      .click();
+    await page
+      .getByRole("button", { name: "Add reminder", exact: true })
+      .click();
+    await page.getByLabel("Reminder 1 timing").selectOption("10080");
+    await page.getByLabel("Reminder 1 goes to").selectOption("group");
+    await page.getByLabel("Reminder 1 group").selectOption("cal-youth");
+    await page
+      .getByRole("button", { name: "Save reminders", exact: true })
+      .click();
+    await expect(
+      page.getByText("Reminders saved for every date of this event."),
+    ).toBeVisible();
+    expect((await db.doc("events/study").get()).get("reminders")).toMatchObject(
+      [{ minutesBefore: 10080, audience: "group", groupId: "cal-youth" }],
+    );
+    await page.screenshot({
+      path: "test-results/phase10-event-reminders.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+  });
 });

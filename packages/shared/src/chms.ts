@@ -8,6 +8,7 @@ import {
   type Service,
   type Household,
 } from "./domain.js";
+import type { EventReminder } from "./calendar.js";
 
 const short = z.string().trim().min(1).max(150);
 const optionalId = z.union([idSchema, z.literal("")]);
@@ -84,7 +85,11 @@ export type EventException = {
 export type ChurchEvent = Omit<
   z.infer<typeof eventSchema>,
   "expectedRevision"
-> & { revision: number; exceptions?: Record<string, EventException> };
+> & {
+  revision: number;
+  exceptions?: Record<string, EventException>;
+  reminders?: EventReminder[];
+};
 export type Occurrence = {
   id: string;
   eventId: string;

@@ -481,7 +481,7 @@ function Workspace({
           Account security
         </Button>
         <div className="nav-bottom">
-          Church management<small>Phase 9 · Development</small>
+          Church management<small>Phase 10 · Development</small>
         </div>
       </nav>
       <main className="content">

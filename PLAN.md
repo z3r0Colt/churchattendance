@@ -265,7 +265,8 @@ groups/{groupId}             name, type, leaderPersonId, memberIds[], schedule, 
   meetings/{meetingId}       date, present{}, updatedAt, updatedBy
 events/{eventId}             title, start/end (Timestamp), recurrence (none | weekly | monthly), interval, until,
                              location, capacity, cancelled, revision, rsvpVersion, updatedAt, updatedBy,
-                             exceptions{date: {cancelled} | {start, end (Timestamp), location}}
+                             exceptions{date: {cancelled} | {start, end (Timestamp), location}},
+                             reminders[{id, minutesBefore, channel, audience (attending | responded | group), groupId}]
   rsvps/{date_personId}      eventId, date, personId, status (yes | maybe | no), updatedAt, updatedBy
 serving/{scheduleId}         role, date, time, personId, location, reminderHours, cancelled, revision,
                              reminderMessageId, updatedAt, updatedBy
@@ -277,7 +278,8 @@ kioskSearches/{token}        uid, serviceId, personIds[], expiresAt (server only
 
 messages/{messageId}         channel (email | sms | both), subject, body, audience, scheduledFor,
                              status, createdAt, createdByUid, selectedPersonIds[], sessionOnly,
-                             attachments[], activeCount, totals{}, source, dateLabel, serviceTime, expiresAt, servingAssignment { id, revision }
+                             attachments[], activeCount, totals{}, source, dateLabel, serviceTime, expiresAt, servingAssignment { id, revision },
+                             eventReminder { eventId, date, reminderId, version }
   recipients/{personId_channel} personId, channel, address, status, providerId, error,
                                attemptKey, startedAt, updatedAt
 messageTemplates/{id}       name, channel, subject, body, updatedBy, updatedAt
@@ -481,7 +483,7 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Separate deacon notes, household assignments, joint visits and practical-help request processing
 * Privacy-scoped daily care digests
 
-**Phase 10, Member self-service and calendar (approved, not implemented)**
+**Phase 10, Member self-service and calendar (implemented; live checks required, see docs/PHASE_10.md)**
 * Passwordless email-link access without granting staff permissions
 * Member contact/photo editing with existing privacy and consent boundaries
 * Confidential prayer/care requests and practical-help requests routed to permitted officers
@@ -536,7 +538,7 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is implemented; verify live digest delivery and, if the Session enables lookups, the Census geocoder on staging. Phase 9 care workflows and diaconal ministry is implemented; verify live workflow, deacon summary and date reminder delivery on staging, and deploy the scheduler with the private record key secret. Phase 10 member self-service and calendar is the next implementation milestone. Phases 10 through 12 remain open. Existing live provisioning and Windows release work remain required.
+Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is implemented; verify live digest delivery and, if the Session enables lookups, the Census geocoder on staging. Phase 9 care workflows and diaconal ministry is implemented; verify live workflow, deacon summary and date reminder delivery on staging, and deploy the scheduler with the private record key secret. Phase 10 member self-service and calendar is implemented; verify email-link sign-in, the account blocking function, calendar feeds in real calendar apps and event reminder delivery on staging. Phase 11 church records and data tools is the next implementation milestone. Phases 11 and 12 remain open. Existing live provisioning and Windows release work remain required.
 
 ### Phase 7 implementation details
 
@@ -549,6 +551,10 @@ See `docs/PHASE_8.md`. Visit plans and rounds are Session-only documents served 
 ### Phase 9 implementation details
 
 See `docs/PHASE_9.md`. Mercy ministry is a separate boundary: request details, outcomes, notes, tasks and visit purposes are sealed and readable only by the deacons currently assigned to the household or request and by the Pastor; the Session and Session-named deacon chairs triage and assign without reading them, and a note reaches the Session only through an explicit, logged share. Invited Session officers see deacon visits as logistics only. A daily deacon summary lists households, kinds of help, due dates and visit times, never details or titles, and is rechecked against a live deacon role at dispatch. Important dates keep ordinary anniversaries apart from Session-only bereavement dates with sealed notes; reminders go out only on their church-local day, never late, name the person and day only, and are rechecked against the current record at dispatch. A Feb 29 date falls on Feb 28 in other years. Care workflows are Session only: triggers (visitor recorded, membership received, request approved, important date) start deterministic runs; steps wait, check conditions, assign tasks with live-role checks, ask for approval without self-approval by default, and send consented messages limited to greeting merge fields. Published versions are immutable, running people keep their version unless moved, leased transactions and step-based IDs keep each side effect single, and pausing stops further steps. The builder is an accessible step list with a keyboard-usable diagram, a required preview before activation, and run history with pause, cancel, retry and migration.
+
+### Phase 10 implementation details
+
+See `docs/PHASE_10.md`. Members sign in with Firebase email links (or their password); a blocking function refuses every client-created account with an email, links return only to allowlisted portal tabs, and access still requires the administrator-made mapping. Members edit only their own contact fields, photo and, as an adult with a recorded birth date, their household address, with stale-field checks. A new mobile number turns texts off; no member edit turns consent on. Photos are validated and served only through a sharing check. Prayer and pastoral requests are sealed in the Session-only `memberRequests` collection and read through the audited private-records API; practical help becomes a member-sourced mercy request in deacon triage. Members see only kind, date and progress. Organizers cancel, move or restore one date of a series under `exceptions`. Editors list member-visible events on a public calendar. Members and staff create revocable, expiring private iCalendar feeds stored only as token hashes and rechecked against live access; feeds never include RSVPs, rosters or care visits. Editors set up to three reminders per series; each date gets one message per reminder and details version, rechecked at delivery against cancellation, changes, the current audience and consent.
 
 ### Phase 5 implementation details
 

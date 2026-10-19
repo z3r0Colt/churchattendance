@@ -36,6 +36,7 @@ import {
   friendlyError,
   type EditorField,
 } from "./Common";
+import { EventReminders } from "./EventReminders";
 export function Calendar({ roles }: { roles: Role[] }) {
   const data = usePublicChms();
   const [from, setFrom] = useState("");
@@ -246,6 +247,13 @@ export function Calendar({ roles }: { roles: Role[] }) {
                 Save RSVP
               </Button>
             </div>
+          )}
+          {series && hasRole(roles, EDITOR_ROLES) && (
+            <EventReminders
+              key={series.id}
+              event={series}
+              groups={data.groups}
+            />
           )}
           <Records
             rows={visible.map((row) => ({

@@ -108,7 +108,7 @@ A deacon can handle an assigned practical request and private note. Another deac
 
 ## Phase 10. Member self-service and calendar
 
-Status is planned. Depends on Phase 7 authentication and privacy contracts. Request routing uses Phase 9.
+Status is implemented in code, with live checks still required. See [Phase 10 implementation](PHASE_10.md) for supported workflows and limits. Depends on Phase 7 authentication and privacy contracts. Request routing uses Phase 9.
 
 ### Member access and requests
 

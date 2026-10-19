@@ -3,9 +3,13 @@ import {
   buildCalendar,
   eventFromRecord,
   eventOccurrences,
+  eventReminderSchema,
   foldLine,
   icsText,
   occurrenceChangeSchema,
+  reminderDue,
+  reminderMessage,
+  reminderVersion,
   type ChurchEvent,
 } from "./index";
 
@@ -156,5 +160,72 @@ describe("iCalendar feeds", () => {
     expect(text).toContain("SEQUENCE:4\r\n");
     expect(text.endsWith("END:VCALENDAR\r\n")).toBe(true);
     expect(text).not.toMatch(/[^\r]\n/);
+  });
+});
+
+describe("event reminders", () => {
+  const reminder = {
+    id: "day",
+    minutesBefore: 1440,
+    channel: "email" as const,
+    audience: "attending" as const,
+    groupId: "",
+  };
+  const occurrence = {
+    title: "Bible study",
+    start: "2027-03-14T22:00:00.000Z",
+    end: "2027-03-14T23:00:00.000Z",
+    location: "Hall",
+    cancelled: false,
+  };
+  it("is due from its lead time until the start, never after", () => {
+    expect(
+      reminderDue(occurrence, reminder, new Date("2027-03-13T21:59:00Z")),
+    ).toBe(false);
+    expect(
+      reminderDue(occurrence, reminder, new Date("2027-03-13T22:00:00Z")),
+    ).toBe(true);
+    expect(
+      reminderDue(occurrence, reminder, new Date("2027-03-14T22:00:00Z")),
+    ).toBe(false);
+    expect(
+      reminderDue(
+        { ...occurrence, cancelled: true },
+        reminder,
+        new Date("2027-03-14T12:00:00Z"),
+      ),
+    ).toBe(false);
+  });
+  it("versions the details a reminder states", () => {
+    const version = reminderVersion(occurrence, reminder);
+    expect(reminderVersion({ ...occurrence }, { ...reminder })).toBe(version);
+    for (const changed of [
+      reminderVersion({ ...occurrence, location: "Manse" }, reminder),
+      reminderVersion(
+        { ...occurrence, start: "2027-03-14T23:00:00.000Z" },
+        reminder,
+      ),
+      reminderVersion(occurrence, { ...reminder, channel: "sms" }),
+      reminderVersion(occurrence, { ...reminder, audience: "responded" }),
+    ])
+      expect(changed).not.toBe(version);
+  });
+  it("accepts only listed lead times and a group only for group reminders", () => {
+    expect(eventReminderSchema.safeParse(reminder).success).toBe(true);
+    for (const value of [
+      { ...reminder, minutesBefore: 5 },
+      { ...reminder, groupId: "youth" },
+      { ...reminder, audience: "group" },
+      { ...reminder, audience: "everyone" },
+    ])
+      expect(eventReminderSchema.safeParse(value).success).toBe(false);
+  });
+  it("says Lord's Day and drops braces from event text", () => {
+    expect(
+      reminderMessage(
+        { ...occurrence, title: "Study {FirstName}" },
+        "America/Indiana/Indianapolis",
+      ),
+    ).toBe("Study FirstName is on the Lord's Day, March 14 at 6:00 PM, Hall.");
   });
 });

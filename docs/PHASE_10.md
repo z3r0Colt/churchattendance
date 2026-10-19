@@ -1,6 +1,6 @@
 # Phase 10 member self-service and calendar
 
-Phase 10 extends the member portal from Phase 4 with passwordless sign-in, self-service contact and photo editing, confidential requests, a public calendar, calendar subscriptions and event reminders. It is built in slices. This file records what each slice implements and its limits. Scope and acceptance criteria are in [Expanded feature requirements](FEATURE_EXPANSION.md).
+Phase 10 extends the member portal from Phase 4 with passwordless sign-in, self-service contact and photo editing, confidential requests, a public calendar, calendar subscriptions and event reminders. It was built in five slices and is implemented in code. Live checks are listed in each section. This file records what each slice implements and its limits. Scope and acceptance criteria are in [Expanded feature requirements](FEATURE_EXPANSION.md).
 
 | Slice | Scope | Status |
 |---|---|---|
@@ -8,7 +8,7 @@ Phase 10 extends the member portal from Phase 4 with passwordless sign-in, self-
 | 2 | Member contact, photo and household address editing | Implemented |
 | 3 | Prayer and pastoral requests to the Session, practical-help requests to the deacons | Implemented |
 | 4 | Occurrence changes, public calendar and calendar subscriptions | Implemented |
-| 5 | Per-event reminders | Planned |
+| 5 | Per-event reminders | Implemented |
 
 Decisions made before implementation: sign-in links are sent by Firebase Authentication's own email sender. Prayer and pastoral requests always go to the whole Session. Members change their own photo, and an adult in a household changes the household address, without staff review.
 
@@ -84,3 +84,19 @@ On every fetch the server checks that the link exists and has not expired, and t
 ### Live setup for calendars
 
 Hosting rewrites `/calendar/**` on the portal domain to the `calendarFeed` function, and private links are built from `PORTAL_ORIGIN`. Check on staging that `https://<portal>/calendar/public.ics` opens in Outlook, Google Calendar and Apple Calendar, that a cancelled date disappears after the next refresh, and that a stopped link returns 404. Calendar apps refresh on their own schedule (often several hours), so changes are not instant. Request logs on the hosting platform include the feed path; treat project log access as able to see feed links, and stop a link if it may have been exposed.
+
+## Event reminders
+
+An Editor (Admin, Pastor, Clerk or Elder) opens a date on **Calendar** and sets up to three reminders for the event series. Each reminder has a lead time (1 hour, 3 hours, 1 day, 2 days or 1 week before), a channel (email, text or both) and an audience: people attending that date, people attending or maybe, or the current members of an active group. Deacons can organize events but cannot set reminders, because reminders send church messages. Saving checks the event revision.
+
+**Scheduling.** The communication scheduler looks one week ahead. When a date's reminder time arrives and the date has not started, it queues one message for the people in the audience at that moment. The message ID is `event_<event>_<date>_<reminder>_<version>`, where the version is a short hash of the title, start, end, place, lead time, channel and audience. Repeated ticks therefore queue one reminder per date, reminder and version. A reminder is never sent after the date starts. People who RSVP after a reminder was queued do not receive that reminder.
+
+**Rechecked at delivery.** Before each delivery the queue confirms that the event still exists, that the reminder is still configured, that the date is not cancelled, that its details still match the queued version, and that the person still RSVPs as required or still belongs to the group. Normal consent, suppression and channel checks apply, so no one who has opted out receives a reminder. A changed time, place or title invalidates reminders still waiting and queues one new reminder with the new details; a cancelled date invalidates them and queues nothing. Changes to other dates of the series do not resend reminders.
+
+**Content.** Reminders say the event title, day, date, time and place ("the Lord's Day" for Sunday) and greet the person by first name. Braces are removed from event text so a title cannot add merge fields. They never list who else is attending.
+
+Check on staging that a reminder arrives once by email and text, that a cancelled date sends nothing, and that an opted-out member receives nothing.
+
+## Not included
+
+Household proxy RSVPs, guardian delegation, attachments on member requests, member self-service consent changes and push notifications are not included. Calendar feeds are not real-time; calendar apps refresh on their own schedule.

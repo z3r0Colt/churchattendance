@@ -49,6 +49,7 @@ import {
   memberRequestStatusSchema,
   eventFromRecord,
   occurrenceChangeSchema,
+  eventRemindersSchema,
   createCalendarFeedSchema,
   revokeCalendarFeedSchema,
   type CalendarFeed,
@@ -282,6 +283,8 @@ export const markGroupAttendance = (value: unknown) =>
   chmsCall("markGroupAttendance", groupMarkSchema.parse(value));
 export const saveChurchEvent = (value: unknown) =>
   chmsCall("saveChurchEvent", eventSchema.parse(value));
+export const saveEventReminders = (value: unknown) =>
+  chmsCall("saveEventReminders", eventRemindersSchema.parse(value));
 export const changeEventOccurrence = (value: unknown) =>
   chmsCall("changeEventOccurrence", occurrenceChangeSchema.parse(value));
 export const createStaffCalendarFeed = (label: string) =>

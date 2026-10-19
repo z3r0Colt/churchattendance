@@ -135,3 +135,104 @@ export function buildCalendar(input: {
   lines.push("END:VCALENDAR");
   return lines.map(foldLine).join("\r\n") + "\r\n";
 }
+
+// Event reminders. Each series has up to three; each date of the series
+// gets at most one message per reminder and version of its details.
+export const reminderLeadMinutes = [60, 180, 1440, 2880, 10080] as const;
+export const reminderLeadLabels: Record<number, string> = {
+  60: "1 hour before",
+  180: "3 hours before",
+  1440: "1 day before",
+  2880: "2 days before",
+  10080: "1 week before",
+};
+export const reminderAudiences = ["attending", "responded", "group"] as const;
+export const reminderAudienceLabels: Record<
+  (typeof reminderAudiences)[number],
+  string
+> = {
+  attending: "People attending",
+  responded: "People attending or maybe",
+  group: "Members of a group",
+};
+export const eventReminderSchema = z
+  .object({
+    id: z.string().regex(/^[a-z0-9]{1,12}$/),
+    minutesBefore: z
+      .number()
+      .int()
+      .refine(
+        (value) => (reminderLeadMinutes as readonly number[]).includes(value),
+        "Choose a reminder time",
+      ),
+    channel: z.enum(["email", "sms", "both"]),
+    audience: z.enum(reminderAudiences),
+    groupId: z.union([idSchema, z.literal("")]).default(""),
+  })
+  .strict()
+  .refine(
+    (row) => (row.audience === "group") === !!row.groupId,
+    "Choose a group only for a group reminder",
+  );
+export type EventReminder = z.infer<typeof eventReminderSchema>;
+export const eventRemindersSchema = z
+  .object({
+    eventId: idSchema,
+    expectedRevision: z.number().int().nonnegative(),
+    reminders: z
+      .array(eventReminderSchema)
+      .max(3)
+      .refine(
+        (rows) => new Set(rows.map((row) => row.id)).size === rows.length,
+        "Use each reminder once",
+      ),
+  })
+  .strict();
+export function reminderDue(
+  occurrence: { start: string; cancelled: boolean },
+  reminder: Pick<EventReminder, "minutesBefore">,
+  now: Date,
+) {
+  const start = Date.parse(occurrence.start);
+  return (
+    !occurrence.cancelled &&
+    start > now.getTime() &&
+    start - reminder.minutesBefore * 60000 <= now.getTime()
+  );
+}
+// A changed time, place, title, channel or audience is a new version and
+// invalidates any reminder still waiting for the old one.
+export function reminderVersion(
+  occurrence: { title: string; start: string; end: string; location: string },
+  reminder: EventReminder,
+) {
+  const text = JSON.stringify([
+    occurrence.title,
+    occurrence.start,
+    occurrence.end,
+    occurrence.location,
+    reminder.minutesBefore,
+    reminder.channel,
+    reminder.audience,
+    reminder.groupId,
+  ]);
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index++) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash.toString(36);
+}
+// Event text is not a template: braces are dropped so a title cannot add
+// merge fields to the message.
+export const plainEventText = (value: string) => value.replace(/[{}]/g, "");
+export function reminderMessage(
+  occurrence: { title: string; start: string; location: string },
+  zone: string,
+) {
+  const start = DateTime.fromISO(occurrence.start).setZone(zone);
+  const day = start.weekday === 7 ? "the Lord's Day" : start.toFormat("cccc");
+  return plainEventText(
+    `${occurrence.title} is on ${day}, ${start.toFormat("LLLL d")} at ${start.toFormat("h:mm a")}${occurrence.location ? `, ${occurrence.location}` : ""}.`,
+  );
+}

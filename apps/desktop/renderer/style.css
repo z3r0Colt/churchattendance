@@ -481,3 +481,4 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .workflow-message { border-left: 3px solid var(--colorNeutralStroke1); padding: 4px 12px; margin: 8px 0; white-space: pre-wrap; }
 .request-cards { display: grid; gap: 16px; margin-top: 16px; }
 .feed-url { overflow-wrap: anywhere; }
+.reminder-panel { display: grid; gap: 8px; margin: 16px 0; }
