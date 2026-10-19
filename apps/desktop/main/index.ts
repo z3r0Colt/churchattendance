@@ -65,11 +65,16 @@ app.whenReady().then(async () => {
       const connect = app.isPackaged
         ? "https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.cloudfunctions.net https://*.run.app https://*.appspot.com https://*.firebasestorage.app"
         : "http://127.0.0.1:* ws://127.0.0.1:* https://*.googleapis.com";
+      // Vite's development page starts with an inline React refresh script. Only the unpackaged dev server allows it.
+      const script =
+        !app.isPackaged && process.env.SYCAMORE_DEV === "1"
+          ? "'self' 'unsafe-inline'"
+          : "'self'";
       callback({
         responseHeaders: {
           ...details.responseHeaders,
           "Content-Security-Policy": [
-            `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ${connect}; object-src 'none'; base-uri 'none'; frame-src 'none'`,
+            `default-src 'self'; script-src ${script}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ${connect}; object-src 'none'; base-uri 'none'; frame-src 'none'`,
           ],
         },
       });
