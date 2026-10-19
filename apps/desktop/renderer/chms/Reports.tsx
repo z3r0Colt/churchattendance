@@ -4,6 +4,7 @@ import {
   Field,
   Input,
   MessageBar,
+  Select,
   Spinner,
   Tab,
   TabList,
@@ -21,6 +22,7 @@ import {
 import {
   chmsCall,
   saveSacrament,
+  saveStatisticalOptions,
   uploadPersonPhoto,
   useCollection,
   useReportData,
@@ -68,6 +70,11 @@ export function AdvancedReports({ roles }: { roles: Role[] }) {
   const typeIds = data.types
     .filter((row) => row.dayOfWeek === 0)
     .map((row) => row.id);
+  const attendanceMode =
+    (
+      labelsData.rows.find((row) => row.id === "statisticalOptions") as
+        { attendanceMode?: "inPerson" | "combined" } | undefined
+    )?.attendanceMode ?? "inPerson";
   const annual = annualStatistics(
     data.people,
     data.history,
@@ -75,6 +82,7 @@ export function AdvancedReports({ roles }: { roles: Role[] }) {
     data.services,
     year,
     typeIds,
+    attendanceMode,
   );
   const monthly = meetingSummary(
     data.people,
@@ -309,6 +317,22 @@ export function AdvancedReports({ roles }: { roles: Role[] }) {
                 <Button onClick={() => setSacrament(true)}>
                   Record baptism or profession
                 </Button>
+                <Select
+                  aria-label="Average attendance counts"
+                  value={attendanceMode}
+                  onChange={(event) =>
+                    void saveStatisticalOptions({
+                      attendanceMode: event.target.value,
+                    }).catch((cause) => setError(friendlyError(cause)))
+                  }
+                >
+                  <option value="inPerson">
+                    Average counts in person only
+                  </option>
+                  <option value="combined">
+                    Average counts in person and online
+                  </option>
+                </Select>
               </>
             )}
           </div>

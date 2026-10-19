@@ -190,7 +190,12 @@ export const checkInKiosk = onCall(async (request) => {
         transaction.update(
           ref,
           new FieldPath("present", id),
-          { at: Timestamp.now(), method: "kiosk", byUid: active.uid },
+          {
+            at: Timestamp.now(),
+            method: "kiosk",
+            byUid: active.uid,
+            mode: "inPerson",
+          },
           "lastAttendancePersonId",
           id,
         );

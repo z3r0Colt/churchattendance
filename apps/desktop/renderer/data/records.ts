@@ -10,6 +10,11 @@ import {
   officeSchema,
   officerDecisionSchema,
   officerPolicySchema,
+  communionBulkSchema,
+  communionDecisionSchema,
+  communionRecordSchema,
+  type CommunionDecision,
+  type CommunionRecord,
   type OfficerDecision,
   type OfficerPolicy,
   type Role,
@@ -68,3 +73,31 @@ export const saveQuorumPolicy = (value: unknown) =>
 export const saveQuorumMeeting = (value: unknown) =>
   chmsCall("saveQuorumMeeting", quorumMeetingSchema.parse(value));
 export type OfficerData = ReturnType<typeof useOfficerData>;
+// The approved list and participation are Session only, read through the audited private-records API.
+export function useCommunionData(roles: Role[]) {
+  const session = hasRole(roles, SESSION_ROLES);
+  const report = useReportData();
+  const decisions = usePrivateRecords<CommunionDecision>(
+    "communionDecisions",
+    session,
+  );
+  const records = usePrivateRecords<CommunionRecord>(
+    "communionRecords",
+    session,
+  );
+  return {
+    ...report,
+    decisions: decisions.rows,
+    records: records.rows,
+    error: report.error || decisions.error || records.error,
+  };
+}
+export const saveCommunionDecision = (value: unknown) =>
+  chmsCall("saveCommunionDecision", communionDecisionSchema.parse(value));
+export const approveCommunicants = (value: unknown) =>
+  chmsCall<{ created: number }>(
+    "approveCommunicants",
+    communionBulkSchema.parse(value),
+  );
+export const saveCommunionRecord = (value: unknown) =>
+  chmsCall("saveCommunionRecord", communionRecordSchema.parse(value));

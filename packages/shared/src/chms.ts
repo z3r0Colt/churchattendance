@@ -342,6 +342,8 @@ export function annualStatistics(
   services: Service[],
   year: number,
   serviceTypeIds: string[],
+  // The Clerk chooses whether the average counts online worshippers. In person is the default.
+  attendanceMode: "inPerson" | "combined" = "inPerson",
 ) {
   const begin = `${year - 1}-12-31`,
     end = `${year}-12-31`,
@@ -416,18 +418,29 @@ export function annualStatistics(
       serviceTypeIds.includes(service.serviceTypeId) &&
       DateTime.fromISO(service.date).weekday === 7,
   );
-  rows.push({
-    Measure: "Average recorded Lord's Day attendance",
-    Count: selected.length
+  const average = (counted: (mode: string | undefined) => boolean) =>
+    selected.length
       ? Math.round(
           (selected.reduce(
-            (sum, row) => sum + Object.keys(row.present).length,
+            (sum, row) =>
+              sum +
+              Object.values(row.present).filter((mark) => counted(mark.mode))
+                .length,
             0,
           ) /
             selected.length) *
             10,
         ) / 10
-      : 0,
+      : 0;
+  rows.push({
+    Measure: "Average recorded Lord's Day attendance",
+    Count: average(
+      (mode) => attendanceMode === "combined" || mode !== "online",
+    ),
+  });
+  rows.push({
+    Measure: "Average recorded Lord's Day online attendance",
+    Count: average((mode) => mode === "online"),
   });
   rows.push({
     Measure: "People missing membership history",

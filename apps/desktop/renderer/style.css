@@ -747,6 +747,10 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   border-color: #2f6b4f;
   color: #ffffff;
 }
+/* An online worshipper keeps the present colours with a dashed edge and the word Online. */
+.app .person-chip.present.online {
+  border-style: dashed;
+}
 .chip-text {
   display: flex;
   flex-direction: column;

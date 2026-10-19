@@ -17,12 +17,15 @@ import {
   healthIndicatorKeys,
   healthIndicatorLabels,
   healthIndicators,
+  communionParticipation,
+  type CommunionRecord,
   indicatorStateLabels,
   statusLabels,
   type Assessment,
   type HealthIndicator,
   type ReportRow,
 } from "@sycamore/shared";
+import { usePrivateRecords } from "../data/private";
 import { ExportButton } from "../components/ExportButton";
 import { useReportData } from "../data/chms";
 import {
@@ -42,6 +45,10 @@ export function FlockHealth({
   const { history, error } = useContactHistory(true);
   const assessments = useAssessments(true);
   const report = useReportData();
+  const communion = usePrivateRecords<CommunionRecord>(
+    "communionRecords",
+    true,
+  );
   const [filter, setFilter] = useState({ district: "", concern: "" });
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<
@@ -146,6 +153,7 @@ export function FlockHealth({
         contact: flags.find((row) => row.personId === personId),
         lastVisit: visits.at(-1) || "",
         visitRecordsSince: history?.policy?.historyStart || "",
+        communion: communionParticipation(communion.rows, personId, today),
       },
       settings!,
       today,

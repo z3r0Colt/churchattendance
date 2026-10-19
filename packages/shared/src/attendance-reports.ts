@@ -183,10 +183,15 @@ export function attendanceReport(
       (other) =>
         other.serviceTypeId === row.serviceTypeId && other.date === yearDate,
     );
+    const online = Object.entries(row.present).filter(
+      ([id, mark]) => matches(id, row.date) && mark.mode === "online",
+    ).length;
     return {
       Date: row.date,
       Service: typeName(row.serviceTypeId),
       ...counts,
+      "In person": count(row) - online,
+      Online: online,
       Total: count(row),
       "Prior 4 week average": average(previous.map(count)),
       "Same weekday 52 weeks earlier": lastYear ? count(lastYear) : "No record",
@@ -208,6 +213,13 @@ export function attendanceReport(
             ? statusLabels[at(id, row.date).status!]
             : "Unclassified",
         Method: row.present[id].method,
+        // Marks made before online tracking have no mode and count as in person.
+        Worship:
+          row.present[id].mode === "online"
+            ? "Online"
+            : row.present[id].mode
+              ? "In person"
+              : "In person (not recorded)",
       })),
   );
   const ordered = source.people

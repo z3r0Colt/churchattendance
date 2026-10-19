@@ -34,9 +34,11 @@ service cloud.firestore {
       return !(personId in marks) || (
         person.isDeceased == false && person.membershipStatus != 'former' &&
         marks[personId] is map && marks[personId].keys().hasAll(['at', 'method', 'byUid']) &&
-        marks[personId].keys().hasOnly(['at', 'method', 'byUid']) &&
+        marks[personId].keys().hasOnly(['at', 'method', 'byUid', 'mode']) &&
         marks[personId].at == request.time && marks[personId].byUid == request.auth.uid &&
-        marks[personId].method in ['roll', 'kiosk']);
+        marks[personId].method in ['roll', 'kiosk'] &&
+        marks[personId].get('mode', 'inPerson') in ['inPerson', 'online'] &&
+        (marks[personId].method == 'roll' || marks[personId].get('mode', 'inPerson') == 'inPerson'));
     }
     function validAttendanceUpdate() {
       let changed = request.resource.data.present.diff(resource.data.present).affectedKeys();
@@ -100,6 +102,9 @@ service cloud.firestore {
     match /officerDecisions/{id} { allow read, write: if false; }
     match /quorumPolicies/{id} { allow read, write: if false; }
     match /quorumMeetings/{id} { allow read, write: if false; }
+    // The communion-approved list and named participation are Session only through audited callables.
+    match /communionDecisions/{id} { allow read, write: if false; }
+    match /communionRecords/{id} { allow read, write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {

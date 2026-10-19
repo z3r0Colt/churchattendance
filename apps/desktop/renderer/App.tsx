@@ -15,6 +15,7 @@ import {
   Option,
   Spinner,
   Subtitle2,
+  Switch,
   Tab,
   TabList,
   Title3,
@@ -85,6 +86,7 @@ import {
 } from "./chms/AttendanceReports";
 import { Dashboard } from "./chms/Dashboard";
 import { Officers } from "./chms/Officers";
+import { Communion } from "./chms/Communion";
 import { StaffPasswordForm, StaffEnrollment } from "./security/Factors";
 import { Security } from "./security/Security";
 import { browserStaffSignIn } from "./data/security";
@@ -109,6 +111,7 @@ type Page =
   | "portal"
   | "dashboard"
   | "officers"
+  | "communion"
   | "security";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
@@ -474,6 +477,14 @@ function Workspace({
                   onClick={() => setPage("officers")}
                 />
               )}
+              {hasRole(roles, SESSION_ROLES) && (
+                <NavItem
+                  label="Communion"
+                  session
+                  current={page === "communion"}
+                  onClick={() => setPage("communion")}
+                />
+              )}
               <NavItem
                 label="Settings"
                 current={page === "settings"}
@@ -654,6 +665,9 @@ function Workspace({
         {page === "workflows" && hasRole(roles, SESSION_ROLES) && <Workflows />}
         {page === "officers" && hasRole(roles, SESSION_ROLES) && (
           <Officers roles={roles} zone={data.timeZone} />
+        )}
+        {page === "communion" && hasRole(roles, SESSION_ROLES) && (
+          <Communion roles={roles} zone={data.timeZone} />
         )}
         {page === "dates" && hasRole(roles, EDITOR_ROLES) && (
           <ImportantDates roles={roles} />
@@ -852,6 +866,8 @@ function RollCall({
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  // New marks are in person unless the volunteer switches to marking online worshippers.
+  const [mode, setMode] = useState<"inPerson" | "online">("inPerson");
   const input = useRef<HTMLInputElement>(null);
   const [undo, setUndo] = useState<{ ids: string[]; expires: number } | null>(
     null,
@@ -913,6 +929,8 @@ function RollCall({
             (householdPeople[0].membershipStatus === "nonResident"),
       );
       const allPresent = family.every((person) => !!service.present[person.id]);
+      const how = (id: string) =>
+        service.present[id]?.mode === "online" ? "online" : "inPerson";
       const here = family.filter((person) => !!service.present[person.id]);
       return (
         <section className="household" key={id}>
@@ -931,11 +949,16 @@ function RollCall({
                 data-roll-row
                 checked={!!service.present[person.id]}
                 disabled={!editable}
-                className={`person-chip ${service.present[person.id] ? "present" : ""}`}
+                className={`person-chip ${service.present[person.id] ? "present" : ""} ${service.present[person.id] && how(person.id) === "online" ? "online" : ""}`}
                 onClick={() =>
-                  data.mark(service.id, person.id, !service.present[person.id])
+                  data.mark(
+                    service.id,
+                    person.id,
+                    !service.present[person.id],
+                    mode,
+                  )
                 }
-                aria-label={`${person.firstName} ${person.lastName}, ${service.present[person.id] ? "present" : "absent"}`}
+                aria-label={`${person.firstName} ${person.lastName}, ${service.present[person.id] ? (how(person.id) === "online" ? "online" : "present") : "absent"}`}
               >
                 <span className="check-dot" aria-hidden="true">
                   {service.present[person.id] ? <CheckmarkRegular /> : null}
@@ -945,7 +968,9 @@ function RollCall({
                     {person.preferredName || person.firstName}
                   </span>
                   <span className="chip-status">
-                    {statusLabels[person.membershipStatus]}
+                    {service.present[person.id] && how(person.id) === "online"
+                      ? `Online · ${statusLabels[person.membershipStatus]}`
+                      : statusLabels[person.membershipStatus]}
                   </span>
                 </span>
               </ToggleButton>
@@ -957,7 +982,7 @@ function RollCall({
             disabled={!editable}
             onClick={() => {
               family.forEach((person) =>
-                data.mark(service.id, person.id, !allPresent),
+                data.mark(service.id, person.id, !allPresent, mode),
               );
               if (allPresent)
                 setUndo({
@@ -992,7 +1017,10 @@ function RollCall({
           <strong aria-live="polite" data-testid="present-count">
             {counts.total}
           </strong>
-          <small>of {onRoll.length} on the active roll</small>
+          <small>
+            of {onRoll.length} on the active roll
+            {counts.online ? ` · ${counts.online} online` : ""}
+          </small>
         </div>
         <div className="tile">
           <span>Members</span>
@@ -1038,6 +1066,7 @@ function RollCall({
                     service.id,
                     filtered[0].id,
                     !service.present[filtered[0].id],
+                    mode,
                   );
                   setSearch("");
                 }
@@ -1053,6 +1082,14 @@ function RollCall({
             <Tab value="adherent">Adherents</Tab>
             <Tab value="visitor">Visitors</Tab>
           </TabList>
+          <Switch
+            label="Marking online worshippers"
+            checked={mode === "online"}
+            disabled={!editable}
+            onChange={(_, value) =>
+              setMode(value.checked ? "online" : "inPerson")
+            }
+          />
         </div>
         {!!resident.length && (
           <div className="roll-panel surface">{groupRows(resident)}</div>
@@ -1084,7 +1121,7 @@ function RollCall({
           Household cleared.{" "}
           <Button
             onClick={() => {
-              undo.ids.forEach((id) => data.mark(service.id, id, true));
+              undo.ids.forEach((id) => data.mark(service.id, id, true, mode));
               setUndo(null);
             }}
           >
@@ -1096,6 +1133,7 @@ function RollCall({
         Members {counts.communicant + counts.baptized + counts.nonResident}{" "}
         <span>Adherents {counts.adherent}</span>{" "}
         <span>Visitors {counts.visitor}</span>
+        {!!counts.online && <span>Online {counts.online}</span>}
         <span className="muted">Children counted in families</span>
       </footer>
     </>

@@ -97,11 +97,17 @@ export function useAttendanceData() {
       window.removeEventListener("offline", off);
     };
   }, []);
-  function mark(serviceId: string, personId: string, present: boolean) {
+  function mark(
+    serviceId: string,
+    personId: string,
+    present: boolean,
+    mode: "inPerson" | "online" = "inPerson",
+  ) {
     const input = attendanceInputSchema.parse({
       personId,
       present,
       method: "roll",
+      mode,
     });
     if (!auth.currentUser) return;
     // Do not await acknowledgements here. Offline writes appear immediately and queue in IndexedDB.
@@ -113,6 +119,7 @@ export function useAttendanceData() {
             at: serverTimestamp(),
             method: input.method,
             byUid: auth.currentUser.uid,
+            mode: input.mode,
           }
         : deleteField(),
       "lastAttendancePersonId",

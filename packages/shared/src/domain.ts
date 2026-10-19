@@ -118,12 +118,19 @@ export const attendanceInputSchema = z
     personId: idSchema,
     present: z.boolean(),
     method: z.enum(["roll", "kiosk"]),
+    mode: z.enum(["inPerson", "online"]).default("inPerson"),
   })
-  .strict();
+  .strict()
+  .refine((row) => row.method === "roll" || row.mode === "inPerson", {
+    message: "Kiosk check-in is in person",
+    path: ["mode"],
+  });
 export type Attendance = {
   at: unknown;
   method: "roll" | "kiosk";
   byUid: string;
+  // Absent on marks made before online tracking; those count as in person.
+  mode?: "inPerson" | "online";
 };
 export type Service = {
   id: string;
@@ -241,10 +248,17 @@ export function attendanceCounts(
   const counts = Object.fromEntries(
     membershipStatuses.map((status) => [status, 0]),
   ) as Record<MembershipStatus, number>;
+  let online = 0;
   for (const person of people)
-    if (Object.hasOwn(service.present, person.id))
+    if (Object.hasOwn(service.present, person.id)) {
       counts[person.membershipStatus]++;
-  return { ...counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };
+      if (service.present[person.id].mode === "online") online++;
+    }
+  return {
+    ...counts,
+    total: Object.values(counts).reduce((a, b) => a + b, 0),
+    online,
+  };
 }
 export function churchDate(now: Date, timeZone: string) {
   return new Intl.DateTimeFormat("en-CA", {

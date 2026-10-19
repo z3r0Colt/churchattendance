@@ -30,6 +30,7 @@ export const encryptedCollections = [
   "bereavementDates",
   "memberRequests",
   "officerDecisions",
+  "communionDecisions",
 ] as const;
 export const privateCollections = [
   ...encryptedCollections,
@@ -37,6 +38,7 @@ export const privateCollections = [
   "officerPolicies",
   "quorumPolicies",
   "quorumMeetings",
+  "communionRecords",
 ] as const;
 export const privatePageSchema = z
   .object({

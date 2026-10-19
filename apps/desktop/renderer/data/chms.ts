@@ -28,6 +28,7 @@ import {
   kioskExitSchema,
   sacramentSchema,
   savePersonSchema,
+  statisticalOptionsSchema,
   hasRole,
   SESSION_ROLES,
   type Role,
@@ -103,6 +104,9 @@ export async function chmsCall<T = unknown>(
       "saveOfficerDecision",
       "saveQuorumPolicy",
       "saveQuorumMeeting",
+      "saveCommunionDecision",
+      "approveCommunicants",
+      "saveCommunionRecord",
     ].includes(name)
   )
     window.dispatchEvent(new Event("private-records-changed"));
@@ -383,3 +387,5 @@ export async function directoryPhoto(path: string) {
     image.close();
   }
 }
+export const saveStatisticalOptions = (value: unknown) =>
+  chmsCall("saveStatisticalOptions", statisticalOptionsSchema.parse(value));

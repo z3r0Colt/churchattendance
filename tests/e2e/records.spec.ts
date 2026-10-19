@@ -24,7 +24,11 @@ const collections = [
   "officerDecisions",
   "quorumPolicies",
   "quorumMeetings",
+  "communionDecisions",
+  "communionRecords",
 ];
+// A fictional past Lord's Day used only by this spec.
+let serviceId = "am_2026-03-01";
 async function loginToken(request: APIRequestContext, email: string) {
   const response = await request.post(
     "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key",
@@ -51,6 +55,8 @@ async function clean() {
   for (const name of collections) await db.recursiveDelete(db.collection(name));
   for (const id of ["james", "ruth", "john"])
     await db.recursiveDelete(db.collection(`people/${id}/offices`));
+  for (const id of ["am_2026-03-01", "pm_2026-03-01"])
+    await db.doc(`services/${id}`).delete();
 }
 test.beforeAll(async ({ request }) => {
   for (const [uid, roles, name] of [
@@ -259,4 +265,126 @@ test("records an elder and shows a quorum calculation", async ({
     page.getByRole("cell", { name: "Ruling elder", exact: true }),
   ).toBeVisible();
   await page.screenshot({ path: "test-results/officers-quorum.png" });
+});
+
+test("keeps communion decisions and participation with the Session", async ({
+  request,
+}) => {
+  const decision = {
+    id: "r11-ruth-approved",
+    personId: "ruth",
+    approved: true,
+    kind: "member",
+    effectiveOn: "2026-01-01",
+    note: "Fictional examination note",
+  };
+  await call(request, "saveCommunionDecision", decision, 403, "r11-office");
+  await call(request, "saveCommunionDecision", decision, 403, "r11-deacon");
+  await call(request, "saveCommunionDecision", decision);
+  // A decision is never rewritten; a correction is a new decision.
+  await call(
+    request,
+    "saveCommunionDecision",
+    { ...decision, approved: false },
+    409,
+  );
+  const stored = (
+    await db.doc("communionDecisions/r11-ruth-approved").get()
+  ).data()!;
+  expect(JSON.stringify(stored)).not.toContain("Fictional examination");
+  expect(stored.approved).toBe(true);
+  for (const collection of ["communionDecisions", "communionRecords"])
+    await call(request, "getPrivateRecords", { collection }, 403, "r11-office");
+  // Only living communicant members can be approved together, and a retry adds nothing.
+  await call(
+    request,
+    "approveCommunicants",
+    {
+      batchId: "r11-batch-1",
+      personIds: ["james", "john"],
+      effectiveOn: "2026-01-01",
+    },
+    400,
+  );
+  const bulk = {
+    batchId: "r11-batch-1",
+    personIds: ["james"],
+    effectiveOn: "2026-01-01",
+  };
+  expect((await call(request, "approveCommunicants", bulk)).created).toBe(1);
+  expect((await call(request, "approveCommunicants", bulk)).created).toBe(0);
+  await call(
+    request,
+    "saveCommunionRecord",
+    { serviceId: "am_1999-01-03", personIds: ["ruth"] },
+    404,
+  );
+  await call(
+    request,
+    "saveCommunionRecord",
+    { serviceId, personIds: ["ruth"] },
+    403,
+    "r11-office",
+  );
+});
+
+test("marks an online worshipper and records who partook", async ({ page }) => {
+  await login(page);
+  // Use whichever Lord's Day service the roll call opened with.
+  const type = page.getByRole("combobox", { name: "Service", exact: true });
+  await expect(type).not.toHaveText("Choose a service");
+  const typeId = (await type.textContent())?.includes("Evening") ? "pm" : "am";
+  serviceId = `${typeId}_2026-03-01`;
+  await db.doc(`services/${serviceId}`).set({
+    serviceTypeId: typeId,
+    date: "2026-03-01",
+    notes: "",
+    present: {},
+    lastAttendancePersonId: "",
+  });
+  await page.getByLabel("Service date").fill("2026-03-01");
+  await page.getByRole("button", { name: "James Calder, absent" }).click();
+  await page
+    .getByRole("switch", { name: "Marking online worshippers" })
+    .check();
+  await page.getByRole("button", { name: "Ruth Calder, absent" }).click();
+  await expect(
+    page.getByRole("button", { name: "Ruth Calder, online" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "James Calder, present" }),
+  ).toBeVisible();
+  await expect(page.getByText("· 1 online")).toBeVisible();
+  await expect
+    .poll(async () => {
+      const present = (await db.doc(`services/${serviceId}`).get()).get(
+        "present",
+      );
+      return [present?.james?.mode, present?.ruth?.mode];
+    })
+    .toEqual(["inPerson", "online"]);
+  await page
+    .getByRole("button", { name: "Communion · Session only", exact: true })
+    .click();
+  await expect(
+    page.getByRole("cell", { name: "Approved" }).first(),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Record participation" }).click();
+  await page.getByLabel("Service").selectOption(serviceId);
+  await page.getByLabel(/^Calder, James · present/).check();
+  await page.getByLabel(/^Calder, Ruth · online/).check();
+  await page.getByLabel(/^Baker, John/).check();
+  await expect(
+    page.getByText(
+      "Please check: Ruth Calder (Marked as worshipping online); John Baker (Not on the approved list on this date, Not marked present).",
+    ),
+  ).toBeVisible();
+  await page.getByLabel(/^Baker, John/).uncheck();
+  await page.getByRole("button", { name: "Save participation" }).click();
+  await expect(page.getByText("Saved 2 for Mar 1, 2026.")).toBeVisible();
+  const record = (await db.doc(`communionRecords/${serviceId}`).get()).data()!;
+  expect(record.personIds.sort()).toEqual(["james", "ruth"]);
+  await page.getByRole("tab", { name: "History" }).click();
+  await expect(page.getByRole("cell", { name: "Mar 1, 2026" })).toBeVisible();
+  await page.screenshot({ path: "test-results/communion.png" });
 });

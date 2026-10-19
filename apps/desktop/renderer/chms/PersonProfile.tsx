@@ -286,6 +286,8 @@ export function PersonProfile({
             Service: typeName(row.serviceTypeId),
             Method:
               row.present[person.id].method === "kiosk" ? "Kiosk" : "Roll call",
+            Worship:
+              row.present[person.id].mode === "online" ? "Online" : "In person",
           }))}
         />
       )}

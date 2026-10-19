@@ -6,7 +6,7 @@ Phase 11 adds officer records, quorum reports, communion records, online worship
 |---|---|---|
 | 1 | Officer terms, ordination and installation history, rotation and term reviews, eligibility lists | Implemented |
 | 2 | Quorum rules, meetings and historical quorum reports | Implemented |
-| 3 | Communion approval, named communion participation, in-person and online worship | Planned |
+| 3 | Communion approval, named communion participation, in-person and online worship | Implemented |
 | 4 | Family relationships, family tree and anniversary records | Planned |
 | 5 | Previewed CSV/XLSX imports with duplicate review and auditable batches | Planned |
 
@@ -49,6 +49,31 @@ A **meeting** (`quorumMeetings`) records its type, date, name and the people pre
 
 Rules and meetings are Session only, written through `saveQuorumPolicy` and `saveQuorumMeeting` and read through the audited private-records API.
 
+## In-person and online worship
+
+A roll-call mark now carries a `mode`, `inPerson` or `online`, on the same `present.{personId}` field, so marking stays one field per person and offline merging between PCs is unchanged. The roll call has a **Marking online worshippers** switch. While it is on, new marks (single names, Enter in search, Mark all and Undo) are online; the chip keeps the present colours with a dashed edge and reads "Online · status", and the Present tile adds "· N online". To change how someone worshipped, clear the mark and mark again with the switch set. Kiosk check-ins are always in person, and the rules refuse an online kiosk mark or any other mode.
+
+Each person counts once per service whatever the mode. Marks made before online tracking have no mode and count as in person; data exports call them "In person (not recorded)".
+
+* **Weekly summary** adds In person and Online columns beside the status columns and Total, which counts everyone once.
+* **Statistical report** keeps "Average recorded Lord's Day attendance" in person by default. An editor can choose **Average counts in person and online** on the Annual reports page (`reportSettings/statisticalOptions`). A separate "Average recorded Lord's Day online attendance" row is always shown.
+* **Shepherding, absence, contact and the matrix** treat an online mark as attendance, as before.
+* **Person profile** shows In person or Online for each attended service.
+
+## Communion
+
+Communion approval and participation are Session only (Pastor, Clerk, Elders) and are read through the audited private-records API. Admins without a Session role, deacons and volunteers are denied.
+
+**Approval** is a dated Session decision in `communionDecisions`: approved for the Lord's Table or not approved, as a member of this congregation or as a visiting communicant, an effective date, a last day for a visiting approval, and a sealed note. Decisions are never rewritten; the server refuses a second write to the same ID, and a correction is a new, later decision. A person's standing on a date is the latest decision on or before it (same-day decisions in the order recorded); a visiting approval lapses after its last day. Approval is separate from membership status and from presence: no status change, import or attendance mark adds anyone.
+
+The **Approved list** shows everyone on the roll and anyone the Session has decided about, as of any date. **Approve communicant members with no decision** is an explicit Session action, confirmed in a dialog that names each person. It records one decision per living communicant member who has none, with IDs derived from a batch ID so a retry adds nothing, and leaves anyone with an earlier decision, including not approved, alone. The server refuses the whole request if any person is not a living communicant member.
+
+**Participation** (`communionRecords/{serviceId}`) is recorded by the Session after the service, separately from attendance. The checklist lists present people first and labels each as present, online or not approved. Before saving, the screen asks the Session to check anyone not approved on that date, not marked present, or marked online; the record is still the Session's to keep. Saves check the record revision.
+
+**History** lists each recorded communion service with how many partook, how many were approved on that date, how many were present in person and how many entries need checking, plus every Session decision.
+
+Flock health's **Communion** indicator now reads "Partook at N of M recorded communion services in the last 12 months", and stays unknown when none are recorded.
+
 ## Checks
 
-Unit tests cover office validation, states on a date, overlap and death flags, term reviews, eligibility with missing history and the initial-entry rule, Feb 29 ages, rule changes over time, historical officer and member electorates, dated discipline and undecidable results. Rules tests deny direct access to the new Session collections for every role and keep office history read-only. The `records` end-to-end spec covers role denials, overlap refusal, sealed decision notes and the officer and quorum screens.
+Unit tests cover communion standing over time, lapsing visiting approvals, same-day corrections, participation flags, the 12-month indicator, once-per-person mode counts, the kiosk mode rule and both statistical averages. Unit tests also cover office validation, states on a date, overlap and death flags, term reviews, eligibility with missing history and the initial-entry rule, Feb 29 ages, rule changes over time, historical officer and member electorates, dated discipline and undecidable results. Rules tests deny direct access to the new Session collections for every role and keep office history read-only. Rules tests also accept in-person and online marks and refuse unknown modes and online kiosk marks. The `records` end-to-end spec covers role denials, overlap refusal, sealed decision and communion notes, immutable decisions, the bulk approval retry, the officer and quorum screens, online marking on the roll call and recording participation.

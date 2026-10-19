@@ -94,6 +94,7 @@ const protectedFields: Record<string, string[]> = {
   bereavementDates: ["note"],
   memberRequests: ["body"],
   officerDecisions: ["note"],
+  communionDecisions: ["note"],
 };
 export const protectedFieldNames = (collection: string) =>
   protectedFields[collection] ?? [];

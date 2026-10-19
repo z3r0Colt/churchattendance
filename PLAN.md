@@ -268,7 +268,10 @@ serviceTypes/{id}            name, dayOfWeek, defaultTime, isActive, revision, u
 
 services/{serviceId}
   serviceTypeId, date, notes, lastAttendancePersonId
-  present { personId: { at, method (roll | kiosk), byUid } }
+  present { personId: { at, method (roll | kiosk), byUid, mode (inPerson | online; absent on older marks = in person) } }
+communionRecords/{serviceId} serviceId, serviceTypeId, date, personIds[], revision, updatedAt, updatedBy   (Session API only)
+communionDecisions/{id}      personId, approved, kind (member | visiting), effectiveOn, until (visiting only), encrypted{note},
+                             authorUid, createdAt   (Session API only; create only, a correction is a later decision)
 
 groups/{groupId}             name, type, leaderPersonId, memberIds[], schedule, archived, revision, updatedAt, updatedBy
   meetings/{meetingId}       date, present{}, updatedAt, updatedBy
@@ -281,6 +284,7 @@ serving/{scheduleId}         role, date, time, personId, location, reminderHours
                              reminderMessageId, updatedAt, updatedBy
 servingSlots/{person_date_time} assignmentId (server-only concurrency lock)
 reportSettings/statistical   labels{}
+reportSettings/statisticalOptions attendanceMode (inPerson | combined)
 kioskConfiguration/church    enabled, salt, hash (server only)
 kioskDevices/{uid}           serviceId, createdBy, expiresAt, requests, minute, exitFailures, ended (server only)
 kioskSearches/{token}        uid, serviceId, personIds[], expiresAt (server only)

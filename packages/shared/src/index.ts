@@ -17,3 +17,4 @@ export * from "./calendar.js";
 export * from "./display.js";
 export * from "./officers.js";
 export * from "./quorum.js";
+export * from "./communion.js";

@@ -23,6 +23,8 @@ const churchRecordCollections = [
   "officerDecisions",
   "quorumPolicies",
   "quorumMeetings",
+  "communionDecisions",
+  "communionRecords",
 ];
 const mark = (uid: string) => ({
   at: serverTimestamp(),
@@ -420,6 +422,35 @@ describe("roll call and identity", () => {
       updateDoc(service, {
         "present.alex": mark("attendanceVolunteer"),
         "present.former": mark("attendanceVolunteer"),
+        lastAttendancePersonId: "alex",
+      }),
+    );
+    // Online worship is a mode on the same mark. Unknown modes and online kiosk marks are refused.
+    await assertSucceeds(
+      updateDoc(service, {
+        "present.alex": { ...mark("attendanceVolunteer"), mode: "online" },
+        lastAttendancePersonId: "alex",
+      }),
+    );
+    await assertSucceeds(
+      updateDoc(service, {
+        "present.alex": { ...mark("attendanceVolunteer"), mode: "inPerson" },
+        lastAttendancePersonId: "alex",
+      }),
+    );
+    await assertFails(
+      updateDoc(service, {
+        "present.alex": { ...mark("attendanceVolunteer"), mode: "hybrid" },
+        lastAttendancePersonId: "alex",
+      }),
+    );
+    await assertFails(
+      updateDoc(service, {
+        "present.alex": {
+          ...mark("attendanceVolunteer"),
+          method: "kiosk",
+          mode: "online",
+        },
         lastAttendancePersonId: "alex",
       }),
     );

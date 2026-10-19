@@ -95,6 +95,8 @@ export type HealthInputs = {
   contact: ContactFlag | undefined;
   lastVisit: string;
   visitRecordsSince: string;
+  // Recorded communion services in the last 12 months and how many the person partook at.
+  communion?: { services: number; partook: number };
 };
 // Indicators restate recorded facts for pastoral review. They never judge a person's spiritual condition.
 export function healthIndicators(
@@ -195,11 +197,19 @@ export function healthIndicators(
             explanation: "Visit records are too recent to judge.",
           };
     },
-    communion: () => ({
-      key: "communion",
-      state: "unknown",
-      explanation: "Communion participation is not recorded yet.",
-    }),
+    communion: () =>
+      inputs.communion?.services
+        ? {
+            key: "communion",
+            state: "info",
+            explanation: `Partook at ${inputs.communion.partook} of ${inputs.communion.services} recorded communion service${inputs.communion.services === 1 ? "" : "s"} in the last 12 months.`,
+          }
+        : {
+            key: "communion",
+            state: "unknown",
+            explanation:
+              "No communion participation recorded in the last 12 months.",
+          },
     relationships: () => ({
       key: "relationships",
       state: "unknown",
