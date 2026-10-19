@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 import {
   Button,
   Checkbox,
@@ -85,8 +85,10 @@ export function StaffPasswordForm({
   }
   return (
     <form className="drawer-form" onSubmit={submit}>
+      {/* Distinct keys give each step fresh inputs, so the typed password never
+          carries into the code field as plain text, and Start again starts empty. */}
       {resolver ? (
-        <>
+        <Fragment key="mfa">
           <Field label="Authenticator">
             <Select value={factor} onChange={(e) => setFactor(e.target.value)}>
               {resolver.hints
@@ -109,9 +111,9 @@ export function StaffPasswordForm({
               required
             />
           </Field>
-        </>
+        </Fragment>
       ) : (
-        <>
+        <Fragment key="password">
           <Field label="Email" required>
             <Input name="email" type="email" autoComplete="username" required />
           </Field>
@@ -130,7 +132,7 @@ export function StaffPasswordForm({
               onChange={(_, data) => setKeep(data.checked === true)}
             />
           )}
-        </>
+        </Fragment>
       )}
       {error && <MessageBar intent="error">{error}</MessageBar>}
       <Button type="submit" appearance="primary" disabled={busy}>

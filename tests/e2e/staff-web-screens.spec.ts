@@ -1,4 +1,10 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Browser,
+  type Page,
+  type Route,
+} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -143,6 +149,78 @@ async function context(browser: Browser, options: object, dark = false) {
   });
   return { created, page: await created.newPage() };
 }
+// A wildcard does not cover the Authorization header, so echo the requested headers.
+function cors(route: Route) {
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-headers":
+      route.request().headers()["access-control-request-headers"] ||
+      "authorization, content-type",
+    "access-control-allow-methods": "POST, OPTIONS",
+  };
+}
+// The real server accepts a fresh test sign-in, so the next `calls` account changes
+// are answered as if the sign-in were more than five minutes old.
+async function answerStale(page: Page) {
+  const stale = { calls: 0 };
+  await page.route("**/us-central1/createStaffAccount", async (route) => {
+    const headers = cors(route);
+    if (route.request().method() === "OPTIONS")
+      return route.fulfill({ status: 204, headers });
+    if (stale.calls > 0) {
+      stale.calls--;
+      return route.fulfill({
+        status: 401,
+        headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({
+          error: {
+            status: "UNAUTHENTICATED",
+            message: "Sign in again before changing security settings.",
+            details: { reason: "recent-sign-in" },
+          },
+        }),
+      });
+    }
+    return route.continue();
+  });
+  return stale;
+}
+// The Auth emulator has no authenticator codes, so answer each password sign-in the
+// way Firebase answers an account with one enrolled. Returns a function that stops.
+async function askForAuthenticator(page: Page, email: string) {
+  const { uid } = await getAuth().getUserByEmail(email);
+  const pattern = "**/accounts:signInWithPassword*";
+  await page.route(pattern, (route) => {
+    const headers = cors(route);
+    if (route.request().method() === "OPTIONS")
+      return route.fulfill({ status: 204, headers });
+    return route.fulfill({
+      status: 200,
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({
+        mfaPendingCredential: "fictional-pending",
+        mfaInfo: [
+          {
+            mfaEnrollmentId: "e1",
+            displayName: "Church authenticator",
+            totpInfo: {},
+          },
+        ],
+        localId: uid,
+      }),
+    });
+  });
+  return () => page.unroute(pattern);
+}
+// True when any field on the page holds this text, whatever its type.
+const anyFieldHolds = (page: Page, text: string) =>
+  page
+    .locator("input")
+    .evaluateAll(
+      (inputs, wanted) =>
+        inputs.some((input) => (input as HTMLInputElement).value === wanted),
+      text,
+    );
 
 test.describe.configure({ timeout: 300_000 });
 
@@ -256,42 +334,13 @@ test("a sensitive account change asks the person to confirm it is them, then con
 }) => {
   const run = await context(browser, phone());
   const { page } = run;
-  // The real server accepts this fresh sign-in, so the first call is answered as if
-  // the sign-in were more than five minutes old.
-  let stale = 0;
-  await page.route("**/us-central1/createStaffAccount", async (route) => {
-    // A wildcard does not cover the Authorization header, so echo the requested headers.
-    const cors = {
-      "access-control-allow-origin": "*",
-      "access-control-allow-headers":
-        route.request().headers()["access-control-request-headers"] ||
-        "authorization, content-type",
-      "access-control-allow-methods": "POST, OPTIONS",
-    };
-    if (route.request().method() === "OPTIONS")
-      return route.fulfill({ status: 204, headers: cors });
-    if (stale > 0) {
-      stale--;
-      return route.fulfill({
-        status: 401,
-        headers: { ...cors, "content-type": "application/json" },
-        body: JSON.stringify({
-          error: {
-            status: "UNAUTHENTICATED",
-            message: "Sign in again before changing security settings.",
-            details: { reason: "recent-sign-in" },
-          },
-        }),
-      });
-    }
-    return route.continue();
-  });
+  const stale = await answerStale(page);
   await signInWeb(page, "pastor@example.test");
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("button", { name: "Account security" }).click();
   const confirm = page.getByRole("alertdialog", { name: "Confirm it is you" });
   // Cancelling changes nothing and says so.
-  stale = 1;
+  stale.calls = 1;
   await page.getByRole("button", { name: "Add staff account" }).click();
   await page
     .getByLabel(/^Sign-in email/)
@@ -314,7 +363,7 @@ test("a sensitive account change asks the person to confirm it is them, then con
     getAuth().getUserByEmail("phase12-cancelled@example.test"),
   ).rejects.toThrow();
   // Confirming with the password runs the change once more.
-  stale = 1;
+  stale.calls = 1;
   await page.getByRole("button", { name: "Add staff account" }).click();
   await page
     .getByLabel(/^Sign-in email/)
@@ -334,6 +383,69 @@ test("a sensitive account change asks the person to confirm it is them, then con
   expect(
     (await getAuth().getUserByEmail("phase12-confirmed@example.test")).uid,
   ).toBeTruthy();
+  await run.created.close();
+});
+
+test("the confirm dialog clears the password when it asks for an authenticator code", async ({
+  browser,
+}) => {
+  const run = await context(browser, phone());
+  const { page } = run;
+  const stale = await answerStale(page);
+  await signInWeb(page, "pastor@example.test");
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("button", { name: "Account security" }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Confirm it is you" });
+  // Only the confirmation is answered as needing an authenticator code.
+  const stop = await askForAuthenticator(page, "pastor@example.test");
+  stale.calls = 1;
+  await page.getByRole("button", { name: "Add staff account" }).click();
+  await page.getByLabel(/^Sign-in email/).fill("phase12-mfa@example.test");
+  await page.getByLabel(/^Display name/).fill("Fictional Helper");
+  await page.getByRole("checkbox", { name: "readOnly" }).check();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(confirm).toBeVisible();
+  await confirm.getByLabel(/^Password/).fill("LocalDemo123!");
+  await confirm.getByRole("button", { name: "Confirm", exact: true }).click();
+  const code = confirm.getByLabel(/^Authenticator code/);
+  await expect(code).toBeVisible();
+  await expect(code).toHaveValue("");
+  expect(await anyFieldHolds(page, "LocalDemo123!")).toBe(false);
+  await stop();
+  await confirm.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    page.getByText("Confirmation cancelled. Nothing was changed."),
+  ).toBeVisible();
+  await expect(
+    getAuth().getUserByEmail("phase12-mfa@example.test"),
+  ).rejects.toThrow();
+  await run.created.close();
+});
+
+test("the sign-in authenticator step starts empty and Start again clears the password", async ({
+  browser,
+}) => {
+  const run = await context(browser, phone());
+  const { page } = run;
+  const stop = await askForAuthenticator(page, "pastor@example.test");
+  await page.goto(web);
+  await page
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill("pastor@example.test");
+  await page.getByLabel(/^Password/).fill("LocalDemo123!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const code = page.getByLabel(/^Authenticator code/);
+  await expect(code).toBeVisible();
+  await expect(code).toHaveValue("");
+  expect(await anyFieldHolds(page, "LocalDemo123!")).toBe(false);
+  await code.fill("123456");
+  await page.getByRole("button", { name: "Start again" }).click();
+  const password = page.getByLabel(/^Password/);
+  await expect(password).toBeVisible();
+  await expect(password).toHaveValue("");
+  await expect(password).toHaveAttribute("type", "password");
+  expect(await anyFieldHolds(page, "123456")).toBe(false);
+  await stop();
   await run.created.close();
 });
 

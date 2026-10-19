@@ -67,6 +67,7 @@ Account changes that the server already limits to a sign-in within the last five
 * The server's refusal carries the reason `recent-sign-in` (`RECENT_SIGN_IN_REASON` in `packages/shared`). `securityCall` sees it, opens **Confirm it is you** and runs the action once more after a successful confirmation.
 * The dialog names the signed-in account and offers its password (and authenticator code when the account has one), **Confirm with passkey** in the staff web, or **Confirm in browser** on the desktop. It confirms the same account only; it never switches accounts.
 * **Cancel** changes nothing and says "Confirmation cancelled. Nothing was changed."
+* When the account has an authenticator, the code field that replaces the password starts empty; the typed password never carries into it. The sign-in form (desktop, staff web and the church security page) works the same way, and its **Start again** returns to an empty password.
 * A confirm dialog opened from a form nests inside that form's dialog, which Fluent's modal handling needs; a sibling dialog left the form unreachable after it closed.
 
 ### Accessibility, themes and the booth display
@@ -86,10 +87,13 @@ Account changes that the server already limits to a sign-in within the last five
 * a volunteer sees only Attendance and Account security;
 * the phone menu by keyboard alone;
 * a sensitive account change answered as stale: Cancel creates nothing and leaves the form usable; Confirm with the password creates the account;
+* the confirm dialog asking for an authenticator code shows an empty code field and the password nowhere on the page;
+* the sign-in authenticator step shows an empty code field, and Start again returns to an empty password field;
 * the statistical report's figures in the browser equal the desktop's.
 
 ## Remaining limits
 
 * The confirm test simulates the server's "sign-in too old" answer for the first call, because a fresh test sign-in is always recent. The server's five-minute rule itself has unit tests.
+* The authenticator step tests answer the Auth emulator's password sign-in the way Firebase answers an account with an authenticator, because the emulator cannot issue authenticator codes. They check the form only, not a real code.
 * Custom tables scroll sideways rather than becoming cards.
 * Before production use, add the staff web URL to the release checks: the Hosting rewrite and CSP on the live site, passkey sign-in and confirmation on the live origin, and a real phone on the church network. Part 3 covers these.

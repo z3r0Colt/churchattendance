@@ -134,8 +134,10 @@ export function ReauthHost() {
                 This change needs a sign-in within the last five minutes.
                 Confirm as {email} to continue.
               </p>
+              {/* Distinct keys give each step a fresh input, so the typed password
+                  never carries into the code field as plain text. */}
               {resolver ? (
-                <Field label="Authenticator code" required>
+                <Field key="code" label="Authenticator code" required>
                   <Input
                     name="code"
                     autoComplete="one-time-code"
@@ -145,7 +147,7 @@ export function ReauthHost() {
                   />
                 </Field>
               ) : (
-                <Field label="Password" required>
+                <Field key="password" label="Password" required>
                   <Input
                     name="password"
                     type="password"
