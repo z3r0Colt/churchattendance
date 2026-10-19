@@ -90,6 +90,9 @@ export const handoffSchema = z
   .object({
     id: z.string().regex(/^[a-f0-9]{64}$/),
     verifier: z.string().regex(/^[a-f0-9]{64}$/),
+    // Set when the desktop confirms the account already signed in on it. The server
+    // then refuses an approval made by any other account.
+    sameAccount: z.literal(true).optional(),
   })
   .strict();
 export const handoffApproveSchema = z

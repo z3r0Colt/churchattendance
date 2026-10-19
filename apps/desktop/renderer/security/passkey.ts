@@ -13,7 +13,7 @@ import { passkeyBeginSchema, passkeyFinishSchema } from "@sycamore/shared";
 export type SecurityCall = <T>(name: string, input: unknown) => Promise<T>;
 
 // The account a Firebase custom token was made for, or "" when it cannot be read.
-function tokenUid(token: string) {
+export function tokenUid(token: string) {
   try {
     const part = token.split(".")[1] || "";
     const bytes = Uint8Array.from(

@@ -1,7 +1,9 @@
 import { httpsCallable } from "firebase/functions";
 import { signInWithCustomToken } from "firebase/auth";
+import { handoffSchema } from "@sycamore/shared";
 import { auth, functions } from "./firebase";
 import { native, staffSecurityUrl } from "../platform";
+import { tokenUid } from "../security/passkey";
 import { withRecentSignIn } from "./reauth";
 // Sensitive account actions ask the person to confirm it is them, then try once more.
 export const securityCall = <T = unknown>(
@@ -15,7 +17,17 @@ const random = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
-export async function browserStaffSignIn(notice: (text: string) => void) {
+export type BrowserSignInOptions = {
+  // Confirm the account already signed in on this PC instead of signing in anew.
+  sameAccount?: boolean;
+};
+// Signs in on this PC once the person approves on the church security page in their
+// browser. The sign-in screen accepts whichever account approves; confirming it is you
+// accepts only the account already signed in.
+export async function browserStaffSignIn(
+  notice: (text: string) => void,
+  options: BrowserSignInOptions = {},
+) {
   const id = random(),
     verifier = random();
   const digest = await crypto.subtle.digest(
@@ -32,13 +44,25 @@ export async function browserStaffSignIn(notice: (text: string) => void) {
   notice(
     `Finish sign-in in your browser. Approve only if it shows this code: ${id.slice(-8)}.`,
   );
+  const input = handoffSchema.parse(
+    options.sameAccount
+      ? { id, verifier, sameAccount: true }
+      : { id, verifier },
+  );
   const expires = Date.now() + 3 * 60_000;
   while (Date.now() < expires) {
     const result = await securityCall<{ pending?: boolean; token?: string }>(
       "completeDesktopSignIn",
-      { id, verifier },
+      input,
     );
     if (result.token) {
+      // The server already refuses another account's approval; this checks once more.
+      const current = auth.currentUser?.uid;
+      if (
+        options.sameAccount &&
+        (!current || tokenUid(result.token) !== current)
+      )
+        throw new Error("Approve with the account signed in on this PC.");
       await signInWithCustomToken(auth, result.token);
       return;
     }

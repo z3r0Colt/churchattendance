@@ -261,6 +261,102 @@ test("binds desktop handoff to its verifier, consumes it once and rejects replay
     "https://attacker.invalid",
   );
 });
+test("confirms in the browser only as the account already signed in on the desktop", async ({
+  request,
+}) => {
+  function handoff() {
+    const verifier = randomBytes(32).toString("hex");
+    return {
+      id: randomBytes(32).toString("hex"),
+      verifier,
+      challenge: createHash("sha256").update(verifier).digest("hex"),
+    };
+  }
+  const uidOf = (token: string) =>
+    JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"))
+      .uid as string;
+  const sessions = async (uid: string) =>
+    (
+      await db.collection("staffSessions").where("uid", "==", uid).count().get()
+    ).data().count;
+  async function complete(data: object, account?: string) {
+    const response = await request.post(`${base}/completeDesktopSignIn`, {
+      headers: {
+        ...(account ? { Authorization: `Bearer ${tokens[account]}` } : {}),
+        Origin: "http://localhost:5174",
+      },
+      data: { data },
+    });
+    return { status: response.status(), body: await response.json() };
+  }
+  // Another account approves; the account signed in on the desktop cannot use it.
+  const other = handoff(),
+    before = await sessions("phase7-admin");
+  await call(
+    request,
+    "approveDesktopSignIn",
+    { id: other.id, challenge: other.challenge },
+    "phase7-admin",
+  );
+  const refused = await complete(
+    { id: other.id, verifier: other.verifier, sameAccount: true },
+    "phase7-elder",
+  );
+  expect(refused.status).toBe(403);
+  expect(refused.body.error.message).toBe(
+    "Approve with the account signed in on this PC.",
+  );
+  expect(refused.body.result).toBeUndefined();
+  expect(await sessions("phase7-admin")).toBe(before);
+  // The refused approval is used up.
+  expect(
+    (await complete({ id: other.id, verifier: other.verifier })).status,
+  ).toBe(403);
+  // Confirming needs someone signed in on the desktop.
+  const unsigned = handoff();
+  await call(request, "approveDesktopSignIn", {
+    id: unsigned.id,
+    challenge: unsigned.challenge,
+  });
+  const anonymous = await complete({
+    id: unsigned.id,
+    verifier: unsigned.verifier,
+    sameAccount: true,
+  });
+  expect(anonymous.status).toBe(403);
+  expect(anonymous.body.result).toBeUndefined();
+  // The same account confirms.
+  const same = handoff();
+  const waiting = await complete(
+    { id: same.id, verifier: same.verifier, sameAccount: true },
+    "phase7-elder",
+  );
+  expect(waiting.body.result).toEqual({ pending: true });
+  await call(request, "approveDesktopSignIn", {
+    id: same.id,
+    challenge: same.challenge,
+  });
+  const confirmed = await complete(
+    { id: same.id, verifier: same.verifier, sameAccount: true },
+    "phase7-elder",
+  );
+  expect(confirmed.status).toBe(200);
+  expect(uidOf(confirmed.body.result.token)).toBe("phase7-elder");
+  // The sign-in screen still accepts whichever account approves.
+  const signIn = handoff();
+  await call(
+    request,
+    "approveDesktopSignIn",
+    { id: signIn.id, challenge: signIn.challenge },
+    "phase7-admin",
+  );
+  const switched = await complete(
+    { id: signIn.id, verifier: signIn.verifier },
+    "phase7-elder",
+  );
+  expect(switched.status).toBe(200);
+  expect(uidOf(switched.body.result.token)).toBe("phase7-admin");
+});
 test("allows no self-role grant or non-Session administrator factor reset of Session", async ({
   request,
 }) => {

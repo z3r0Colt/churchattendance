@@ -26,6 +26,15 @@ import { staffWeb } from "../platform";
 import { passkeySignIn } from "./passkey";
 
 type Pending = { resolve: () => void; reject: (cause: Error) => void };
+// The browser confirmation's own plain reasons, such as another account approving.
+function browserReason(cause: unknown) {
+  const value = cause as { code?: unknown; message?: unknown };
+  return (value.code === undefined ||
+    value.code === "functions/permission-denied") &&
+    typeof value.message === "string"
+    ? value.message
+    : "";
+}
 
 // Asks the signed-in person to confirm it is them before a sensitive account change.
 // Password and authenticator code work everywhere; the staff web confirms a passkey in
@@ -49,7 +58,7 @@ export function ReauthHost() {
     setError("");
     setNotice("");
   }
-  async function attempt(action: () => Promise<unknown>) {
+  async function attempt(action: () => Promise<unknown>, explain = false) {
     setBusy(true);
     setError("");
     try {
@@ -62,8 +71,10 @@ export function ReauthHost() {
         setResolver(getMultiFactorResolver(auth, cause as MultiFactorError));
         return;
       }
+      setNotice("");
       setError(
-        "That did not confirm your sign-in. Check the details and try again.",
+        (explain && browserReason(cause)) ||
+          "That did not confirm your sign-in. Check the details and try again.",
       );
     } finally {
       setBusy(false);
@@ -155,9 +166,13 @@ export function ReauthHost() {
               <Button
                 disabled={busy}
                 onClick={() =>
-                  void attempt(
-                    staffWeb ? passkey : () => browserStaffSignIn(setNotice),
-                  )
+                  void (staffWeb
+                    ? attempt(passkey)
+                    : attempt(
+                        () =>
+                          browserStaffSignIn(setNotice, { sameAccount: true }),
+                        true,
+                      ))
                 }
               >
                 {staffWeb ? "Confirm with passkey" : "Confirm in browser"}

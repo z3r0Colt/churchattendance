@@ -343,6 +343,15 @@ export const completeDesktopSignIn = onCall(async (request) => {
     return row.data()!;
   });
   if (!grant) return { pending: true };
+  // Confirming it is you on the desktop: only the account signed in there may approve.
+  // The approval is already used up, so another account's approval fails closed.
+  if (input.sameAccount && request.auth?.uid !== grant.uid) {
+    await securityEvent(grant.uid, "desktop.authentication", "denied");
+    throw new HttpsError(
+      "permission-denied",
+      "Approve with the account signed in on this PC.",
+    );
+  }
   const user = await getAuth().getUser(grant.uid);
   if (user.disabled)
     throw new HttpsError("permission-denied", "This account is unavailable.");
