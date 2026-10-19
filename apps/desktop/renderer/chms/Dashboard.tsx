@@ -13,6 +13,7 @@ import {
   churchDate,
   eventOccurrences,
   historicalMembership,
+  termReviews,
   type ChurchEvent,
   type Role,
   type Serving,
@@ -30,7 +31,7 @@ export function Dashboard({
   roles: Role[];
   timeZone: string;
   report: (request: ReportRequest) => void;
-  open: (page: "care" | "serving" | "people" | "calendar") => void;
+  open: (page: "care" | "serving" | "people" | "calendar" | "officers") => void;
 }) {
   const data = useAttendanceReports(roles),
     serving = useCollection<Serving>("serving"),
@@ -129,6 +130,7 @@ export function Dashboard({
   );
   const due =
     data.followUps?.filter((row) => !row.done && row.dueDate <= today) || [];
+  const reviews = data.session ? termReviews(data.offices, today) : [];
   // The last twelve recorded Lord's Days for the selected service type.
   const weeks = result.summary
     .filter((row) => DateTime.fromISO(row.Date, { zone: "utc" }).weekday === 7)
@@ -381,9 +383,14 @@ export function Dashboard({
                     ? "1 follow-up is due"
                     : `${due.length} follow-ups are due`}{" "}
                   today or earlier.
+                  {!!reviews.length &&
+                    ` ${reviews.length === 1 ? "1 officer term needs" : `${reviews.length} officer terms need`} review within 60 days.`}
                 </p>
               )}
               <Button onClick={() => open("care")}>Open pastoral care</Button>
+              {!!reviews.length && (
+                <Button onClick={() => open("officers")}>Review terms</Button>
+              )}
             </section>
           )}
         </>

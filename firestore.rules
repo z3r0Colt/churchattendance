@@ -95,6 +95,11 @@ service cloud.firestore {
     match /workflows/{id} { allow read, write: if false; }
     match /workflowVersions/{id} { allow read, write: if false; }
     match /workflowRuns/{id} { allow read, write: if false; }
+    // Officer criteria, Session decisions, quorum rules and meetings are Session only through audited callables.
+    match /officerPolicies/{id} { allow read, write: if false; }
+    match /officerDecisions/{id} { allow read, write: if false; }
+    match /quorumPolicies/{id} { allow read, write: if false; }
+    match /quorumMeetings/{id} { allow read, write: if false; }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {

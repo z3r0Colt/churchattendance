@@ -29,10 +29,14 @@ export const encryptedCollections = [
   "flockAssessments",
   "bereavementDates",
   "memberRequests",
+  "officerDecisions",
 ] as const;
 export const privateCollections = [
   ...encryptedCollections,
   "visitRounds",
+  "officerPolicies",
+  "quorumPolicies",
+  "quorumMeetings",
 ] as const;
 export const privatePageSchema = z
   .object({

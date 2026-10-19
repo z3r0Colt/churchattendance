@@ -17,6 +17,13 @@ import {
 } from "firebase/firestore";
 import { deleteObject, getBytes, ref, uploadBytes } from "firebase/storage";
 let env: RulesTestEnvironment;
+// Phase 11 Session records, served only by audited callables.
+const churchRecordCollections = [
+  "officerPolicies",
+  "officerDecisions",
+  "quorumPolicies",
+  "quorumMeetings",
+];
 const mark = (uid: string) => ({
   at: serverTimestamp(),
   method: "roll",
@@ -116,9 +123,14 @@ beforeEach(async () => {
         "workflows",
         "workflowVersions",
         "workflowRuns",
+        ...churchRecordCollections,
       ].map((collection) =>
         setDoc(doc(db, `${collection}/private`), { body: "Private" }),
       ),
+      setDoc(doc(db, "people/alex/offices/elder"), {
+        role: "elder",
+        installedOn: "2020-01-01",
+      }),
       // The deacon is invited, which still grants no direct read of the visit.
       setDoc(doc(db, "pastoralVisits/private"), {
         householdId: "calder",
@@ -165,6 +177,7 @@ describe("Session boundary", () => {
     "workflows",
     "workflowVersions",
     "workflowRuns",
+    ...churchRecordCollections,
   ]) {
     it(`${collection} requires audited APIs even for Session and denies all direct writes`, async () => {
       for (const role of ["pastor", "clerk", "elder"])
@@ -190,6 +203,29 @@ describe("Session boundary", () => {
       );
     });
   }
+});
+describe("office history", () => {
+  it("is readable by staff readers, hidden from volunteers and written only by Functions", async () => {
+    for (const role of ["admin", "pastor", "deacon", "readOnly"])
+      await assertSucceeds(
+        getDoc(doc(auth(role).firestore(), "people/alex/offices/elder")),
+      );
+    await assertFails(
+      getDoc(
+        doc(
+          auth("attendanceVolunteer").firestore(),
+          "people/alex/offices/elder",
+        ),
+      ),
+    );
+    for (const role of ["pastor", "clerk", "admin"])
+      await assertFails(
+        setDoc(doc(auth(role).firestore(), "people/alex/offices/elder"), {
+          role: "elder",
+          installedOn: "2021-01-01",
+        }),
+      );
+  });
 });
 describe("member portal accounts", () => {
   // A linked member has a verified email and no staff role. Every portal

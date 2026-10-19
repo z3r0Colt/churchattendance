@@ -297,3 +297,67 @@ export function RecordEditor({
 export function StatusPill({ text }: { text: string }) {
   return <span className={`pill ${statusTone(text)}`}>{text}</span>;
 }
+// A grid with the shared Export button and an Actions column for each row.
+export function ActionTable({
+  rows,
+  actions,
+  empty,
+  session = false,
+}: {
+  rows: ReportRow[];
+  actions?: (index: number) => ReactNode;
+  empty: string;
+  session?: boolean;
+}) {
+  const keys = Object.keys(rows[0] || {}).filter((key) => key !== "id");
+  return (
+    <section
+      className={`surface table-card communication-panel${session ? " session-panel" : ""}`}
+    >
+      <div className="section-heading">
+        {rows.length ? (
+          <span className="muted">
+            {rows.length} record{rows.length === 1 ? "" : "s"}
+          </span>
+        ) : (
+          <span className="records-empty">{empty}</span>
+        )}
+        <span hidden={!rows.length}>
+          <ExportButton rows={rows} />
+        </span>
+      </div>
+      {!!rows.length && (
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                {keys.map((key) => (
+                  <th key={key}>{columnLabel(key)}</th>
+                ))}
+                {actions && <th>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={String(row.id ?? index)}>
+                  {keys.map((key) => (
+                    <td key={key}>
+                      {["Status", "State"].includes(columnLabel(key)) &&
+                      typeof row[key] === "string" &&
+                      row[key] ? (
+                        <StatusPill text={String(row[key])} />
+                      ) : (
+                        displayValue(row[key])
+                      )}
+                    </td>
+                  ))}
+                  {actions && <td className="row-actions">{actions(index)}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}

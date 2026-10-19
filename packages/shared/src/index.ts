@@ -15,3 +15,5 @@ export * from "./workflows.js";
 export * from "./member.js";
 export * from "./calendar.js";
 export * from "./display.js";
+export * from "./officers.js";
+export * from "./quorum.js";

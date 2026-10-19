@@ -8,8 +8,11 @@ import {
   digestClock,
   digestText,
   hasRole,
+  officeRoleLabels,
   roleSchema,
+  termReviews,
   visitState,
+  type Office,
   type Channel,
   type CommunicationSettings,
   type DigestSection,
@@ -224,11 +227,24 @@ export async function processShepherdingDigests(now: Date) {
     }
   }
   if (clock.daily) {
-    const [followUps, mercyVisits, memberRequests] = await Promise.all([
-      db.collection("followUps").where("done", "==", false).get(),
-      db.collection("mercyVisits").where("status", "==", "planned").get(),
-      waitingMemberRequests(zone),
-    ]);
+    const [followUps, mercyVisits, memberRequests, offices] = await Promise.all(
+      [
+        db.collection("followUps").where("done", "==", false).get(),
+        db.collection("mercyVisits").where("status", "==", "planned").get(),
+        waitingMemberRequests(zone),
+        db.collectionGroup("offices").get(),
+      ],
+    );
+    // Term reviews give the office and date only, never the officer's name.
+    const reviews = termReviews(
+      offices.docs
+        .filter((row) => /^people\/[^/]+\/offices\/[^/]+$/.test(row.ref.path))
+        .map((row) => ({ ...row.data(), id: row.id }) as Office),
+      clock.date,
+    ).map(
+      (row) =>
+        `${officeRoleLabels[row.role]} term ${row.review === "overdue" ? "ended" : "ends"} ${DateTime.fromISO(row.termEndsOn).toFormat("LLL d")}`,
+    );
     // Deacon-led visits an officer was invited to, as time and household only.
     const invited = (uids: string[]) =>
       mercyVisits.docs
@@ -277,6 +293,10 @@ export async function processShepherdingDigests(now: Date) {
             // date only, never the member's name or words.
             title: "New prayer and pastoral requests",
             names: memberRequests,
+          },
+          {
+            title: "Officer term reviews within 60 days",
+            names: reviews,
           },
           {
             // Follow-up titles are private, so the summary names only the person.

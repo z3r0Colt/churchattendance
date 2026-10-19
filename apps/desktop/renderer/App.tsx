@@ -84,6 +84,7 @@ import {
   type ReportRequest,
 } from "./chms/AttendanceReports";
 import { Dashboard } from "./chms/Dashboard";
+import { Officers } from "./chms/Officers";
 import { StaffPasswordForm, StaffEnrollment } from "./security/Factors";
 import { Security } from "./security/Security";
 import { browserStaffSignIn } from "./data/security";
@@ -107,6 +108,7 @@ type Page =
   | "annual"
   | "portal"
   | "dashboard"
+  | "officers"
   | "security";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
@@ -464,6 +466,14 @@ function Workspace({
                   onClick={() => setPage("annual")}
                 />
               )}
+              {hasRole(roles, SESSION_ROLES) && (
+                <NavItem
+                  label="Officers"
+                  session
+                  current={page === "officers"}
+                  onClick={() => setPage("officers")}
+                />
+              )}
               <NavItem
                 label="Settings"
                 current={page === "settings"}
@@ -642,6 +652,9 @@ function Workspace({
           <Shepherding roles={roles} />
         )}
         {page === "workflows" && hasRole(roles, SESSION_ROLES) && <Workflows />}
+        {page === "officers" && hasRole(roles, SESSION_ROLES) && (
+          <Officers roles={roles} zone={data.timeZone} />
+        )}
         {page === "dates" && hasRole(roles, EDITOR_ROLES) && (
           <ImportantDates roles={roles} />
         )}

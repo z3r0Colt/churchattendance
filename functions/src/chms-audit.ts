@@ -37,3 +37,4 @@ function audit(path: string) {
 export const auditGroupMeetings = audit("groups/{groupId}/meetings/{docId}");
 export const auditEventRsvps = audit("events/{eventId}/rsvps/{docId}");
 export const auditSacraments = audit("people/{personId}/sacraments/{docId}");
+export const auditOffices = audit("people/{personId}/offices/{docId}");

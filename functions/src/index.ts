@@ -51,6 +51,7 @@ export * from "./member/profile.js";
 export * from "./member/requests.js";
 export * from "./member/calendar.js";
 export * from "./events/reminders.js";
+export * from "./records/officers.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
@@ -358,6 +359,10 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "workflows",
         "workflowVersions",
         "workflowRuns",
+        "officerPolicies",
+        "officerDecisions",
+        "quorumPolicies",
+        "quorumMeetings",
       ].includes(event.params.collection) ||
       !event.data
     )
@@ -400,6 +405,10 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "workflows",
         "workflowVersions",
         "workflowRuns",
+        "officerPolicies",
+        "officerDecisions",
+        "quorumPolicies",
+        "quorumMeetings",
       ].includes(event.params.collection)
         ? "session"
         : event.params.collection.startsWith("mercy")

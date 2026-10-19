@@ -199,7 +199,8 @@ people/{personId}
   isDeceased, customFields{}, updatedAt, updatedBy, firstVisitDate (optional, visitor quick add)
   membershipEvents/{id}   date, fromStatus, toStatus, method, otherChurch, reason
   sacraments/{id}         type (baptism | profession), date, category (infant | adult for baptism), place, officiant, revision
-  offices/{id}            role (pastor | elder | deacon), ordainedOn, installedOn, endedOn
+  offices/{id}            role (pastor | elder | deacon), ordainedOn, installedOn, termEndsOn, endedOn,
+                          endReason, emeritusOn, revision   (one record per period of service; Session writes)
 
 sessionPrivate/{personId}    encrypted{disciplineFlag, disciplineHistory[]}, revision, updatedAt, updatedBy     (Session API only)
 attendanceRoster/{personId}  id, firstName, lastName, preferredName, householdId,
@@ -245,6 +246,14 @@ memberRequests/{id}          personId, kind (prayer | pastoral), encrypted{body}
 workflows/{id}               name, description, trigger, steps[], status (draft | active | paused | archived), publishedVersion,
                              createdAt, revision, updatedAt, updatedBy   (Session API only; the draft)
 workflowVersions/{id_vN}     workflowId, version, name, trigger, steps[], publishedAt, publishedBy   (Session API only; immutable)
+officerPolicies/{elder|deacon} statuses[], minimumAge, minimumMemberYears, excludeUnderDiscipline, source,
+                             revision, updatedAt, updatedBy   (Session API only)
+officerDecisions/{id}        personId, role, decision (approved | notApproved | deferred), decidedOn, encrypted{note},
+                             authorUid, createdAt, revision, updatedAt, updatedBy   (Session API only)
+quorumPolicies/{id}          meetingType (session | congregational | diaconate | other), effectiveFrom, electorate
+                             (officers | members), offices[], includeEmeritus, statuses[], minimumAge,
+                             excludeUnderDiscipline, minimumCount, percent, source, revision   (Session API only)
+quorumMeetings/{id}          meetingType, date, title, presentPersonIds[], revision, updatedAt, updatedBy   (Session API only)
 workflowRuns/{workflowId_subject} workflowId, version, subject{personId, householdId, requestId, dateId, occurrence}, status
                              (active | waiting | paused | blocked | cancelled | completed), stepIndex, nextAt, startedAt,
                              startedBy, waitingFor, pausedFrom, error, history[], lease, revision, updatedAt   (Session API only)

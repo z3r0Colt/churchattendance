@@ -420,9 +420,10 @@ export const getCareAssignees = onCall(async (request) => {
 });
 export const getReportingRecords = onCall(async (request) => {
   await requireRoles(request, [...EDITOR_ROLES, "deacon", "readOnly"]);
-  const [history, sacraments] = await Promise.all([
+  const [history, sacraments, offices] = await Promise.all([
     db.collectionGroup("membershipEvents").get(),
     db.collectionGroup("sacraments").get(),
+    db.collectionGroup("offices").get(),
   ]);
   const rows = (snapshot: typeof history, kind: string) =>
     snapshot.docs
@@ -437,6 +438,13 @@ export const getReportingRecords = onCall(async (request) => {
   return {
     history: rows(history, "membershipEvents"),
     sacraments: rows(sacraments, "sacraments"),
+    // Moments cannot cross callable JSON, and offices carry calendar dates only.
+    offices: rows(offices, "offices").map((row) => {
+      const plain: Record<string, unknown> = { ...row };
+      for (const key of ["createdAt", "updatedAt", "updatedBy"])
+        delete plain[key];
+      return plain;
+    }),
   };
 });
 export async function processServingReminders(now: Date) {

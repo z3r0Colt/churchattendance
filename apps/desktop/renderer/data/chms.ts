@@ -46,6 +46,7 @@ import {
   type HistoryEvent,
   type MemberRequest,
   type Sacrament,
+  type Office,
   memberRequestStatusSchema,
   eventFromRecord,
   occurrenceChangeSchema,
@@ -98,6 +99,10 @@ export async function chmsCall<T = unknown>(
       "controlWorkflowRun",
       "decideWorkflowApproval",
       "updateMemberRequest",
+      "saveOfficerPolicy",
+      "saveOfficerDecision",
+      "saveQuorumPolicy",
+      "saveQuorumMeeting",
     ].includes(name)
   )
     window.dispatchEvent(new Event("private-records-changed"));
@@ -231,7 +236,8 @@ export function useReportData() {
   const [records, setRecords] = useState<{
     history: HistoryEvent[];
     sacraments: Sacrament[];
-  }>({ history: [], sacraments: [] });
+    offices: Office[];
+  }>({ history: [], sacraments: [], offices: [] });
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [reload, setReload] = useState(0);
