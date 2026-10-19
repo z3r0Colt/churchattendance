@@ -45,7 +45,7 @@ firebase target:apply hosting portal YOUR_HOSTING_SITE --project YOUR_PROJECT
 firebase deploy --project YOUR_PROJECT --only firestore,storage,functions,hosting:portal
 ```
 
-Create and verify the Hosting site/domain and add the domain to Firebase Auth's authorized domains before enabling member logins. The hosting target serves only apps/portal/dist. The desktop bundle and private server files are not published. Hosting config includes a content security policy, frame protection, no-referrer and no-store headers. Check those headers on the real hostname after deployment. Allow Firestore indexes, including the member RSVP collection-group index, to finish building.
+Create and verify the Hosting site/domain and add the domain to Firebase Auth's authorized domains before enabling member logins. The hosting target serves only apps/portal/dist, which since Phase 12 also holds the staff web under /staff/. Its predeploy in firebase.json rebuilds the portal and then the staff web before every Hosting deploy. The desktop Electron bundle and private server files are not published. Hosting config includes a content security policy, frame protection, no-referrer and no-store headers. Check those headers on the real hostname after deployment. Allow Firestore indexes, including the member RSVP collection-group index, to finish building.
 
 No live deployment has been performed. The automated suite uses fake accounts and emulators, with production App Check/origin checks deliberately bypassed only inside the Functions emulator. Verify real App Check attestation, authorized origins, email verification, rate-limit behavior and domain configuration with the church project before opening forms publicly.
 

@@ -38,6 +38,11 @@
   "hosting": {
     "target": "portal",
     "public": "apps/portal/dist",
+    "predeploy": [
+      "npm run build -w @sycamore/shared",
+      "npm run build -w @sycamore/portal",
+      "npm run build:web -w @sycamore/desktop"
+    ],
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
