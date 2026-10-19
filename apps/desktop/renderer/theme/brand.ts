@@ -22,25 +22,32 @@ const brand: BrandVariants = {
   150: "#DFF3EA",
   160: "#F2FAF6",
 };
+// Cambria ships with Windows, so the display serif works offline in the booth.
+export const displayFont = 'Cambria, Georgia, "Times New Roman", serif';
+// A warm, quiet ground with white panels. See DESIGN.md section 2.1.
 export const lightTheme = {
   ...createLightTheme(brand),
   colorBrandBackground: "#2F6B4F",
   colorBrandForeground1: "#2F6B4F",
   colorNeutralBackground1: "#FFFFFF",
-  colorNeutralBackground2: "#FAFAF8",
+  colorNeutralBackground2: "#F6F4EE",
+  colorNeutralBackground3: "#EFECE4",
   colorNeutralForeground1: "#1F2321",
   colorNeutralForeground2: "#5B625E",
-  colorNeutralStroke1: "#DADFDC",
+  colorNeutralStroke1: "#E2DED5",
+  colorNeutralStroke2: "#EEEBE4",
   fontFamilyBase: '"Segoe UI Variable", "Segoe UI", sans-serif',
 };
 export const darkTheme = {
   ...createDarkTheme(brand),
   colorBrandBackground: "#2F6B4F",
   colorBrandForeground1: "#6FB592",
-  colorNeutralBackground1: "#242726",
-  colorNeutralBackground2: "#1B1D1C",
+  colorNeutralBackground1: "#222624",
+  colorNeutralBackground2: "#181B1A",
+  colorNeutralBackground3: "#2A2F2C",
   colorNeutralForeground1: "#ECEEEC",
   colorNeutralForeground2: "#A9B0AC",
-  colorNeutralStroke1: "#3A3F3D",
+  colorNeutralStroke1: "#383E3B",
+  colorNeutralStroke2: "#2E3331",
   fontFamilyBase: lightTheme.fontFamilyBase,
 };

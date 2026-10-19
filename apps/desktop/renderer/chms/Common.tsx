@@ -15,6 +15,7 @@ import {
   Textarea,
 } from "@fluentui/react-components";
 import { ExportButton } from "../components/ExportButton";
+import { columnLabel, displayValue } from "@sycamore/shared";
 import type { ReportRow } from "@sycamore/shared";
 export type Choice = { id: string; name: string };
 export type EditorField = {
@@ -66,28 +67,35 @@ export function Picker({
 export function Records({
   rows,
   choose,
+  empty = "Nothing to show here yet.",
 }: {
   rows: ReportRow[];
   choose?: (index: number) => void;
+  empty?: string;
 }) {
   const keys = Object.keys(rows[0] || {}).filter((key) => key !== "id");
   return (
     <section className="surface table-card communication-panel">
       <div className="section-heading">
-        <span>
-          {rows.length} record{rows.length === 1 ? "" : "s"}
+        {rows.length ? (
+          <span className="muted">
+            {rows.length} record{rows.length === 1 ? "" : "s"}
+          </span>
+        ) : (
+          <span className="records-empty">{empty}</span>
+        )}
+        {/* Stays mounted so focus handling is not disturbed when rows arrive. */}
+        <span hidden={!rows.length}>
+          <ExportButton rows={rows} />
         </span>
-        <ExportButton rows={rows} />
       </div>
-      {!rows.length ? (
-        <p>No records match this view.</p>
-      ) : (
+      {!!rows.length && (
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
                 {keys.map((key) => (
-                  <th key={key}>{key}</th>
+                  <th key={key}>{columnLabel(key)}</th>
                 ))}
               </tr>
             </thead>
@@ -101,10 +109,10 @@ export function Records({
                           appearance="transparent"
                           onClick={() => choose(index)}
                         >
-                          {row[key]}
+                          {displayValue(row[key])}
                         </Button>
                       ) : (
-                        row[key]
+                        displayValue(row[key])
                       )}
                     </td>
                   ))}

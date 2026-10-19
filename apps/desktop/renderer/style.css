@@ -482,3 +482,132 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .request-cards { display: grid; gap: 16px; margin-top: 16px; }
 .feed-url { overflow-wrap: anywhere; }
 .reminder-panel { display: grid; gap: 8px; margin: 16px 0; }
+
+/* Design refresh (DESIGN.md sections 2 and 4): warm ground, grouped sidebar,
+   serif display type, quiet panels and a purple Session-only treatment. */
+.app {
+  --font-display: Cambria, Georgia, "Times New Roman", serif;
+  --present-bg: #eef6f1;
+  --present-fg: #1f4431;
+  --session-bg: #efebf8;
+  --session-fg: #4a3c78;
+  --session-border: #d8d1ea;
+}
+.app[data-theme="dark"] {
+  --present-bg: #20372b;
+  --present-fg: #dff3ea;
+  --session-bg: #2c2640;
+  --session-fg: #d6ccf2;
+  --session-border: #4a4168;
+}
+.app .topbar {
+  background: var(--colorNeutralBackground2);
+}
+.app .wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--colorBrandForeground1);
+}
+.app .wordmark span {
+  font-family: var(--fontFamilyBase);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--colorNeutralForeground2);
+}
+.app .sidebar {
+  gap: 20px;
+  padding: 24px 14px;
+  background: var(--colorNeutralBackground2);
+}
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.app .nav-label {
+  padding: 0 12px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+.app .sidebar .nav-item {
+  min-height: 38px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-weight: 400;
+  color: var(--colorNeutralForeground1);
+}
+.app .sidebar .nav-item[aria-current="page"] {
+  background: var(--present-bg);
+  color: var(--present-fg);
+  font-weight: 600;
+}
+.nav-text {
+  text-align: left;
+}
+.nav-lock {
+  flex-shrink: 0;
+  color: var(--session-fg);
+}
+.app .page-heading {
+  align-items: flex-end;
+}
+.app .page-heading h1,
+.app .page-heading .fui-Title3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1.2;
+}
+.app .eyebrow {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+.app .section-heading .fui-Subtitle2,
+.app .surface > h2,
+.app .surface .fui-Subtitle2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+}
+.app .surface {
+  border-radius: 10px;
+}
+.app .session-banner,
+.app .session-panel {
+  border: 1px solid var(--session-border);
+  border-left: 1px solid var(--session-border);
+}
+.app .session-banner.fui-MessageBar {
+  background: var(--session-bg);
+  color: var(--session-fg);
+}
+.session-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--session-bg);
+  color: var(--session-fg);
+  font-size: 12px;
+  width: fit-content;
+}
+.app th {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.app td {
+  border-bottom-color: var(--colorNeutralStroke2);
+}
+.records-empty {
+  color: var(--colorNeutralForeground2);
+}

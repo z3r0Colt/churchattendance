@@ -1,5 +1,7 @@
 # DESIGN.md
 
+The visual direction was chosen in October 2026 from mockups of the attendance, dashboard, person profile and portal screens: a warm, quiet ground, a grouped sidebar, Cambria display headings, number tiles and household name chips on the roll.
+
 The UI design system and screen specs for the Sycamore RPC church management app. Agents and developers follow this file for every screen. Product scope lives in `PLAN.md`.
 
 ## 1. Principles
@@ -20,15 +22,18 @@ The brand color is a deep sycamore green. Generate the Fluent `BrandVariants` ra
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | brand primary | `#2F6B4F` | `#6FB592` | Primary buttons, selected nav, links |
-| background | `#FAFAF8` | `#1B1D1C` | App background |
-| surface | `#FFFFFF` | `#242726` | Cards, panels, dialogs |
+| background | `#F6F4EE` | `#181B1A` | App background, top bar and sidebar (a warm, quiet ground) |
+| surface | `#FFFFFF` | `#222624` | Cards, panels, dialogs |
+| surface subtle | `#EFECE4` | `#2A2F2C` | Hover, date badges, empty bars |
 | text primary | `#1F2321` | `#ECEEEC` | Body text |
 | text secondary | `#5B625E` | `#A9B0AC` | Labels, hints |
-| border | `#DADFDC` | `#3A3F3D` | Dividers, inputs |
+| border | `#E2DED5` | `#383E3B` | Panel edges, inputs |
+| divider | `#EEEBE4` | `#2E3331` | Rows inside a panel |
+| present fill | `#EEF6F1` | `#20372B` | Present rows and chips, the selected nav item |
 | present | `#2F6B4F` | `#6FB592` | Present check marks and counts |
 | warning | `#9A6200` | `#E0A84A` | Absence alerts, pending sync |
 | danger | `#B3261E` | `#F2B8B5` | Errors, failed sends, destructive actions |
-| session lock | `#5A4A8A` | `#B9A8E8` | Session only badges and borders |
+| session lock | `#4A3C78` on `#EFEBF8`, outline `#D8D1EA` | `#D6CCF2` on `#2C2640`, outline `#4A4168` | Session only badges, outlines and nav locks |
 
 All text and icon pairs must meet WCAG AA contrast (4.5 to 1 for text, 3 to 1 for large text and icons). Check both themes.
 
@@ -37,14 +42,15 @@ All text and icon pairs must meet WCAG AA contrast (4.5 to 1 for text, 3 to 1 fo
 * The Kiosk always uses the light theme with extra large type.
 
 ### 2.3 Type
-* Font is **Segoe UI Variable** (Windows default) through Fluent tokens. No web fonts.
+* Body font is **Segoe UI Variable** (Windows default) through Fluent tokens. No web fonts.
+* Display font is **Cambria** (falling back to Georgia), which ships with Windows. It is used, at regular weight, for page titles (32px), section and panel headings (20px), household names on the roll, the wordmark and large numbers in tiles. Never use it for body text, labels, buttons or tables.
 * Base size 14px. Roll call names are 16px semibold. Kiosk names are 24px.
-* Page titles use Fluent `Title3`. Section headings use `Subtitle2`.
+* Page titles use Fluent `Title3` restyled with the display font. Section headings use `Subtitle2`, also in the display font.
 * Numbers in tables and stat tiles use tabular figures.
 
 ### 2.4 Spacing, size and shape
 * 4px grid. Common gaps are 8, 12, 16 and 24.
-* Corner radius uses Fluent `borderRadiusMedium` (4px) for controls and `borderRadiusLarge` (8px) for cards.
+* Corner radius is 6px for controls and nav items, 8px for chips and 10px for panels and tiles.
 * Minimum click target is 40px tall on regular screens, 48px on Take Attendance, and 64px on the Kiosk.
 * Minimum window size is 1024 by 680. Layouts must work at 1366 by 768, which is typical for an older booth PC.
 
@@ -88,8 +94,10 @@ Officer roles (Pastor, Elder, Deacon) show as a second small badge after the nam
 +--------------+-----------------------------------------------------------------+
 ```
 
-* Left nav is 220px and collapses to icons below 1200px wide.
-* `#` marks Session only sections. They show the lock icon and are hidden entirely for users without a Session role.
+* The top bar and sidebar share the warm background. The wordmark reads "Sycamore" in the display font with "REFORMED PRESBYTERIAN" in small capitals beneath.
+* The left nav is 220px and grouped under small labels: **Worship** (Dashboard, Attendance, Calendar, Serving), **Congregation** (People & households, Groups, Messages, Bulletin, Online access), **Care · Session only** (Pastoral care, Shepherding, Care workflows), **Ministry** (Deacon tasks, Mercy ministry, Important dates) and **Records** (Reports, Annual reports, Settings, Account security). A group appears only when the role can open at least one of its items.
+* The current page is marked with the present fill and semibold text, and `aria-current="page"`.
+* Session only items show a lock icon, and their accessible name ends with "· Session only". They are hidden entirely for users without a Session role.
 * Top right shows the connection pill and the signed in user with role. The menu holds Theme, Lock now, and Sign out.
 
 ### 4.1 Connection pill
@@ -190,7 +198,7 @@ Header with photo, name, status badge, officer badge, household link, and quick 
 * **Attendance** for a 12 month calendar heat strip plus a list
 * **Groups and Serving**
 * **Messages** for the email and text history, including replies
-* **Pastoral** (Session only, purple left border and lock icon) for notes, visits, follow-ups, and the discipline record
+* **Pastoral** (Session only, purple outline and lock badge) for notes, visits, follow-ups, and the discipline record
 
 Status changes always open a dialog asking for date, method, other church, and reason, so the membership history is never skipped.
 
@@ -216,7 +224,12 @@ Sections for Church (name, address, time zone), Service types, Elder districts, 
 
 ## 6. Patterns
 
-* **Empty states** give one sentence and one button, such as "No services yet. Add your Lord's Day services to start taking attendance. [Add service type]".
+* **Panels** are white with a 1px border and 10px corners on the warm background. Do not put a panel inside another panel; group related content with headings and dividers instead.
+* **Tables** use plain column names ("Public calendar", never `PublicCalendar`) and show calendar dates as "Oct 11, 2026". Exports keep ISO dates. Export sits in the panel heading and is hidden when there is nothing to export.
+* **Session only** content carries a purple "Session only" badge with a lock and a soft purple outline. Never mark it with a coloured left edge alone.
+* **Tiles** show one key number in the display font with a short label. The lead tile may be filled with the brand green.
+
+* **Empty states** never say "0 records". They give one kind sentence and, where useful, one button, such as "No services yet. Add your Lord's Day services to start taking attendance. [Add service type]".
 * **Confirmations** are only for destructive or wide actions, such as deleting, merging people, or sending to more than 20 people. The confirm button names the action ("Send to 134 people"), never just "OK".
 * **Undo** shows a toast with Undo for 8 seconds after unmarking a household, archiving a person, or removing from a group.
 * **Errors** say what happened and what to do next in one or two plain sentences, with no codes on the face of the message.

@@ -24,13 +24,10 @@ import {
 import { OverlayDrawer } from "@fluentui/react-components";
 import {
   AddRegular,
-  ArrowDownloadRegular,
   CheckmarkCircleRegular,
   CheckmarkRegular,
   DismissRegular,
-  PeopleRegular,
   PersonRegular,
-  SettingsRegular,
   WeatherMoonRegular,
 } from "@fluentui/react-icons";
 import {
@@ -58,6 +55,7 @@ import {
   useAttendanceData,
 } from "./data/attendance";
 import { darkTheme, lightTheme } from "./theme/brand";
+import { NavGroup, NavItem } from "./components/Nav";
 import { Messages } from "./communications/Messages";
 import { Bulletin } from "./communications/Bulletin";
 import { CommunicationSettingsPanel } from "./communications/Settings";
@@ -300,7 +298,8 @@ function Workspace({
     <div className="workspace">
       <header className="topbar">
         <div className="wordmark">
-          SYCAMORE <span>RPC</span>
+          Sycamore
+          <span>REFORMED PRESBYTERIAN</span>
         </div>
         <div className="topbar-right">
           <Badge
@@ -334,155 +333,147 @@ function Workspace({
         </div>
       </header>
       <nav aria-label="Main navigation" className="sidebar">
-        <span className="nav-label">CONGREGATION</span>
+        <NavGroup label="WORSHIP">
+          {!volunteer && (
+            <NavItem
+              label="Dashboard"
+              current={page === "dashboard"}
+              onClick={() => setPage("dashboard")}
+            />
+          )}
+          <NavItem
+            label="Attendance"
+            current={page === "attendance"}
+            onClick={() => setPage("attendance")}
+          />
+          {!volunteer && (
+            <>
+              <NavItem
+                label="Calendar"
+                current={page === "calendar"}
+                onClick={() => setPage("calendar")}
+              />
+              <NavItem
+                label="Serving"
+                current={page === "serving"}
+                onClick={() => setPage("serving")}
+              />
+            </>
+          )}
+        </NavGroup>
         {!volunteer && (
-          <Button
-            appearance={page === "dashboard" ? "primary" : "subtle"}
-            onClick={() => setPage("dashboard")}
-          >
-            Dashboard
-          </Button>
-        )}
-        <Button
-          icon={<CheckmarkCircleRegular />}
-          appearance={page === "attendance" ? "primary" : "subtle"}
-          onClick={() => setPage("attendance")}
-        >
-          Attendance
-        </Button>
-        {editor && (
-          <>
-            <Button
-              appearance={page === "messages" ? "primary" : "subtle"}
-              onClick={() => setPage("messages")}
-            >
-              Messages {unreadTexts > 0 ? `(${unreadTexts})` : ""}
-            </Button>
-            <Button
-              appearance={page === "bulletin" ? "primary" : "subtle"}
-              onClick={() => setPage("bulletin")}
-            >
-              Bulletin
-            </Button>
-          </>
-        )}
-        {hasRole(roles, EDITOR_ROLES) && (
-          <Button
-            appearance={page === "portal" ? "primary" : "subtle"}
-            onClick={() => setPage("portal")}
-          >
-            Online access
-          </Button>
-        )}
-        {!volunteer && (
-          <>
-            <Button
-              appearance={page === "groups" ? "primary" : "subtle"}
+          <NavGroup label="CONGREGATION">
+            <NavItem
+              label="People & households"
+              current={page === "people"}
+              onClick={() => setPage("people")}
+            />
+            <NavItem
+              label="Groups"
+              current={page === "groups"}
               onClick={() => setPage("groups")}
-            >
-              Groups
-            </Button>
-            <Button
-              appearance={page === "calendar" ? "primary" : "subtle"}
-              onClick={() => setPage("calendar")}
-            >
-              Calendar
-            </Button>
-            <Button
-              appearance={page === "serving" ? "primary" : "subtle"}
-              onClick={() => setPage("serving")}
-            >
-              Serving
-            </Button>
-            {hasRole(roles, [...SESSION_ROLES, "deacon"]) && (
-              <Button
-                appearance={page === "care" ? "primary" : "subtle"}
-                onClick={() => setPage("care")}
-              >
-                {hasRole(roles, SESSION_ROLES)
-                  ? "Pastoral care · Session only"
-                  : "Deacon tasks"}
-              </Button>
+            />
+            {editor && (
+              <>
+                <NavItem
+                  label={`Messages${unreadTexts > 0 ? ` (${unreadTexts})` : ""}`}
+                  current={page === "messages"}
+                  onClick={() => setPage("messages")}
+                />
+                <NavItem
+                  label="Bulletin"
+                  current={page === "bulletin"}
+                  onClick={() => setPage("bulletin")}
+                />
+              </>
             )}
             {hasRole(roles, EDITOR_ROLES) && (
-              <Button
-                appearance={page === "dates" ? "primary" : "subtle"}
-                onClick={() => setPage("dates")}
-              >
-                Important dates
-              </Button>
+              <NavItem
+                label="Online access"
+                current={page === "portal"}
+                onClick={() => setPage("portal")}
+              />
+            )}
+          </NavGroup>
+        )}
+        {!volunteer && hasRole(roles, SESSION_ROLES) && (
+          <NavGroup label="CARE · SESSION ONLY">
+            <NavItem
+              label="Pastoral care"
+              session
+              current={page === "care"}
+              onClick={() => setPage("care")}
+            />
+            <NavItem
+              label="Shepherding"
+              session
+              current={page === "shepherding"}
+              onClick={() => setPage("shepherding")}
+            />
+            <NavItem
+              label="Care workflows"
+              session
+              current={page === "workflows"}
+              onClick={() => setPage("workflows")}
+            />
+          </NavGroup>
+        )}
+        {!volunteer && hasRole(roles, [...EDITOR_ROLES, "deacon"]) && (
+          <NavGroup label="MINISTRY">
+            {!hasRole(roles, SESSION_ROLES) && hasRole(roles, ["deacon"]) && (
+              <NavItem
+                label="Deacon tasks"
+                current={page === "care"}
+                onClick={() => setPage("care")}
+              />
             )}
             {hasRole(roles, [...SESSION_ROLES, "deacon"]) && (
-              <Button
-                appearance={page === "mercy" ? "primary" : "subtle"}
+              <NavItem
+                label="Mercy ministry"
+                current={page === "mercy"}
                 onClick={() => setPage("mercy")}
-              >
-                Mercy ministry
-              </Button>
+              />
             )}
-            {hasRole(roles, SESSION_ROLES) && (
-              <Button
-                appearance={page === "workflows" ? "primary" : "subtle"}
-                onClick={() => setPage("workflows")}
-              >
-                Care workflows · Session only
-              </Button>
+            {hasRole(roles, EDITOR_ROLES) && (
+              <NavItem
+                label="Important dates"
+                current={page === "dates"}
+                onClick={() => setPage("dates")}
+              />
             )}
-            {hasRole(roles, SESSION_ROLES) && (
-              <Button
-                appearance={page === "shepherding" ? "primary" : "subtle"}
-                onClick={() => setPage("shepherding")}
-              >
-                Shepherding · Session only
-              </Button>
-            )}
-            {hasRole(roles, [...EDITOR_ROLES, "readOnly"]) && (
-              <Button
-                appearance={page === "annual" ? "primary" : "subtle"}
-                onClick={() => setPage("annual")}
-              >
-                Annual reports
-              </Button>
-            )}
-          </>
+          </NavGroup>
         )}
-        {!volunteer && (
-          <>
-            <Button
-              icon={<PeopleRegular />}
-              appearance={page === "people" ? "primary" : "subtle"}
-              onClick={() => setPage("people")}
-            >
-              People & households
-            </Button>
-            <Button
-              icon={<ArrowDownloadRegular />}
-              appearance={page === "reports" ? "primary" : "subtle"}
-              onClick={() => {
-                setReportRequest(undefined);
-                setPage("reports");
-              }}
-            >
-              Reports
-            </Button>
-            <Button
-              icon={<SettingsRegular />}
-              appearance={page === "settings" ? "primary" : "subtle"}
-              onClick={() => setPage("settings")}
-            >
-              Settings
-            </Button>
-          </>
-        )}
-        <Button
-          appearance={page === "security" ? "primary" : "subtle"}
-          onClick={() => setPage("security")}
-        >
-          Account security
-        </Button>
-        <div className="nav-bottom">
-          Church management<small>Phase 10 · Development</small>
-        </div>
+        <NavGroup label="RECORDS">
+          {!volunteer && (
+            <>
+              <NavItem
+                label="Reports"
+                current={page === "reports"}
+                onClick={() => {
+                  setReportRequest(undefined);
+                  setPage("reports");
+                }}
+              />
+              {hasRole(roles, [...EDITOR_ROLES, "readOnly"]) && (
+                <NavItem
+                  label="Annual reports"
+                  current={page === "annual"}
+                  onClick={() => setPage("annual")}
+                />
+              )}
+              <NavItem
+                label="Settings"
+                current={page === "settings"}
+                onClick={() => setPage("settings")}
+              />
+            </>
+          )}
+          <NavItem
+            label="Account security"
+            current={page === "security"}
+            onClick={() => setPage("security")}
+          />
+        </NavGroup>
       </nav>
       <main className="content">
         {!data.online && (
