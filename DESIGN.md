@@ -194,19 +194,22 @@ Centered card with the church name, email, password, and a "Keep this PC signed 
 * The Session strip shows only for Session roles. It gives counts only, never names or note text.
 
 ### 5.4 People list
-Data grid with columns for Name, Status, Household, Elder district, Mobile, Email, and Last attended. Filters for Status, Elder district, Group, and "absent X weeks" sit above the grid. Saved lists appear as chips. Toolbar holds Add person, Add household, Export (CSV / XLSX), and Message these people.
+A search box and Status and District filters sit in one row above the table. The table lists Name, Status, Household, District, Mobile, Email, Last attended and Deceased; choosing a name opens that person's page in place of the list. A Households tab lists households for editing. Toolbar holds Add person and Add household. Saved lists, a Group filter and "Message these people" remain future additions.
 
-### 5.5 Person detail
-Header with photo, name, status badge, officer badge, household link, and quick actions (Email, Text, Mark status change). Tabs below.
+### 5.5 Person page
+A "‹ People & households" link returns to the list.
 
-* **Info** for contact, birthday, anniversary, and custom fields
-* **Membership** for the status history timeline, sacraments, offices, received and removed details
-* **Attendance** for a 12 month calendar heat strip plus a list
-* **Groups and Serving**
-* **Messages** for the email and text history, including replies
-* **Pastoral** (Session only, purple outline and lock badge) for notes, visits, follow-ups, and the discipline record
+* **Header:** the photo (or initials in a soft green circle), the name in the display font, tags for membership status (filled), household and elder district, and for editors "Edit contact and consent" and "Edit profile or status".
+* **Overview tab:**
+  * Lord's Days: one square per Lord's Day for the last 26 weeks, green when present, plain when not marked, hatched when no service was recorded, with "21 of 26 recorded" beside the heading. A Lord's Day without a recorded service never counts as an absence. The strip's accessible name states the count and the dates not marked.
+  * Membership: the latest four status changes as a short timeline with the reason, and a link to the full history.
+  * Contact: email, mobile, household address, and church email and text consent shown as On or Off.
+  * At a glance: birthday and last attended.
+  * For Session roles only, a Session only panel pointing to Pastoral care. It reads no private records itself.
+* **Attendance tab:** every recorded service the person attended, with the service name and whether it came from roll call or the kiosk.
+* **Membership history tab:** the full status history table.
 
-Status changes always open a dialog asking for date, method, other church, and reason, so the membership history is never skipped.
+Status changes always open a dialog asking for date, method, other church, and reason, so the membership history is never skipped. Groups and serving, message history and a Session Care tab are future additions.
 
 ### 5.6 Messages
 * Compose panel with channel (Email, Text, or Both), audience picker (person, household, group, status, elder district, or saved list), a live recipient count with opted out people listed separately, a template picker, merge field chips such as `{FirstName}`, Send now or Schedule, and Send a test to me.

@@ -18,3 +18,33 @@ export function displayValue(value: unknown) {
   }
   return value as string | number | boolean | null | undefined;
 }
+
+export type StripWeek = {
+  date: string;
+  state: "present" | "absent" | "unrecorded";
+};
+// One square per Lord's Day, oldest first, ending on the latest Lord's Day on
+// or before today. A Lord's Day with no recorded service is "unrecorded",
+// never counted as an absence.
+export function attendanceStrip(
+  services: { date: string; present: Record<string, unknown> }[],
+  personId: string,
+  today: string,
+  weeks = 26,
+): StripWeek[] {
+  const day = DateTime.fromISO(today, { zone: "utc" });
+  if (!day.isValid) return [];
+  const last = day.minus({ days: day.weekday % 7 });
+  return Array.from({ length: weeks }, (_, index) => {
+    const date = last.minus({ weeks: weeks - 1 - index }).toISODate()!;
+    const held = services.filter((row) => row.date === date);
+    return {
+      date,
+      state: !held.length
+        ? "unrecorded"
+        : held.some((row) => !!row.present[personId])
+          ? "present"
+          : "absent",
+    };
+  });
+}

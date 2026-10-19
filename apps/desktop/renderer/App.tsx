@@ -601,6 +601,8 @@ function Workspace({
             roles={roles}
             timeZone={data.timeZone}
             services={data.services}
+            types={data.types}
+            openCare={() => setPage("care")}
             add={() => setHousehold(true)}
           />
         )}

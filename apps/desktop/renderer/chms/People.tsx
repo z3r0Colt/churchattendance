@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Badge,
   Button,
   Input,
   MessageBar,
@@ -22,24 +21,31 @@ import {
   type HistoryEvent,
   type Household,
   type Person,
+  SESSION_ROLES,
   type Role,
   type Service,
+  type ServiceType,
 } from "@sycamore/shared";
 import { chmsCall, useCollection } from "../data/chms";
 import { addPerson } from "../data/administration";
 import { ConsentDialog } from "../communications/Messages";
 import { Picker, RecordEditor, Records, type EditorField } from "./Common";
+import { PersonProfile } from "./PersonProfile";
 type Family = Household & { revision?: number };
 export function People({
   roles,
   add,
   timeZone,
   services,
+  types,
+  openCare,
 }: {
   roles: Role[];
   add: () => void;
   timeZone: string;
   services: Service[];
+  types: ServiceType[];
+  openCare: () => void;
 }) {
   const people = useCollection<Person>("people"),
     families = useCollection<Family>("households"),
@@ -138,10 +144,48 @@ export function People({
           },
         ]),
   ];
+  const profile = selected && (
+    <PersonProfile
+      person={selected}
+      household={familyName(selected.householdId)}
+      address={
+        families.rows.find((row) => row.id === selected.householdId)?.address ||
+        ""
+      }
+      district={
+        districts.rows.find((row) => row.id === selected.elderDistrictId)
+          ?.name || ""
+      }
+      services={services}
+      types={types}
+      history={history.rows}
+      today={churchDate(new Date(), timeZone)}
+      editor={editor}
+      session={hasRole(roles, SESSION_ROLES)}
+      back={() => setSelected("")}
+      openCare={openCare}
+      contact={() => setContact({ ...selected })}
+      edit={() =>
+        setEditing({
+          kind: "person",
+          value: {
+            ...selected,
+            date: churchDate(new Date(), timeZone),
+            method: "",
+            reason: "",
+            otherChurch: "",
+          },
+          person: { ...selected },
+        })
+      }
+    />
+  );
   return (
     <>
-      <div className="page-heading">
+      {profile}
+      <div className="page-heading" hidden={!!selected}>
         <div>
+          <span className="eyebrow">THE CONGREGATION</span>
           <Title3 as="h1">People & households</Title3>
           <p>Contact information and membership records</p>
         </div>
@@ -173,191 +217,115 @@ export function People({
           </div>
         )}
       </div>
-      {(people.error || families.error || districts.error || history.error) && (
-        <MessageBar intent="error">
-          {people.error || families.error || districts.error || history.error}
-        </MessageBar>
-      )}
-      <TabList
-        selectedValue={tab}
-        onTabSelect={(_, data) => {
-          setTab(String(data.value));
-          setSearch("");
-        }}
-      >
-        <Tab value="people">People</Tab>
-        <Tab value="households">Households</Tab>
-      </TabList>
-      {tab === "households" && (
-        <Input
-          aria-label="Search households"
-          placeholder="Search households"
-          value={search}
-          onChange={(_, data) => setSearch(data.value)}
-        />
-      )}
-      {tab === "people" ? (
+      {!selected &&
+        (people.error ||
+          families.error ||
+          districts.error ||
+          history.error) && (
+          <MessageBar intent="error">
+            {people.error || families.error || districts.error || history.error}
+          </MessageBar>
+        )}
+      {!selected && (
         <>
-          <div className="surface communication-panel">
+          <TabList
+            selectedValue={tab}
+            onTabSelect={(_, data) => {
+              setTab(String(data.value));
+              setSearch("");
+            }}
+          >
+            <Tab value="people">People</Tab>
+            <Tab value="households">Households</Tab>
+          </TabList>
+          {tab === "households" && (
             <Input
-              aria-label="Search people"
-              placeholder="Search people or household"
+              aria-label="Search households"
+              placeholder="Search households"
               value={search}
               onChange={(_, data) => setSearch(data.value)}
             />
-            <div className="actions">
-              <Picker
-                label="Status filter"
-                value={status}
-                onChange={setStatus}
-                empty="All statuses"
-                choices={membershipStatuses.map((id) => ({
-                  id,
-                  name: statusLabels[id],
-                }))}
-              />
-              <Picker
-                label="District filter"
-                value={district}
-                onChange={setDistrict}
-                empty="All districts"
-                choices={districts.rows.map((row) => ({
+          )}
+          {tab === "people" ? (
+            <>
+              <div className="list-toolbar">
+                <Input
+                  aria-label="Search people"
+                  placeholder="Search people or household"
+                  value={search}
+                  onChange={(_, data) => setSearch(data.value)}
+                />
+                <Picker
+                  label="Status filter"
+                  value={status}
+                  onChange={setStatus}
+                  empty="All statuses"
+                  choices={membershipStatuses.map((id) => ({
+                    id,
+                    name: statusLabels[id],
+                  }))}
+                />
+                <Picker
+                  label="District filter"
+                  value={district}
+                  onChange={setDistrict}
+                  empty="All districts"
+                  choices={districts.rows.map((row) => ({
+                    id: row.id,
+                    name: row.name,
+                  }))}
+                />
+              </div>
+              <Records
+                rows={filtered.map((row) => ({
                   id: row.id,
-                  name: row.name,
+                  Name: `${row.firstName} ${row.lastName}`,
+                  Status: statusLabels[row.membershipStatus],
+                  Household: familyName(row.householdId),
+                  District:
+                    districts.rows.find(
+                      (district) => district.id === row.elderDistrictId,
+                    )?.name || "",
+                  Mobile: row.mobilePhone,
+                  Email: row.email,
+                  "Last attended": lastAttended(row.id),
+                  Deceased: row.isDeceased ? "Yes" : "No",
                 }))}
+                empty="No people match this search."
+                choose={(index) => setSelected(filtered[index].id)}
               />
-            </div>
-          </div>
-          <Records
-            rows={filtered.map((row) => ({
-              id: row.id,
-              Name: `${row.firstName} ${row.lastName}`,
-              Status: statusLabels[row.membershipStatus],
-              Household: familyName(row.householdId),
-              District:
-                districts.rows.find(
-                  (district) => district.id === row.elderDistrictId,
-                )?.name || "",
-              Mobile: row.mobilePhone,
-              Email: row.email,
-              "Last attended": lastAttended(row.id),
-              Deceased: row.isDeceased ? "Yes" : "No",
-            }))}
-            choose={(index) => setSelected(filtered[index].id)}
-          />
+            </>
+          ) : (
+            <Records
+              rows={families.rows
+                .filter((row) =>
+                  row.name.toLowerCase().includes(search.toLowerCase()),
+                )
+                .map((row) => ({
+                  id: row.id,
+                  Household: row.name,
+                  Address: row.address,
+                  "Home phone": row.homePhone,
+                  People: people.rows.filter(
+                    (person) => person.householdId === row.id,
+                  ).length,
+                }))}
+              choose={
+                editor
+                  ? (index) => {
+                      const row = families.rows.filter((row) =>
+                        row.name.toLowerCase().includes(search.toLowerCase()),
+                      )[index];
+                      setEditing({
+                        kind: "family",
+                        value: { ...row, expectedRevision: row.revision || 0 },
+                      });
+                    }
+                  : undefined
+              }
+            />
+          )}
         </>
-      ) : (
-        <Records
-          rows={families.rows
-            .filter((row) =>
-              row.name.toLowerCase().includes(search.toLowerCase()),
-            )
-            .map((row) => ({
-              id: row.id,
-              Household: row.name,
-              Address: row.address,
-              "Home phone": row.homePhone,
-              People: people.rows.filter(
-                (person) => person.householdId === row.id,
-              ).length,
-            }))}
-          choose={
-            editor
-              ? (index) => {
-                  const row = families.rows.filter((row) =>
-                    row.name.toLowerCase().includes(search.toLowerCase()),
-                  )[index];
-                  setEditing({
-                    kind: "family",
-                    value: { ...row, expectedRevision: row.revision || 0 },
-                  });
-                }
-              : undefined
-          }
-        />
-      )}
-      {selected && (
-        <section
-          className="surface communication-panel"
-          aria-label="Person profile"
-        >
-          <div className="section-heading">
-            <div>
-              <Title3 as="h2">
-                {selected.firstName} {selected.lastName}
-              </Title3>{" "}
-              <Badge>{statusLabels[selected.membershipStatus]}</Badge>
-            </div>
-            <Button onClick={() => setSelected("")}>Close profile</Button>
-          </div>
-          <p>
-            {familyName(selected.householdId)} · Born{" "}
-            {selected.birthDate || "not recorded"}
-            {selected.isDeceased ? " · Deceased" : ""}
-          </p>
-          <p>
-            {selected.email || "No email"} ·{" "}
-            {selected.mobilePhone || "No mobile number"}
-          </p>
-          {editor && (
-            <div className="actions">
-              <Button
-                onClick={() =>
-                  setEditing({
-                    kind: "person",
-                    value: {
-                      ...selected,
-                      date: churchDate(new Date(), timeZone),
-                      method: "",
-                      reason: "",
-                      otherChurch: "",
-                    },
-                    person: { ...selected },
-                  })
-                }
-              >
-                Edit profile or status
-              </Button>
-              <Button onClick={() => setContact({ ...selected })}>
-                Edit contact and consent
-              </Button>
-            </div>
-          )}
-          <h3>Membership history</h3>
-          <Records
-            rows={[...history.rows]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .map((row) => ({
-                id: row.id,
-                Date: row.date,
-                From: row.fromStatus
-                  ? statusLabels[row.fromStatus]
-                  : "Initial entry",
-                To: statusLabels[row.toStatus],
-                Method: row.method,
-                "Other church": row.otherChurch,
-                Reason: row.reason,
-              }))}
-          />
-          {!history.rows.length && (
-            <MessageBar intent="warning">
-              No membership history has been recorded. Annual counts will flag
-              this record for review.
-            </MessageBar>
-          )}
-          <h3>Attendance</h3>
-          <Records
-            rows={services
-              .filter((row) => row.present[selected.id])
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .map((row) => ({
-                id: row.id,
-                Date: row.date,
-                Service: row.serviceTypeId,
-                Method: row.present[selected.id].method,
-              }))}
-          />
-        </section>
       )}
       {contact && (
         <ConsentDialog person={contact} close={() => setContact(null)} />
