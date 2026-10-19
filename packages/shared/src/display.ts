@@ -10,12 +10,15 @@ export function columnLabel(key: string) {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-// Calendar dates read as "Oct 11, 2026" on screen. Exports keep ISO dates.
+// Calendar dates read as "Oct 11, 2026" and times as "6:30 PM" on screen.
+// Exports keep ISO dates and 24-hour times.
 export function displayValue(value: unknown) {
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const date = DateTime.fromISO(value);
     if (date.isValid) return date.toFormat("LLL d, yyyy");
   }
+  if (typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value))
+    return DateTime.fromFormat(value, "HH:mm").toFormat("h:mm a");
   return value as string | number | boolean | null | undefined;
 }
 
@@ -78,4 +81,24 @@ export function deliveryBreakdown(totals: Record<string, number> = {}) {
     skipped: count("skipped", "expired"),
     failed: count("failed", "undelivered"),
   };
+}
+
+// The tone of a status word, so tables can show it as a small label. The word
+// itself always stays visible; tone never carries meaning alone.
+export type StatusTone = "good" | "attention" | "problem" | "neutral";
+const tones: [StatusTone, RegExp][] = [
+  ["problem", /^(failed|declined|needs attention|undelivered)/i],
+  [
+    "attention",
+    /^(contact gap|overdue|due|waiting|new|pending|changed|not shared|needs review|skipped|paused|unknown|weak|stray|lost)/i,
+  ],
+  [
+    "good",
+    /^(current|active|completed|complete|finished|resolved|approved|assigned|linked|as scheduled|on time|planned|sent|shared|healthy|in progress|ready)/i,
+  ],
+];
+export function statusTone(text: string): StatusTone {
+  return (
+    tones.find(([, pattern]) => pattern.test(text.trim()))?.[0] ?? "neutral"
+  );
 }

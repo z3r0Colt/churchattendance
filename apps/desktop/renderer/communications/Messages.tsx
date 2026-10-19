@@ -57,6 +57,7 @@ import {
 } from "../data/communications";
 import { ExportButton } from "../components/ExportButton";
 import { DeliveryBar } from "../components/DeliveryBar";
+import { StatusPill } from "../chms/Common";
 type Data = ReturnType<typeof useCommunicationData>;
 function messageError(error: unknown) {
   return error instanceof Error && !error.message.startsWith("[")
@@ -819,8 +820,10 @@ function DeliveryDialog({
                 {recipients.map((row) => (
                   <tr key={row.id}>
                     <td>{row.address}</td>
-                    <td>{row.channel}</td>
-                    <td>{row.status}</td>
+                    <td>{channelLabel(row.channel)}</td>
+                    <td>
+                      <StatusPill text={messageStatusLabel(row.status)} />
+                    </td>
                     <td>{row.error}</td>
                   </tr>
                 ))}

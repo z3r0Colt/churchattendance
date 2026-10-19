@@ -15,7 +15,7 @@ import {
   Textarea,
 } from "@fluentui/react-components";
 import { ExportButton } from "../components/ExportButton";
-import { columnLabel, displayValue } from "@sycamore/shared";
+import { columnLabel, displayValue, statusTone } from "@sycamore/shared";
 import type { ReportRow } from "@sycamore/shared";
 export type Choice = { id: string; name: string };
 export type EditorField = {
@@ -111,6 +111,10 @@ export function Records({
                         >
                           {displayValue(row[key])}
                         </Button>
+                      ) : ["Status", "State"].includes(columnLabel(key)) &&
+                        typeof row[key] === "string" &&
+                        row[key] ? (
+                        <StatusPill text={String(row[key])} />
                       ) : (
                         displayValue(row[key])
                       )}
@@ -287,4 +291,9 @@ export function RecordEditor({
       </DialogSurface>
     </Dialog>
   );
+}
+
+// A status word as a small label. The word is always shown; colour only adds to it.
+export function StatusPill({ text }: { text: string }) {
+  return <span className={`pill ${statusTone(text)}`}>{text}</span>;
 }

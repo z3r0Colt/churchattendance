@@ -31,7 +31,7 @@ import {
   useHouseholdLocations,
   type useShepherdingData,
 } from "../data/shepherding";
-import { Records, RecordEditor, friendlyError } from "./Common";
+import { Records, RecordEditor, StatusPill, friendlyError } from "./Common";
 
 export function Locations({
   data,
@@ -165,7 +165,9 @@ export function Locations({
                   <tr key={row.id}>
                     <td>{row.name}</td>
                     <td>{row.address || "None"}</td>
-                    <td>{locationStateLabels[state(row.id)]}</td>
+                    <td>
+                      <StatusPill text={locationStateLabels[state(row.id)]} />
+                    </td>
                     <td>{location(row.id)?.matchedAddress || ""}</td>
                     <td>
                       {row.address && lookups && (

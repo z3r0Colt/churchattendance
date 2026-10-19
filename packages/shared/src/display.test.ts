@@ -6,6 +6,7 @@ import {
   deliveryBreakdown,
   displayValue,
   messageStatusLabel,
+  statusTone,
 } from "./index";
 
 describe("table display", () => {
@@ -20,6 +21,8 @@ describe("table display", () => {
     expect(displayValue("2026-10-11")).toBe("Oct 11, 2026");
     expect(displayValue("2026-02-30")).toBe("2026-02-30");
     expect(displayValue("2026-10-11T18:00:00Z")).toBe("2026-10-11T18:00:00Z");
+    expect(displayValue("18:30")).toBe("6:30 PM");
+    expect(displayValue("24:00")).toBe("24:00");
     expect(displayValue(4)).toBe(4);
     expect(displayValue("Calder")).toBe("Calder");
   });
@@ -75,5 +78,17 @@ describe("message log wording", () => {
       skipped: 0,
       failed: 0,
     });
+  });
+});
+
+describe("status tone", () => {
+  it("reads common status words", () => {
+    expect(statusTone("Contact gap")).toBe("attention");
+    expect(statusTone("Overdue")).toBe("attention");
+    expect(statusTone("Current")).toBe("good");
+    expect(statusTone("Resolved")).toBe("good");
+    expect(statusTone("Declined")).toBe("problem");
+    expect(statusTone("Archived")).toBe("neutral");
+    expect(statusTone("Waiting for triage")).toBe("attention");
   });
 });

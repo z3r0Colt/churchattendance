@@ -1277,3 +1277,147 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Status labels and Session-only page titles. */
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--colorNeutralBackground3);
+  color: var(--colorNeutralForeground1);
+}
+.pill.good {
+  background: var(--present-bg);
+  color: var(--present-fg);
+}
+.pill.attention {
+  background: #fbefd9;
+  color: #6b4400;
+}
+.pill.problem {
+  background: #fbe3e1;
+  color: #8c1d18;
+}
+[data-theme="dark"] .pill.attention {
+  background: #45361a;
+  color: #f2d39b;
+}
+[data-theme="dark"] .pill.problem {
+  background: #4a2421;
+  color: #f2b8b5;
+}
+.app .page-heading h1 > svg {
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  vertical-align: 2px;
+  color: var(--session-fg);
+}
+.jump-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: -8px 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--colorNeutralStroke1);
+}
+.app .jump-links .fui-Button {
+  color: var(--colorBrandForeground1);
+}
+/* Settings panels share one readable width. */
+.app #settings-pc,
+.app #settings-church .surface,
+.app #settings-communication .surface,
+.app #settings-kiosk {
+  max-width: 960px;
+}
+
+/* Kiosk (DESIGN.md 5.9): large type, people as big check-in cards. */
+.kiosk.fui-FluentProvider {
+  background: #f6f4ee;
+  --font-display: Cambria, Georgia, "Times New Roman", serif;
+}
+.kiosk-heading {
+  border-bottom-color: #e2ded5;
+}
+.kiosk .wordmark {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #2f6b4f;
+}
+.kiosk main h1,
+.kiosk-household h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+.kiosk main h1 {
+  font-size: 36px;
+}
+.kiosk-date {
+  font-size: 20px;
+  color: #4a504c;
+}
+.kiosk .fui-Input,
+.kiosk .fui-Button {
+  min-height: 64px !important;
+  font-size: 20px !important;
+}
+.kiosk .fui-Input input {
+  font-size: 22px;
+}
+.kiosk-household h2 {
+  margin: 0 0 16px;
+  font-size: 28px;
+}
+.kiosk-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.kiosk .kiosk-chip.fui-Checkbox {
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  padding: 0 16px;
+  border: 1px solid #d9d4c9;
+  border-radius: 10px;
+  background: #ffffff;
+}
+.kiosk .kiosk-chip:has(input:checked) {
+  border: 2px solid #2f6b4f;
+  background: #eef6f1;
+}
+.kiosk .kiosk-chip .fui-Checkbox__indicator {
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+}
+.kiosk .kiosk-chip .fui-Checkbox__label {
+  padding: 0 0 0 12px;
+  font-size: 22px;
+  color: #1f2321;
+}
+.kiosk-welcome {
+  font-family: var(--font-display);
+}
+.kiosk .kiosk-chip.fui-Checkbox {
+  display: flex !important;
+  width: 100% !important;
+  box-sizing: border-box;
+}
+.kiosk .kiosk-chip .fui-Checkbox__indicator {
+  margin: 0;
+  align-self: center;
+}
+.kiosk .kiosk-household h2 {
+  font-size: 28px;
+}
+.kiosk .fui-Field > label {
+  font-size: 18px;
+}
+.kiosk main > .fui-Button {
+  width: 100%;
+}

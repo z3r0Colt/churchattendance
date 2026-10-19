@@ -667,9 +667,42 @@ function Workspace({
         {page === "settings" && (
           <>
             <div className="page-heading">
-              <Title3 as="h1">Settings</Title3>
+              <div>
+                <span className="eyebrow">THIS PC AND THE CHURCH</span>
+                <Title3 as="h1">Settings</Title3>
+              </div>
             </div>
-            <section className="surface settings">
+            <nav className="jump-links" aria-label="Settings sections">
+              {[
+                ["settings-pc", "This PC", true],
+                [
+                  "settings-church",
+                  "Church, services and districts",
+                  hasRole(roles, ["admin", "pastor"]),
+                ],
+                ["settings-communication", "Communication", editor],
+                [
+                  "settings-kiosk",
+                  "Kiosk",
+                  hasRole(roles, ["admin", "pastor"]),
+                ],
+              ]
+                .filter(([, , shown]) => shown)
+                .map(([id, label]) => (
+                  <Button
+                    key={String(id)}
+                    appearance="subtle"
+                    onClick={() =>
+                      document
+                        .getElementById(String(id))
+                        ?.scrollIntoView({ block: "start" })
+                    }
+                  >
+                    {label}
+                  </Button>
+                ))}
+            </nav>
+            <section className="surface settings" id="settings-pc">
               <Subtitle2>This PC</Subtitle2>
               <Field label="Theme">
                 <Dropdown
@@ -698,16 +731,23 @@ function Workspace({
               </p>
             </section>
             {hasRole(roles, ["admin", "pastor"]) && (
-              <Administration roles={roles} />
+              <div id="settings-church">
+                <Administration roles={roles} />
+              </div>
             )}
             {editor && (
-              <CommunicationSettingsPanel
-                roles={roles}
-                serviceTypes={data.types}
-              />
+              <div id="settings-communication">
+                <CommunicationSettingsPanel
+                  roles={roles}
+                  serviceTypes={data.types}
+                />
+              </div>
             )}
             {hasRole(roles, ["admin", "pastor"]) && (
-              <section className="surface communication-panel">
+              <section
+                className="surface communication-panel"
+                id="settings-kiosk"
+              >
                 <Subtitle2>Optional household kiosk</Subtitle2>
                 <p>
                   Open a service in Attendance first. Starting the kiosk signs

@@ -224,12 +224,14 @@ Status changes always open a dialog asking for date, method, other church, and r
 * History list of past bulletins below.
 
 ### 5.8 Reports
+Each report's title has a one-line description of what it answers under it, and Session-enriched reports carry the purple Session only badge.
 Left list of the seven reports from `PLAN.md` section 3.7. The right side holds filters (date range, service types, status, elder district), an on screen preview, and Export XLSX, Export CSV, and Print / PDF buttons. Print layouts use letter size, the church name at top, the report name and date range, and page numbers.
 
 ### 5.9 Kiosk (optional)
-Full screen, light theme, no nav. Big search box reading "Type your last name or phone number". Results show household cards with every member as a 64px toggle and a large "Check in" button. Shows "Welcome, Baker family" for 3 seconds, then resets. Exiting requires an Admin or Pastor PIN.
+Full screen, light theme on the warm background, no nav. The heading and household names use the display font; the date reads "Lord's Day, March 14, 2027". A big search box reads "Type your last name or full phone number". Results show each household with every member as a large check-in card (a real checkbox with a 22px name, at least 72px tall), and full-width 64px "Find household" and "Check in" buttons. After check-in it says "Welcome, Calder household. You are checked in." Exiting requires an Admin or Pastor PIN.
 
 ### 5.10 Settings
+Jump links at the top (This PC; Church, services and districts; Communication; Kiosk) scroll to each section, which stay on one page with a shared 960px width. Times show as "6:30 PM".
 Sections for Church (name, address, time zone), Service types, Elder districts, Users and roles, Email (Microsoft 365 connection status), Text (Twilio status and number), Bulletin (day, time, reminder person, OneDrive folder, subject, standard message), Custom fields, Backups, and Theme for this PC.
 
 ### 5.11 Member portal
@@ -253,6 +255,7 @@ Month is the default view, with List beside it for a date range and export.
 * **Panels** are white with a 1px border and 10px corners on the warm background. Do not put a panel inside another panel; group related content with headings and dividers instead.
 * **Tables** use plain column names ("Public calendar", never `PublicCalendar`) and show calendar dates as "Oct 11, 2026". Exports keep ISO dates. Export sits in the panel heading and is hidden when there is nothing to export.
 * **Session only** content carries a purple "Session only" badge with a lock and a soft purple outline. Never mark it with a coloured left edge alone.
+* **Status words** in tables (Status and State columns) show as small labels: green for done or current, amber for waiting or overdue, red for failed or declined, grey otherwise. The word is always visible, so colour never carries meaning alone.
 * **Tiles** show one key number in the display font with a short label. The lead tile may be filled with the brand green.
 
 * **Empty states** never say "0 records". They give one kind sentence and, where useful, one button, such as "No services yet. Add your Lord's Day services to start taking attendance. [Add service type]".

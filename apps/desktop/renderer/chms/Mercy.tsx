@@ -19,6 +19,7 @@ import {
   localSchedule,
   visitState,
   mercyCategories,
+  displayValue,
   mercyCategoryLabels,
   mercyOpen,
   mercyStatusLabels,
@@ -47,6 +48,7 @@ import {
 import {
   Picker,
   Records,
+  StatusPill,
   RecordEditor,
   friendlyError,
   type EditorField,
@@ -548,7 +550,9 @@ export function Mercy() {
                           {row.urgent ? " · Urgent" : ""}
                           {row.neededBy ? ` · by ${row.neededBy}` : ""}
                         </td>
-                        <td>{mercyStatusLabels[row.status]}</td>
+                        <td>
+                          <StatusPill text={mercyStatusLabels[row.status]} />
+                        </td>
                         <td>
                           {row.deaconUids.map(deacon).join(", ") || "None"}
                         </td>
@@ -721,7 +725,7 @@ export function Mercy() {
                   <tbody>
                     {notes.map((row) => (
                       <tr key={row.id}>
-                        <td>{row.date}</td>
+                        <td>{displayValue(row.date)}</td>
                         <td>{household(row.householdId)}</td>
                         <td>{requestName(row.requestId)}</td>
                         <td>{row.body}</td>
@@ -825,7 +829,11 @@ export function Mercy() {
                               {row.officerUids.map(officerName).join(", ") ||
                                 "None"}
                             </td>
-                            <td>{visitStates[visitState(row, new Date())]}</td>
+                            <td>
+                              <StatusPill
+                                text={visitStates[visitState(row, new Date())]}
+                              />
+                            </td>
                             <td>{row.purpose}</td>
                             <td>
                               {row.status !== "completed" && (

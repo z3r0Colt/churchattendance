@@ -288,7 +288,7 @@ test("labels Session care exports and prints a readable attendance matrix", asyn
     page.getByRole("columnheader", { name: "Current open follow-ups" }),
   ).toBeVisible();
   await expect(
-    page.locator(".fui-Badge").filter({ hasText: "Session only" }),
+    page.locator(".session-badge").filter({ hasText: "Session only" }),
   ).toBeVisible();
   const book = await downloadBook(page);
   expect(cells(book)).toContain("Session only");

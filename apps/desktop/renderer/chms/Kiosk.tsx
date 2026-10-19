@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { DateTime } from "luxon";
 import {
   Button,
   Checkbox,
@@ -71,12 +72,12 @@ export function Kiosk() {
   return (
     <FluentProvider theme={lightTheme} className="kiosk">
       <div className="kiosk-heading">
-        <span className="wordmark">SYCAMORE RPC</span>
+        <span className="wordmark">Sycamore</span>
         <Button onClick={() => setExit(!exit)}>Exit kiosk</Button>
       </div>
       <main>
         <Title3 as="h1">Welcome to the Lord's Day service</Title3>
-        <p>{date}</p>
+        <p className="kiosk-date">{kioskDate(date)}</p>
         {error && <MessageBar intent="error">{error}</MessageBar>}
         {welcome ? (
           <div className="kiosk-welcome" role="status">
@@ -129,21 +130,24 @@ export function Kiosk() {
             {result?.households.map((household) => (
               <section className="surface kiosk-household" key={household.id}>
                 <h2>{household.name}</h2>
-                {household.people.map((person) => (
-                  <Checkbox
-                    key={person.id}
-                    label={`${person.name}${person.present ? ", already checked in" : ""}`}
-                    disabled={person.present || busy}
-                    checked={person.present || selected.includes(person.id)}
-                    onChange={(_, row) =>
-                      setSelected((before) =>
-                        row.checked
-                          ? [...before, person.id]
-                          : before.filter((id) => id !== person.id),
-                      )
-                    }
-                  />
-                ))}
+                <div className="kiosk-people">
+                  {household.people.map((person) => (
+                    <Checkbox
+                      className="kiosk-chip"
+                      key={person.id}
+                      label={`${person.name}${person.present ? ", already checked in" : ""}`}
+                      disabled={person.present || busy}
+                      checked={person.present || selected.includes(person.id)}
+                      onChange={(_, row) =>
+                        setSelected((before) =>
+                          row.checked
+                            ? [...before, person.id]
+                            : before.filter((id) => id !== person.id),
+                        )
+                      }
+                    />
+                  ))}
+                </div>
               </section>
             ))}
             {result && (
@@ -153,7 +157,17 @@ export function Kiosk() {
                 onClick={() => {
                   setBusy(true);
                   void checkInKiosk(result.searchToken, selected)
-                    .then(() => setWelcome("Welcome. You are checked in."))
+                    .then(() =>
+                      setWelcome(
+                        `Welcome, ${
+                          result.households.find((household) =>
+                            household.people.some((person) =>
+                              selected.includes(person.id),
+                            ),
+                          )?.name || "friends"
+                        } household. You are checked in.`,
+                      ),
+                    )
                     .catch((error) => setError(friendlyError(error)))
                     .finally(() => setBusy(false));
                 }}
@@ -166,4 +180,11 @@ export function Kiosk() {
       </main>
     </FluentProvider>
   );
+}
+
+// "Lord's Day, March 14, 2027" in large type for the kiosk.
+function kioskDate(date: string) {
+  const day = DateTime.fromISO(date);
+  if (!date || !day.isValid) return "";
+  return `${day.weekday === 7 ? "Lord's Day" : day.toFormat("cccc")}, ${day.toFormat("LLLL d, yyyy")}`;
 }

@@ -25,7 +25,13 @@ import {
   useContactHistory,
   type useShepherdingData,
 } from "../data/shepherding";
-import { Picker, Records, RecordEditor, type EditorField } from "./Common";
+import {
+  Picker,
+  Records,
+  RecordEditor,
+  StatusPill,
+  type EditorField,
+} from "./Common";
 
 const stateLabels: Record<ContactState, string> = {
   gap: "Contact gap",
@@ -211,6 +217,8 @@ export function ContactGaps({
                             >
                               {value}
                             </Button>
+                          ) : key === "State" ? (
+                            <StatusPill text={String(value)} />
                           ) : (
                             value
                           )}

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Badge,
   Button,
   Checkbox,
   Field,
@@ -241,8 +240,9 @@ export function AttendanceReports({
     <>
       <div className="page-heading">
         <div>
+          <span className="eyebrow">REPORTS</span>
           <Title3 as="h1">{attendanceReportTitles[kind]}</Title3>
-          <p>Summary, detail and source rows for review and export</p>
+          <p>{reportDescriptions[kind]}</p>
         </div>
         <div className="actions">
           <Button onClick={data.refresh}>Refresh history</Button>
@@ -252,13 +252,9 @@ export function AttendanceReports({
         </div>
       </div>
       {privateReport && (
-        <Badge
-          icon={<LockClosedRegular />}
-          color="important"
-          appearance="outline"
-        >
-          Session only
-        </Badge>
+        <span className="session-badge">
+          <LockClosedRegular aria-hidden /> Session only
+        </span>
       )}
       {(error || data.error || (privateReport && data.careError)) && (
         <MessageBar intent="error">
@@ -437,3 +433,15 @@ export function AttendanceReports({
     </>
   );
 }
+
+// What each report answers, shown under its title.
+const reportDescriptions: Record<AttendanceReportKind, string> = {
+  summary:
+    "People present at each recorded service, with averages and the same week last year.",
+  matrix: "Who was marked present at each recorded service in the period.",
+  shepherding:
+    "Recorded Lord's Days missed and follow-up for each person, by elder district.",
+  visitors:
+    "Visitors in the period, how often they came and whether anyone has followed up.",
+  roll: "The membership roll on the last date, and every change in the period.",
+};
