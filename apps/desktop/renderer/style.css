@@ -1095,3 +1095,115 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .app [hidden] {
   display: none !important;
 }
+
+/* Calendar month view (DESIGN.md 5.12). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.app .month-panel {
+  margin: 16px 0 20px;
+  padding: 16px 20px 20px;
+}
+.month-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.month-heading h2 {
+  margin: 0 8px;
+  min-width: 190px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 24px;
+}
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--colorNeutralStroke1);
+  border-left: 1px solid var(--colorNeutralStroke1);
+}
+.month-weekday {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--colorNeutralForeground2);
+  border-right: 1px solid var(--colorNeutralStroke1);
+  border-bottom: 1px solid var(--colorNeutralStroke1);
+  background: var(--colorNeutralBackground2);
+}
+.month-day {
+  min-height: 104px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-right: 1px solid var(--colorNeutralStroke1);
+  border-bottom: 1px solid var(--colorNeutralStroke1);
+}
+.month-day.outside {
+  background: var(--colorNeutralBackground2);
+}
+.month-day.outside .month-date {
+  color: var(--colorNeutralForeground3);
+}
+.month-date {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.month-day.today .month-date {
+  align-self: flex-start;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: #2f6b4f;
+  color: #ffffff;
+}
+.month-event {
+  display: block;
+  width: 100%;
+  min-height: 26px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--present-bg);
+  color: var(--present-fg);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.month-event.cancelled {
+  background: transparent;
+  color: var(--colorNeutralForeground3);
+  text-decoration: line-through;
+}
+.month-event.selected {
+  outline: 2px solid #2f6b4f;
+  outline-offset: -2px;
+}
+.month-time {
+  font-weight: 600;
+}
+.app .occurrence-panel h2 {
+  margin: 4px 0 0;
+}
+.app .occurrence-panel .section-heading > div:first-child {
+  display: flex;
+  flex-direction: column;
+}
+/* A table inside a panel joins the panel instead of drawing a second box. */
+.app .surface .surface.table-card {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}

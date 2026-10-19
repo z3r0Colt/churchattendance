@@ -413,6 +413,7 @@ test("cancels one date from the desktop calendar and keeps it listed for restori
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
+  await page.getByRole("tab", { name: "List", exact: true }).click();
   await page.getByLabel("Through").fill(dates[3]);
   const row = page.getByRole("row").filter({
     hasText: DateTime.fromISO(dates[1]).toFormat("LLL d, yyyy"),
@@ -692,6 +693,7 @@ test.describe("event reminders", () => {
     await page.getByLabel("Password").fill("LocalDemo123!");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.getByRole("button", { name: "Calendar", exact: true }).click();
+    await page.getByRole("tab", { name: "List", exact: true }).click();
     await page.getByLabel("Through").fill(dates[3]);
     await page
       .getByRole("button", { name: "Evening Bible study" })
@@ -717,5 +719,34 @@ test.describe("event reminders", () => {
       fullPage: true,
       animations: "disabled",
     });
+  });
+});
+
+test("shows the month with Lord's Day first and opens a date from the grid", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Email").fill("pastor@example.test");
+  await page.getByLabel("Password").fill("LocalDemo123!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Calendar", exact: true }).click();
+  const target = DateTime.fromISO(dates[1]).toFormat("LLLL yyyy");
+  for (let step = 0; step < 3; step++) {
+    if (await page.getByRole("heading", { name: target }).isVisible()) break;
+    await page.getByRole("button", { name: "Next month" }).click();
+  }
+  await expect(page.getByRole("heading", { name: target })).toBeVisible();
+  const label = `Evening Bible study, ${DateTime.fromISO(dates[1]).toFormat("LLLL d")} at 6:00 PM`;
+  await page.getByRole("button", { name: label, exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Selected date" }),
+  ).toContainText("Evening Bible study");
+  await expect(
+    page.getByRole("button", { name: "Cancel this date", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/design-calendar-month.png",
+    fullPage: true,
+    animations: "disabled",
   });
 });

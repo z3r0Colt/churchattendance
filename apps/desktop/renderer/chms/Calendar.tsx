@@ -4,6 +4,8 @@ import {
   Field,
   Input,
   MessageBar,
+  Tab,
+  TabList,
   Title3,
   Subtitle2,
 } from "@fluentui/react-components";
@@ -37,8 +39,13 @@ import {
   type EditorField,
 } from "./Common";
 import { EventReminders } from "./EventReminders";
+import { MonthGrid } from "./MonthGrid";
 export function Calendar({ roles }: { roles: Role[] }) {
   const data = usePublicChms();
+  const [view, setView] = useState("month");
+  const [month, setMonth] = useState(() =>
+    DateTime.now().startOf("month").toISODate()!,
+  );
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [picked, setPicked] = useState<Occurrence | null>(null);
@@ -120,7 +127,7 @@ export function Calendar({ roles }: { roles: Role[] }) {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">CHURCH CALENDAR</span>
+          <span className="eyebrow">THE CHURCH CALENDAR</span>
           <Title3 as="h1">Calendar & events</Title3>
           <p>Recurring gatherings and registration for each occurrence.</p>
         </div>
@@ -135,45 +142,78 @@ export function Calendar({ roles }: { roles: Role[] }) {
           {error || data.error || responses.error}
         </MessageBar>
       )}
-      <div className="report-filters">
-        <Field label="From">
-          <Input
-            type="date"
-            value={first}
-            onChange={(_, row) => setFrom(row.value)}
+      <TabList
+        selectedValue={view}
+        onTabSelect={(_, value) => setView(String(value.value))}
+      >
+        <Tab value="month">Month</Tab>
+        <Tab value="list">List</Tab>
+      </TabList>
+      {view === "month" && (
+        <MonthGrid
+          events={data.events}
+          zone={data.zone}
+          month={month}
+          setMonth={setMonth}
+          selectedId={selected?.id || ""}
+          choose={setPicked}
+        />
+      )}
+      {view === "list" && (
+        <>
+          <div className="report-filters">
+            <Field label="From">
+              <Input
+                type="date"
+                value={first}
+                onChange={(_, row) => setFrom(row.value)}
+              />
+            </Field>
+            <Field label="Through">
+              <Input
+                type="date"
+                value={last}
+                onChange={(_, row) => setTo(row.value)}
+              />
+            </Field>
+          </div>
+          <Records
+            rows={occurrences.map((row) => ({
+              id: row.id,
+              Event: row.title,
+              Starts: DateTime.fromISO(row.start)
+                .setZone(data.zone)
+                .toFormat("LLL d, yyyy h:mm a"),
+              Ends: DateTime.fromISO(row.end)
+                .setZone(data.zone)
+                .toFormat("h:mm a"),
+              Location: row.location,
+              Status: row.cancelled
+                ? "Cancelled"
+                : row.changed
+                  ? "Changed for this date"
+                  : "As scheduled",
+            }))}
+            choose={(index) => setPicked(occurrences[index])}
+            empty="No gatherings in these dates."
           />
-        </Field>
-        <Field label="Through">
-          <Input
-            type="date"
-            value={last}
-            onChange={(_, row) => setTo(row.value)}
-          />
-        </Field>
-      </div>
-      <Records
-        rows={occurrences.map((row) => ({
-          id: row.id,
-          Event: row.title,
-          Starts: DateTime.fromISO(row.start)
-            .setZone(data.zone)
-            .toFormat("LLL d, yyyy h:mm a"),
-          Ends: DateTime.fromISO(row.end).setZone(data.zone).toFormat("h:mm a"),
-          Location: row.location,
-          Status: row.cancelled
-            ? "Cancelled"
-            : row.changed
-              ? "Changed for this date"
-              : "As scheduled",
-        }))}
-        choose={(index) => setPicked(occurrences[index])}
-      />
+        </>
+      )}
       {selected && (
-        <section className="surface communication-panel">
+        <section
+          className="surface communication-panel occurrence-panel"
+          aria-label="Selected date"
+        >
           <div className="section-heading">
-            <Subtitle2>
-              {selected.title} · {selected.date}
-            </Subtitle2>
+            <div>
+              <span className="eyebrow">
+                {DateTime.fromISO(selected.start)
+                  .setZone(data.zone)
+                  .toFormat("cccc, LLLL d · h:mm a")
+                  .replace(/^Sunday/, "Lord's Day")}
+              </span>
+              <Subtitle2 as="h2">{selected.title}</Subtitle2>
+            </div>
             {editable && series && !series.cancelled && (
               <div className="actions">
                 {selected.cancelled || selected.changed ? (
@@ -256,6 +296,7 @@ export function Calendar({ roles }: { roles: Role[] }) {
             />
           )}
           <Records
+            empty="No responses for this date yet."
             rows={visible.map((row) => ({
               id: row.id,
               Name:
@@ -419,6 +460,7 @@ function StaffSubscriptions() {
         </MessageBar>
       )}
       <Records
+        empty="No calendar links yet."
         rows={feeds.map((feed) => ({
           id: feed.id,
           Name: feed.label,

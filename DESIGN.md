@@ -239,6 +239,14 @@ The portal uses the same warm background, white cards with 12px corners, and the
 * On phones (600px and narrower) the section tabs become a fixed bottom bar with an icon above each label, and the page leaves room for it.
 * Sunday reads as the Lord's Day in dates and date badges.
 
+### 5.12 Calendar
+Month is the default view, with List beside it for a date range and export.
+
+* The month grid starts each week on the Lord's Day, shows the month name in the display font with previous, next and This month controls, and dims days outside the month. Today's date is marked in green.
+* Each occurrence is a small green button with its time and title. A cancelled date stays in place, struck through. A moved date appears on the day it now meets. The button's accessible name gives the title, date, time and any change.
+* Choosing an occurrence opens the Selected date panel below: its date line and title, Change, Cancel or Restore this date, Edit event series, registrations and RSVPs, and the series reminders.
+* My calendar link sits at the bottom.
+
 ## 6. Patterns
 
 * **Panels** are white with a 1px border and 10px corners on the warm background. Do not put a panel inside another panel; group related content with headings and dividers instead.
