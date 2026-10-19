@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auth: { currentUser: null as { uid: string } | null },
@@ -38,12 +38,19 @@ describe("browserStaffSignIn", () => {
   beforeEach(() => {
     mocks.calls.length = 0;
     mocks.auth.currentUser = null;
+    mocks.answer = () => ({ pending: true });
     vi.clearAllMocks();
+    // Read the timers when called, so fake timers apply.
     vi.stubGlobal("window", {
       open: vi.fn(),
-      setTimeout: globalThis.setTimeout,
-      clearTimeout: globalThis.clearTimeout,
+      setTimeout: (run: () => void, ms: number) =>
+        globalThis.setTimeout(run, ms),
+      clearTimeout: (id: ReturnType<typeof setTimeout>) =>
+        globalThis.clearTimeout(id),
     });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("signs in whichever account approves from the sign-in screen", async () => {
@@ -82,5 +89,58 @@ describe("browserStaffSignIn", () => {
       browserStaffSignIn(() => {}, { sameAccount: true }),
     ).rejects.toThrow("Approve with the account signed in on this PC.");
     expect(signInWithCustomToken).not.toHaveBeenCalled();
+  });
+
+  it("does not start when already cancelled", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    mocks.answer = () => ({ token: tokenFor("fictional-elder") });
+    await expect(
+      browserStaffSignIn(() => {}, { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(mocks.calls).toEqual([]);
+    expect(signInWithCustomToken).not.toHaveBeenCalled();
+  });
+
+  it("stops waiting at once when cancelled between checks", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const controller = new AbortController();
+    const outcome = browserStaffSignIn(() => {}, {
+      signal: controller.signal,
+    }).catch((cause: unknown) => cause);
+    // The first check has been answered and the 1.5 second wait has begun.
+    await vi.waitFor(() => expect(vi.getTimerCount()).toBe(1));
+    expect(mocks.calls).toHaveLength(1);
+    controller.abort();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(vi.getTimerCount()).toBe(0);
+    expect(await outcome).toMatchObject({ name: "AbortError" });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(mocks.calls).toHaveLength(1);
+    expect(signInWithCustomToken).not.toHaveBeenCalled();
+  });
+
+  it("signs nobody in when cancelled while the browser answers", async () => {
+    const controller = new AbortController();
+    mocks.answer = () => {
+      controller.abort();
+      return { token: tokenFor("fictional-elder") };
+    };
+    await expect(
+      browserStaffSignIn(() => {}, { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(signInWithCustomToken).not.toHaveBeenCalled();
+  });
+
+  it("stops polling when cancelled during a check", async () => {
+    const controller = new AbortController();
+    mocks.answer = () => {
+      controller.abort();
+      return { pending: true };
+    };
+    await expect(
+      browserStaffSignIn(() => {}, { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(mocks.calls).toHaveLength(1);
   });
 });

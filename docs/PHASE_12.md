@@ -58,7 +58,7 @@ The staff web is the desktop renderer built a second time for browsers (`apps/de
 
 `tests/e2e/security.spec.ts` checks that a passkey sign-in on the church security page stores no account in IndexedDB or localStorage, is not shared with a second tab and survives a reload of the same tab. `apps/desktop/renderer/security/passkey.test.ts` checks that the helper sets session persistence before signing in and that a passkey for another account signs nobody in.
 
-`tests/e2e/security.spec.ts` also checks that a desktop confirmation in the browser refuses another account's approval (no token and no sign-in made), refuses it with no one signed in, accepts the same account, and that the sign-in screen's handoff still accepts any account. `apps/desktop/renderer/data/security.test.ts` checks that the desktop asks the server for the same account and stops before signing in when the returned sign-in is for another account.
+`tests/e2e/security.spec.ts` also checks that a desktop confirmation in the browser refuses another account's approval (no token and no sign-in made), refuses it with no one signed in, accepts the same account, and that the sign-in screen's handoff still accepts any account. `apps/desktop/renderer/data/security.test.ts` checks that the desktop asks the server for the same account and stops before signing in when the returned sign-in is for another account, and that cancelling stops the checks at once, clears the wait between them and signs nobody in.
 
 ## Every screen on a phone (part 2)
 
@@ -77,7 +77,7 @@ Account changes that the server already limits to a sign-in within the last five
 * The server's refusal carries the reason `recent-sign-in` (`RECENT_SIGN_IN_REASON` in `packages/shared`). `securityCall` sees it, opens **Confirm it is you** and runs the action once more after a successful confirmation.
 * The dialog names the signed-in account and offers its password (and authenticator code when the account has one), **Confirm with passkey** in the staff web, or **Confirm in browser** on the desktop. It confirms the same account only; it never switches accounts, and a passkey for another account stops before signing in.
 * **Confirm in browser** asks the server to check that the account approving on the church security page is the one signed in on this PC. An approval from any other account is used up and refused with "Approve with the account signed in on this PC.", which the dialog shows, and no sign-in is made for it. The desktop also checks the account in the returned sign-in before using it. The desktop sign-in screen and **Open browser sign-in and passkeys** still accept whichever account approves.
-* **Cancel** changes nothing and says "Confirmation cancelled. Nothing was changed."
+* **Cancel** changes nothing and says "Confirmation cancelled. Nothing was changed." It stays available while **Confirm in browser** waits for the browser. Cancel or Escape stops the desktop checking for the approval, so approving in the browser afterwards signs nothing in, and the next confirmation opens with every button ready. A late answer from an earlier confirmation never settles or closes a newer one.
 * When the account has an authenticator, the code field that replaces the password starts empty; the typed password never carries into it. The sign-in form (desktop, staff web and the church security page) works the same way, and its **Start again** returns to an empty password.
 * A confirm dialog opened from a form nests inside that form's dialog, which Fluent's modal handling needs; a sibling dialog left the form unreachable after it closed.
 
@@ -99,6 +99,7 @@ Account changes that the server already limits to a sign-in within the last five
 * the phone menu by keyboard alone;
 * a sensitive account change answered as stale: Cancel creates nothing and leaves the form usable; Confirm with the password creates the account;
 * Confirm with passkey, with a virtual authenticator, creates the account without reloading the tab or changing account;
+* on the desktop, Cancel stays available while Confirm in browser waits, stops the checks for a browser approval once pressed, and the next confirmation opens with every button ready and creates the account with the password;
 * the confirm dialog asking for an authenticator code shows an empty code field and the password nowhere on the page;
 * the sign-in authenticator step shows an empty code field, and Start again returns to an empty password field;
 * the statistical report's figures in the browser equal the desktop's.

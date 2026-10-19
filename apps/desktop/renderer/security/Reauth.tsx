@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Button,
   Dialog,
@@ -45,26 +45,49 @@ export function ReauthHost() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
-  useEffect(() => hostReauth(setPending), []);
-  const email = auth.currentUser?.email || "";
-  function finish(outcome: "done" | "cancel") {
-    if (outcome === "done") pending?.resolve();
-    else
-      pending?.reject(
-        new Error("Confirmation cancelled. Nothing was changed."),
-      );
-    setPending(null);
+  // The request on screen and the confirmation running for it. A confirmation answers
+  // only while it is still the one running, so a late answer from an earlier one
+  // never settles or closes a newer request.
+  const shown = useRef<Pending | null>(null),
+    running = useRef<AbortController | null>(null);
+  // Shows a request, or none, and stops any confirmation still running.
+  function show(request: Pending | null) {
+    running.current?.abort();
+    running.current = null;
+    shown.current = request;
+    setPending(request);
     setResolver(null);
+    setBusy(false);
     setError("");
     setNotice("");
   }
-  async function attempt(action: () => Promise<unknown>, explain = false) {
+  useEffect(() => hostReauth(show), []);
+  const email = auth.currentUser?.email || "";
+  function finish(outcome: "done" | "cancel", request = shown.current) {
+    if (!request || request !== shown.current) return;
+    show(null);
+    if (outcome === "done") request.resolve();
+    else
+      request.reject(new Error("Confirmation cancelled. Nothing was changed."));
+  }
+  async function attempt(
+    action: (signal: AbortSignal) => Promise<unknown>,
+    explain = false,
+  ) {
+    const request = shown.current;
+    if (!request) return;
+    running.current?.abort();
+    const controller = new AbortController();
+    running.current = controller;
+    const current = () => running.current === controller;
     setBusy(true);
     setError("");
     try {
-      await action();
-      finish("done");
+      await action(controller.signal);
+      if (current()) finish("done", request);
     } catch (cause) {
+      // Cancelled, or replaced by a newer request: that one has its own answer.
+      if (!current()) return;
       if (
         (cause as { code?: string }).code === "auth/multi-factor-auth-required"
       ) {
@@ -77,7 +100,10 @@ export function ReauthHost() {
           "That did not confirm your sign-in. Check the details and try again.",
       );
     } finally {
-      setBusy(false);
+      if (current()) {
+        running.current = null;
+        setBusy(false);
+      }
     }
   }
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -169,17 +195,19 @@ export function ReauthHost() {
                   void (staffWeb
                     ? attempt(passkey)
                     : attempt(
-                        () =>
-                          browserStaffSignIn(setNotice, { sameAccount: true }),
+                        (signal) =>
+                          browserStaffSignIn(setNotice, {
+                            sameAccount: true,
+                            signal,
+                          }),
                         true,
                       ))
                 }
               >
                 {staffWeb ? "Confirm with passkey" : "Confirm in browser"}
               </Button>
-              <Button disabled={busy} onClick={() => finish("cancel")}>
-                Cancel
-              </Button>
+              {/* Cancel stays available while a browser confirmation waits. */}
+              <Button onClick={() => finish("cancel")}>Cancel</Button>
             </DialogActions>
           </DialogBody>
         </form>

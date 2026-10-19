@@ -498,6 +498,89 @@ test("Confirm with passkey confirms in this tab and the change continues", async
   await run.created.close();
 });
 
+test("Cancel stops a desktop browser confirmation and the next one starts fresh", async ({
+  browser,
+}) => {
+  const run = await context(browser, booth);
+  const { page } = run;
+  const stale = await answerStale(page);
+  await signInDesktop(page, "pastor@example.test");
+  await page
+    .getByRole("button", { name: "Account security", exact: true })
+    .click();
+  const checks: number[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().includes("/us-central1/completeDesktopSignIn")
+    )
+      checks.push(Date.now());
+  });
+  const confirm = page.getByRole("alertdialog", { name: "Confirm it is you" });
+  const editor = page.getByRole("dialog", { name: "Add staff account" });
+  stale.calls = 1;
+  await page.getByRole("button", { name: "Add staff account" }).click();
+  await page
+    .getByLabel(/^Sign-in email/)
+    .fill("phase12-browser-cancelled@example.test");
+  await page.getByLabel(/^Display name/).fill("Fictional Helper");
+  await page.getByRole("checkbox", { name: "readOnly" }).check();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(confirm).toBeVisible();
+  // The person starts in the browser, then closes it without approving.
+  const opened = run.created.waitForEvent("page");
+  await confirm
+    .getByRole("button", { name: "Confirm in browser", exact: true })
+    .click();
+  await (await opened).close();
+  await expect(confirm).toContainText("Finish sign-in in your browser");
+  await expect.poll(() => checks.length).toBeGreaterThan(0);
+  // Only the confirm buttons wait; Cancel stays available.
+  await expect(
+    confirm.getByRole("button", { name: "Confirm in browser", exact: true }),
+  ).toBeDisabled();
+  const cancel = confirm.getByRole("button", { name: "Cancel", exact: true });
+  await expect(cancel).toBeEnabled();
+  await cancel.click();
+  await expect(
+    page.getByText("Confirmation cancelled. Nothing was changed."),
+  ).toBeVisible();
+  await expect(confirm).toBeHidden();
+  // Cancelling stops the checks for a browser approval.
+  const stopped = checks.length;
+  await page.waitForTimeout(4500);
+  expect(checks.length).toBe(stopped);
+  await expect(
+    getAuth().getUserByEmail("phase12-browser-cancelled@example.test"),
+  ).rejects.toThrow();
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(editor).toBeHidden();
+  // Trying again opens a dialog ready to use.
+  stale.calls = 1;
+  await page.getByRole("button", { name: "Add staff account" }).click();
+  await page
+    .getByLabel(/^Sign-in email/)
+    .fill("phase12-browser-retried@example.test");
+  await page.getByLabel(/^Display name/).fill("Fictional Helper");
+  await page.getByRole("checkbox", { name: "readOnly" }).check();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(confirm).toBeVisible();
+  await expect(confirm).not.toContainText("Finish sign-in in your browser");
+  for (const name of ["Confirm", "Confirm in browser", "Cancel"])
+    await expect(
+      confirm.getByRole("button", { name, exact: true }),
+    ).toBeEnabled();
+  await confirm.getByLabel(/^Password/).fill("LocalDemo123!");
+  await confirm.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(confirm).toBeHidden();
+  await expect(page.getByLabel("Account setup link")).toBeVisible();
+  expect(
+    (await getAuth().getUserByEmail("phase12-browser-retried@example.test"))
+      .uid,
+  ).toBeTruthy();
+  await run.created.close();
+});
+
 test("the sign-in authenticator step starts empty and Start again clears the password", async ({
   browser,
 }) => {

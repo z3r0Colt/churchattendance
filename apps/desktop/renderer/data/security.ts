@@ -17,9 +17,26 @@ const random = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
+// Waits between checks for the browser approval, ending at once if cancelled.
+function pause(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener("abort", stop);
+      resolve();
+    }, ms);
+    function stop() {
+      window.clearTimeout(timer);
+      reject(signal!.reason);
+    }
+    signal?.addEventListener("abort", stop, { once: true });
+  });
+}
 export type BrowserSignInOptions = {
   // Confirm the account already signed in on this PC instead of signing in anew.
   sameAccount?: boolean;
+  // Stops waiting for the browser, for example when the person cancels. Nobody is
+  // signed in after it fires, even if the browser approves later.
+  signal?: AbortSignal;
 };
 // Signs in on this PC once the person approves on the church security page in their
 // browser. The sign-in screen accepts whichever account approves; confirming it is you
@@ -28,6 +45,8 @@ export async function browserStaffSignIn(
   notice: (text: string) => void,
   options: BrowserSignInOptions = {},
 ) {
+  const { signal } = options;
+  signal?.throwIfAborted();
   const id = random(),
     verifier = random();
   const digest = await crypto.subtle.digest(
@@ -37,10 +56,12 @@ export async function browserStaffSignIn(
   const challenge = Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
+  signal?.throwIfAborted();
   const url = new URL(staffSecurityUrl());
   url.hash = new URLSearchParams({ id, challenge }).toString();
   if (native) await native.openStaffSecurity(id, challenge);
   else window.open(url.href, "_blank", "noopener,noreferrer");
+  signal?.throwIfAborted();
   notice(
     `Finish sign-in in your browser. Approve only if it shows this code: ${id.slice(-8)}.`,
   );
@@ -51,10 +72,12 @@ export async function browserStaffSignIn(
   );
   const expires = Date.now() + 3 * 60_000;
   while (Date.now() < expires) {
+    signal?.throwIfAborted();
     const result = await securityCall<{ pending?: boolean; token?: string }>(
       "completeDesktopSignIn",
       input,
     );
+    signal?.throwIfAborted();
     if (result.token) {
       // The server already refuses another account's approval; this checks once more.
       const current = auth.currentUser?.uid;
@@ -66,7 +89,7 @@ export async function browserStaffSignIn(
       await signInWithCustomToken(auth, result.token);
       return;
     }
-    await new Promise((resolve) => window.setTimeout(resolve, 1500));
+    await pause(1500, signal);
   }
   throw new Error("Browser sign-in expired. Start again.");
 }
