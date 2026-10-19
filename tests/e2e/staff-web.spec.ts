@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { readdirSync, readFileSync } from "node:fs";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -40,6 +40,39 @@ async function openRoll(page: Page) {
   await expect(
     page.getByRole("button", { name: /^Mary Baker,/ }),
   ).toBeVisible();
+}
+// Records every dialog the page raises and answers the leave-page prompt with Cancel.
+function recordDialogs(page: Page) {
+  const dialogs: string[] = [];
+  page.on("dialog", (dialog) => {
+    dialogs.push(dialog.type());
+    void dialog.dismiss();
+  });
+  return dialogs;
+}
+async function markOffline(page: Page, context: BrowserContext, name: string) {
+  await context.setOffline(true);
+  await page.getByRole("button", { name: `${name}, absent` }).click();
+  await expect(
+    page.getByRole("button", { name: `${name}, present` }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Offline, keep this tab open", { exact: true }),
+  ).toBeVisible();
+}
+// The tab must be able to load the sign-in page again, so the network returns
+// while the church records stay out of reach and the mark stays unsaved.
+async function keepRecordsUnreachable(page: Page, context: BrowserContext) {
+  await context.route("http://127.0.0.1:8080/**", (route) => route.abort());
+  await context.setOffline(false);
+  await expect(page.getByText("Saving", { exact: true })).toBeVisible();
+}
+async function expectLocked(page: Page, dialogs: string[]) {
+  await expect(
+    page.getByRole("button", { name: "Sign in", exact: true }),
+  ).toBeVisible();
+  expect(dialogs).toEqual([]);
+  await expect(page.getByText(/Baker|Calder|Moss/)).toHaveCount(0);
 }
 test.afterAll(async () => {
   const db = getFirestore();
@@ -198,6 +231,75 @@ test("the staff web keeps nothing in browser storage and forgets an account afte
   await expect(
     page.getByRole("button", { name: "Settings", exact: true }),
   ).toHaveCount(0);
+  await context.close();
+});
+test("the staff web asks before leaving while a mark is unsaved", async ({
+  browser,
+}) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  const dialogs = recordDialogs(page);
+  await signIn(page, "volunteer@example.test");
+  await openRoll(page);
+  await markOffline(page, context, "Grace Calder");
+  await page.close({ runBeforeUnload: true });
+  await expect.poll(() => dialogs).toEqual(["beforeunload"]);
+  await context.close();
+});
+test("Lock anyway with an unsaved mark reloads past the leave-page prompt", async ({
+  browser,
+}) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  const dialogs = recordDialogs(page);
+  await signIn(page, "volunteer@example.test");
+  await openRoll(page);
+  await markOffline(page, context, "Eli Moss");
+  await page.getByRole("button", { name: "Lock now" }).click();
+  await keepRecordsUnreachable(page, context);
+  await page.getByRole("button", { name: "Lock anyway" }).click();
+  await expectLocked(page, dialogs);
+  await context.close();
+});
+test("the idle lock with an unsaved mark reloads past the leave-page prompt", async ({
+  browser,
+}) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  await page.clock.install();
+  const dialogs = recordDialogs(page);
+  await signIn(page, "volunteer@example.test");
+  await openRoll(page);
+  await markOffline(page, context, "James Calder");
+  await keepRecordsUnreachable(page, context);
+  await page.clock.fastForward("31:00");
+  await expectLocked(page, dialogs);
+  // The idle lock discards a mark that never reached the church records.
+  const services = await getFirestore()
+    .collection("services")
+    .where("date", "==", date)
+    .get();
+  expect(services.size).toBeGreaterThan(0);
+  expect(services.docs.some((row) => row.data().present?.james)).toBe(false);
+  await context.close();
+});
+test("a lock whose reload is held back shows no records", async ({
+  browser,
+}) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  const dialogs = recordDialogs(page);
+  await signIn(page, "volunteer@example.test");
+  await openRoll(page);
+  // Something other than the app holds back the reload, and the person cancels it.
+  await page.evaluate(() =>
+    window.addEventListener("beforeunload", (event) => event.preventDefault()),
+  );
+  await page.getByRole("button", { name: "Lock now" }).click();
+  await expect.poll(() => dialogs).toEqual(["beforeunload"]);
+  await expect(page.getByText("Opening Sycamore RPC")).toBeVisible();
+  await expect(page.getByText(/Baker|Calder|Moss/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Lock now" })).toHaveCount(0);
   await context.close();
 });
 test("a staff member signs in to the staff web with a passkey", async ({

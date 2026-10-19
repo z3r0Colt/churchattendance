@@ -324,9 +324,15 @@ function Workspace({
     };
   }, []);
   // Marks on the staff web live only in this tab's memory until they reach the server.
+  // A lock signs out before it reloads, so the reload that clears the records is never held back.
   useEffect(() => {
     if (!staffWeb || !data.pending) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!auth.currentUser) return;
+      event.preventDefault();
+      // Chromium before 119 asks only when returnValue is set.
+      event.returnValue = true;
+    };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [data.pending]);

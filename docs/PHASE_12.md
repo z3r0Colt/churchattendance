@@ -28,14 +28,16 @@ The staff web is the desktop renderer built a second time for browsers (`apps/de
 ## Records in the browser
 
 * Firestore uses a memory cache in the web build. Nothing from the church records is written to IndexedDB or localStorage; localStorage holds only the theme choice.
-* Any sign-out or change of account reloads the tab, which drops every listener and cached document before the next person signs in. This covers Lock now, the idle lock, revocation and a passkey sign-in over another account.
+* Any sign-out or change of account reloads the tab, which drops every listener and cached document before the next person signs in. This covers Lock now, the idle lock, revocation and a passkey sign-in over another account. The records leave the screen before the reload starts, and the leave-page question is asked only while someone is signed in, so it never holds back the reload after a lock; a reload that is cancelled or blocked shows no records.
 
 ## Phone attendance and offline
 
 * Below 760px the sidebar becomes a labelled **Menu** (with `aria-expanded`) that opens over the page. Choosing a destination closes it, Escape closes it and returns focus to Menu, and the signed-in name and roles move into it. Session lock labels stay on menu items.
 * The top bar stays in view with the sync state. The roll footer names the service and date. Tiles go two across, name chips are at least 56px tall, and household buttons and tabs at least 48px. Wide content scrolls inside the page rather than widening it.
 * **What works offline:** with the roll already open, marking and unmarking names, Mark all and Undo. Marks stay in this tab and reach the church records when the connection returns. Other PCs and phones keep their own marks, because each mark is still one `present.{personId}` field.
-* **What does not:** opening a new service or a different date, adding visitors and every other screen need a connection, as on the desktop. Closing or reloading the tab before marks are saved loses them. The sync badge reads "Offline, keep this tab open", the browser asks before leaving while marks are unsaved, and Lock now warns with **Lock anyway** or **Keep working**. The 30-minute idle lock still locks.
+* **What does not:** opening a new service or a different date, adding visitors and every other screen need a connection, as on the desktop. Closing or reloading the tab before marks are saved loses them. The sync badge reads "Offline, keep this tab open", the browser asks before leaving while marks are unsaved, and Lock now warns with **Lock anyway** or **Keep working**.
+* **The idle lock discards unsaved marks.** The 30-minute idle lock still locks, and marks that have not reached the church records are lost when it does. This is deliberate: a shared phone left alone locks rather than staying signed in to keep them.
+* **iPhones do not ask before leaving.** iPhone and iPad browsers never show the leave-page question, so there the only protection for unsaved marks is keeping the tab open until the badge reads "Online".
 
 ## Local use
 
@@ -47,6 +49,7 @@ The staff web is the desktop renderer built a second time for browsers (`apps/de
 
 * a phone and the desktop mark different names at the same moment and both see both; the phone goes offline, marks a name while the desktop clears another, reconnects, and both changes survive; touch target, no horizontal scroll, light and dark screenshots;
 * no Firestore IndexedDB, nothing but the theme in localStorage, no desktop bridge, a second tab not signed in, the menu opened and closed by mouse and Escape, no kiosk, and Lock now followed by a volunteer sign-in in the same tab shows none of the Pastor's name or Session menu;
+* with a mark unsaved, closing the tab asks before leaving, while Lock anyway and the idle lock (run on Playwright's clock) both reach the sign-in page without the question and leave no names on screen, and the idle lock's mark never reaches the records;
 * passkey sign-in to the staff web with a virtual authenticator and a real WebAuthn assertion;
 * the built staff web bundle contains no desktop bridge names.
 

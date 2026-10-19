@@ -36,11 +36,20 @@ export function useAuth() {
       onIdTokenChanged(auth, async (user) => {
         // The staff web holds records only in memory. Reloading on sign-out or a change of
         // account drops every listener and cached document before anyone else signs in.
+        // The records leave the screen first, so a reload that is blocked or cancelled shows none.
         if (
           staffWeb &&
           signedInUid.current &&
           user?.uid !== signedInUid.current
         ) {
+          setState({
+            loading: true,
+            user: null,
+            roles: [],
+            kiosk: false,
+            assured: false,
+            error: "",
+          });
           location.reload();
           return;
         }
