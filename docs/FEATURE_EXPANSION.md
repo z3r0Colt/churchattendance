@@ -131,7 +131,7 @@ Calendar tests cover recurrence across daylight-saving changes, cancelled/resche
 
 ## Phase 11. Church records and data tools
 
-Status is planned. Depends on Phase 7 and provides additional inputs to Phase 8 indicators and Phase 9 important-date workflows.
+Status is implemented in code. See [Phase 11 implementation](PHASE_11.md) for supported workflows and limits. Depends on Phase 7 and provides additional inputs to Phase 8 indicators and Phase 9 important-date workflows.
 
 ### Officers, quorum and communion
 

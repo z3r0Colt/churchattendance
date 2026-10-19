@@ -91,6 +91,8 @@ Use these words in code, UI text and docs.
 * Store dates as ISO `YYYY-MM-DD` strings for calendar dates (birthdays, service dates) and Firestore `Timestamp` for moments (check-in time, sent time). The church time zone setting (`settings/church.timeZone`) decides what "Saturday 6:00 PM" means. Never use the PC's local zone in Functions.
 * Security expiration/audit moments also use Firestore Timestamps. `validAfter` and handoff `authTime` are explicitly Auth-protocol epoch-second cutoffs for comparison with the signed `auth_time` claim. They are not church calendar dates.
 * Membership status changes always create a `membershipEvents` document in the same batch.
+* Family links live in `relationships`, separate from households, and grant no directory, portal or care access.
+* Imports write people only through the reviewed batch callables, one row per transaction. Imported records carry `importBatchId`, start opted out unless consent evidence was reviewed, and do not start workflows.
 
 ## Code conventions
 

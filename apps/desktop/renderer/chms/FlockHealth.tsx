@@ -18,6 +18,7 @@ import {
   healthIndicatorLabels,
   healthIndicators,
   communionParticipation,
+  familyOf,
   type CommunionRecord,
   indicatorStateLabels,
   statusLabels,
@@ -26,6 +27,7 @@ import {
   type ReportRow,
 } from "@sycamore/shared";
 import { usePrivateRecords } from "../data/private";
+import { useRelationships } from "../data/records";
 import { ExportButton } from "../components/ExportButton";
 import { useReportData } from "../data/chms";
 import {
@@ -49,6 +51,7 @@ export function FlockHealth({
     "communionRecords",
     true,
   );
+  const links = useRelationships();
   const [filter, setFilter] = useState({ district: "", concern: "" });
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<
@@ -154,6 +157,19 @@ export function FlockHealth({
         lastVisit: visits.at(-1) || "",
         visitRecordsSince: history?.policy?.historyStart || "",
         communion: communionParticipation(communion.rows, personId, today),
+        family: (() => {
+          const family = familyOf(personId, links.rows, data.people);
+          return {
+            spouse: family.spouses.filter((row) => !row.ended).length,
+            parents: family.parents.length,
+            children: family.children.length,
+            other:
+              family.siblings.length +
+              family.guardians.length +
+              family.wards.length +
+              family.other.length,
+          };
+        })(),
       },
       settings!,
       today,

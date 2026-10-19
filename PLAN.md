@@ -196,7 +196,7 @@ Firestore stores documents in collections. Locking happens per document, not per
 people/{personId}
   firstName, lastName, preferredName, gender, birthDate, email, mobilePhone, homePhone,
   photoPath, householdId, membershipStatus, elderDistrictId, smsOptIn, emailOptIn,
-  isDeceased, customFields{}, updatedAt, updatedBy, firstVisitDate (optional, visitor quick add)
+  isDeceased, customFields{}, updatedAt, updatedBy, firstVisitDate (optional, visitor quick add), importBatchId (when imported)
   membershipEvents/{id}   date, fromStatus, toStatus, method, otherChurch, reason
   sacraments/{id}         type (baptism | profession), date, category (infant | adult for baptism), place, officiant, revision
   offices/{id}            role (pastor | elder | deacon), ordainedOn, installedOn, termEndsOn, endedOn,
@@ -262,7 +262,13 @@ mercyVisits/{id}             householdId, requestId, start (Timestamp), duration
                              completedBy, noteId, authorUid, createdAt, revision, updatedAt, updatedBy
                              (mercy API; invited Session officers get logistics only)
 
-households/{householdId}     name, address, homePhone, revision, updatedAt, updatedBy
+households/{householdId}     name, address, homePhone, revision, updatedAt, updatedBy, importBatchId (when imported)
+relationships/{id}           personId, relatedPersonId, kind (spouse | parent | guardian | sibling | other), label,
+                             startDate (wedding date for a spouse), endDate, revision, updatedAt, updatedBy
+                             (staff readers; editors write through the API; parent/guardian read personId → relatedPersonId)
+importBatches/{batchId}      fileName, createdBy, createdAt, consentReviewed, consentSource, total, pending, created,
+                             updated, skipped, conflict, failed   (editors read; Functions write)
+  rows/{row}                 row, value{}, decision (skip | create | update with expected values), outcome, personId, message
 elderDistricts/{id}          name, elderPersonId, archived, revision, updatedAt, updatedBy
 serviceTypes/{id}            name, dayOfWeek, defaultTime, isActive, revision, updatedAt, updatedBy
 
@@ -502,7 +508,7 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Confidential prayer/care requests and practical-help requests routed to permitted officers
 * Public calendar, private revocable calendar subscriptions and automatic event reminders
 
-**Phase 11, Church records and data tools (approved, not implemented)**
+**Phase 11, Church records and data tools (implemented; see docs/PHASE_11.md)**
 * Officer terms, ordination/installation history, rotation and eligibility lists
 * Historical quorum reports and Session-maintained communion-approved lists
 * Named communion participation and separate in-person/online worship attendance
@@ -551,7 +557,7 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is implemented; verify live digest delivery and, if the Session enables lookups, the Census geocoder on staging. Phase 9 care workflows and diaconal ministry is implemented; verify live workflow, deacon summary and date reminder delivery on staging, and deploy the scheduler with the private record key secret. Phase 10 member self-service and calendar is implemented; verify email-link sign-in, the account blocking function, calendar feeds in real calendar apps and event reminder delivery on staging. Phase 11 church records and data tools is the next implementation milestone. Phases 11 and 12 remain open. Existing live provisioning and Windows release work remain required.
+Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is implemented; verify live digest delivery and, if the Session enables lookups, the Census geocoder on staging. Phase 9 care workflows and diaconal ministry is implemented; verify live workflow, deacon summary and date reminder delivery on staging, and deploy the scheduler with the private record key secret. Phase 10 member self-service and calendar is implemented; verify email-link sign-in, the account blocking function, calendar feeds in real calendar apps and event reminder delivery on staging. Phase 11 church records and data tools is implemented; it needs no new live provider setup, but try a real church export through the import preview on staging before loading the roll. Phase 12 staff mobile access and release is the next implementation milestone. Existing live provisioning and Windows release work remain required.
 
 ### Phase 7 implementation details
 

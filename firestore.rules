@@ -105,6 +105,12 @@ service cloud.firestore {
     // The communion-approved list and named participation are Session only through audited callables.
     match /communionDecisions/{id} { allow read, write: if false; }
     match /communionRecords/{id} { allow read, write: if false; }
+    // Family links are ordinary church records; imports and their row outcomes are for editors.
+    match /relationships/{id} { allow read: if reader(); allow write: if false; }
+    match /importBatches/{id} {
+      allow read: if editor(); allow write: if false;
+      match /rows/{row} { allow read: if editor(); allow write: if false; }
+    }
     match /settings/{id} { allow read: if attendanceReader() && id == 'church'; allow write: if false; }
     match /users/{uid} { allow read: if attendanceReader() && (request.auth.uid == uid || roles().hasAny(['admin'])); allow write: if false; }
     match /messages/{id} {

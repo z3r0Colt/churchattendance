@@ -229,6 +229,55 @@ describe("office history", () => {
       );
   });
 });
+describe("family links and imports", () => {
+  it("lets staff readers see family links and editors see import batches, with no client writes", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, "relationships/link"), {
+        personId: "alex",
+        relatedPersonId: "former",
+        kind: "sibling",
+      });
+      await setDoc(doc(db, "importBatches/b1"), { fileName: "roll.csv" });
+      await setDoc(doc(db, "importBatches/b1/rows/0001"), {
+        outcome: "created",
+      });
+    });
+    for (const role of ["admin", "pastor", "deacon", "readOnly"])
+      await assertSucceeds(
+        getDoc(doc(auth(role).firestore(), "relationships/link")),
+      );
+    await assertFails(
+      getDoc(
+        doc(auth("attendanceVolunteer").firestore(), "relationships/link"),
+      ),
+    );
+    for (const role of ["admin", "clerk"]) {
+      await assertSucceeds(
+        getDoc(doc(auth(role).firestore(), "importBatches/b1")),
+      );
+      await assertSucceeds(
+        getDoc(doc(auth(role).firestore(), "importBatches/b1/rows/0001")),
+      );
+    }
+    for (const role of ["deacon", "readOnly", "attendanceVolunteer"])
+      await assertFails(
+        getDoc(doc(auth(role).firestore(), "importBatches/b1/rows/0001")),
+      );
+    await assertFails(
+      setDoc(doc(auth("pastor").firestore(), "relationships/new"), {
+        personId: "alex",
+        relatedPersonId: "former",
+        kind: "spouse",
+      }),
+    );
+    await assertFails(
+      setDoc(doc(auth("admin").firestore(), "importBatches/b2"), {
+        fileName: "x.csv",
+      }),
+    );
+  });
+});
 describe("member portal accounts", () => {
   // A linked member has a verified email and no staff role. Every portal
   // feature runs through callables, so direct access stays closed.

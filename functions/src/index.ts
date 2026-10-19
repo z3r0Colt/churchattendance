@@ -53,6 +53,8 @@ export * from "./member/calendar.js";
 export * from "./events/reminders.js";
 export * from "./records/officers.js";
 export * from "./records/communion.js";
+export * from "./records/relationships.js";
+export * from "./records/imports.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);

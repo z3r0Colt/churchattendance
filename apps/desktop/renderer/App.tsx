@@ -87,6 +87,7 @@ import {
 import { Dashboard } from "./chms/Dashboard";
 import { Officers } from "./chms/Officers";
 import { Communion } from "./chms/Communion";
+import { Imports } from "./chms/Imports";
 import { StaffPasswordForm, StaffEnrollment } from "./security/Factors";
 import { Security } from "./security/Security";
 import { browserStaffSignIn } from "./data/security";
@@ -112,6 +113,7 @@ type Page =
   | "dashboard"
   | "officers"
   | "communion"
+  | "imports"
   | "security";
 const roleNames: Record<Role, string> = {
   admin: "Admin",
@@ -485,6 +487,13 @@ function Workspace({
                   onClick={() => setPage("communion")}
                 />
               )}
+              {editor && (
+                <NavItem
+                  label="Import people"
+                  current={page === "imports"}
+                  onClick={() => setPage("imports")}
+                />
+              )}
               <NavItem
                 label="Settings"
                 current={page === "settings"}
@@ -669,6 +678,7 @@ function Workspace({
         {page === "communion" && hasRole(roles, SESSION_ROLES) && (
           <Communion roles={roles} zone={data.timeZone} />
         )}
+        {page === "imports" && editor && <Imports zone={data.timeZone} />}
         {page === "dates" && hasRole(roles, EDITOR_ROLES) && (
           <ImportantDates roles={roles} />
         )}

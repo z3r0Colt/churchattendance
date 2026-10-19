@@ -97,6 +97,8 @@ export type HealthInputs = {
   visitRecordsSince: string;
   // Recorded communion services in the last 12 months and how many the person partook at.
   communion?: { services: number; partook: number };
+  // Recorded family links, as counts by kind. Names and private care facts are not included.
+  family?: { spouse: number; parents: number; children: number; other: number };
 };
 // Indicators restate recorded facts for pastoral review. They never judge a person's spiritual condition.
 export function healthIndicators(
@@ -210,11 +212,34 @@ export function healthIndicators(
             explanation:
               "No communion participation recorded in the last 12 months.",
           },
-    relationships: () => ({
-      key: "relationships",
-      state: "unknown",
-      explanation: "Family relationships are not recorded yet.",
-    }),
+    relationships: () => {
+      const family = inputs.family;
+      const parts = family
+        ? [
+            family.spouse ? "a spouse" : "",
+            family.parents
+              ? `${family.parents} parent${family.parents === 1 ? "" : "s"}`
+              : "",
+            family.children
+              ? `${family.children} child${family.children === 1 ? "" : "ren"}`
+              : "",
+            family.other
+              ? `${family.other} other relative${family.other === 1 ? "" : "s"}`
+              : "",
+          ].filter(Boolean)
+        : [];
+      return parts.length
+        ? {
+            key: "relationships",
+            state: "info",
+            explanation: `Family links recorded: ${parts.join(", ")}.`,
+          }
+        : {
+            key: "relationships",
+            state: "unknown",
+            explanation: "No family links recorded.",
+          };
+    },
   };
   return healthIndicatorKeys
     .filter((key) => settings.indicators.includes(key))

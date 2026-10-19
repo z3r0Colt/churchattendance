@@ -147,6 +147,7 @@ export function People({
   const profile = selected && (
     <PersonProfile
       person={selected}
+      people={people.rows}
       household={familyName(selected.householdId)}
       address={
         families.rows.find((row) => row.id === selected.householdId)?.address ||

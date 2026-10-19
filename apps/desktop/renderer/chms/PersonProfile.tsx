@@ -18,6 +18,7 @@ import {
 } from "@sycamore/shared";
 import { directoryPhoto } from "../data/chms";
 import { Records } from "./Common";
+import { Family } from "./Family";
 
 const longDate = (date: string) =>
   date ? DateTime.fromISO(date).toFormat("LLLL d, yyyy") : "";
@@ -25,6 +26,7 @@ const longDate = (date: string) =>
 // A person's page: header, then Overview, Attendance and Membership history.
 export function PersonProfile({
   person,
+  people,
   household,
   address,
   district,
@@ -40,6 +42,7 @@ export function PersonProfile({
   openCare,
 }: {
   person: Person;
+  people: Person[];
   household: string;
   address: string;
   district: string;
@@ -124,7 +127,11 @@ export function PersonProfile({
         <Tab value="overview">Overview</Tab>
         <Tab value="attendance">Attendance</Tab>
         <Tab value="membership">Membership history</Tab>
+        <Tab value="family">Family</Tab>
       </TabList>
+      {tab === "family" && (
+        <Family person={person} people={people} editor={editor} />
+      )}
       {tab === "overview" && (
         <div className="profile-grid">
           <div className="profile-main">

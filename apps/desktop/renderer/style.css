@@ -1425,3 +1425,58 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .kiosk main > .fui-Button {
   width: 100%;
 }
+
+/* Family tab: a plain list with a three-generation tree beside it. */
+.app .family-list > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  border-top: 1px solid var(--colorNeutralStroke2);
+  padding-top: 10px;
+}
+.app .family-list dd {
+  margin: 0;
+  text-align: left;
+}
+.family-list li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.family-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.family-tree .tree-row {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.family-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tree-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--colorNeutralStroke1);
+  border-radius: 8px;
+  background: var(--colorNeutralBackground1);
+}
+.tree-chip.self {
+  border: 2px solid #2f6b4f;
+  font-weight: 600;
+}
+/* Import column matching in a responsive grid. */
+.import-mapping {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px 16px;
+  margin: 8px 0 16px;
+}

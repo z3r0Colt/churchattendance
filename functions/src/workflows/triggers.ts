@@ -11,7 +11,13 @@ export const workflowVisitorRecorded = onDocumentCreated(
   { document: "people/{personId}", secrets: [privateKeys] },
   async (event) => {
     const person = event.data?.data();
-    if (!person || person.membershipStatus !== "visitor" || person.isDeceased)
+    // An imported record is history being entered, not a newly recorded visitor.
+    if (
+      !person ||
+      person.membershipStatus !== "visitor" ||
+      person.isDeceased ||
+      person.importBatchId
+    )
       return;
     await startRuns(
       (trigger) => trigger.kind === "visitorRecorded",
@@ -34,6 +40,7 @@ export const workflowMembershipReceived = onDocumentCreated(
     const change = event.data?.data();
     if (
       !change ||
+      change.importBatchId ||
       change.method === "initial" ||
       change.fromStatus === change.toStatus ||
       ["communicant", "nonResident"].includes(change.fromStatus)

@@ -10,6 +10,9 @@ import {
   officeSchema,
   officerDecisionSchema,
   officerPolicySchema,
+  relationshipRemoveSchema,
+  relationshipSchema,
+  type Relationship,
   communionBulkSchema,
   communionDecisionSchema,
   communionRecordSchema,
@@ -19,7 +22,12 @@ import {
   type OfficerPolicy,
   type Role,
 } from "@sycamore/shared";
-import { chmsCall, useReportData, type PrivateRecord } from "./chms";
+import {
+  chmsCall,
+  useCollection,
+  useReportData,
+  type PrivateRecord,
+} from "./chms";
 import { usePrivateRecords } from "./private";
 
 // Office history is staff-readable. Policies, decisions and discipline flags come from the audited Session API.
@@ -101,3 +109,10 @@ export const approveCommunicants = (value: unknown) =>
   );
 export const saveCommunionRecord = (value: unknown) =>
   chmsCall("saveCommunionRecord", communionRecordSchema.parse(value));
+// Family links are staff-readable and grant no other access.
+export const useRelationships = () =>
+  useCollection<Relationship>("relationships");
+export const saveRelationship = (value: unknown) =>
+  chmsCall("saveRelationship", relationshipSchema.parse(value));
+export const removeRelationship = (value: unknown) =>
+  chmsCall("removeRelationship", relationshipRemoveSchema.parse(value));
