@@ -1,19 +1,16 @@
 import { useState } from "react";
 import { Button, Field, Input, MessageBar } from "@fluentui/react-components";
-import { signInWithCustomToken, type Auth } from "firebase/auth";
-import {
-  startAuthentication,
-  type PublicKeyCredentialRequestOptionsJSON,
-} from "@simplewebauthn/browser";
-import { passkeyBeginSchema, passkeyFinishSchema } from "@sycamore/shared";
+import type { Auth } from "firebase/auth";
+import { passkeySignIn, type SecurityCall } from "./passkey";
 
 // In-page passkey sign-in for pages served from the church security origin (the portal and the staff web).
+// The sign-in lasts only for this browser tab.
 export function PasskeySignIn({
   auth,
   call,
 }: {
   auth: Auth;
-  call: <T>(name: string, input: unknown) => Promise<T>;
+  call: SecurityCall;
 }) {
   const [email, setEmail] = useState(""),
     [busy, setBusy] = useState(false),
@@ -22,18 +19,7 @@ export function PasskeySignIn({
     setBusy(true);
     setError("");
     try {
-      const begin = await call<{
-        id: string;
-        options: PublicKeyCredentialRequestOptionsJSON;
-      }>("beginPasskeySignIn", passkeyBeginSchema.parse({ email }));
-      const response = await startAuthentication({
-        optionsJSON: begin.options,
-      });
-      const result = await call<{ token: string }>(
-        "finishPasskeySignIn",
-        passkeyFinishSchema.parse({ challengeId: begin.id, response }),
-      );
-      await signInWithCustomToken(auth, result.token);
+      await passkeySignIn(auth, call, email);
     } catch {
       setError(
         "Passkey sign-in failed. Check the email, your device and your connection.",

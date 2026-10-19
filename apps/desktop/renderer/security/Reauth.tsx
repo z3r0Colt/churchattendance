@@ -15,20 +15,15 @@ import {
   EmailAuthProvider,
   getMultiFactorResolver,
   reauthenticateWithCredential,
-  signInWithCustomToken,
   TotpMultiFactorGenerator,
   type MultiFactorError,
   type MultiFactorResolver,
 } from "firebase/auth";
-import {
-  startAuthentication,
-  type PublicKeyCredentialRequestOptionsJSON,
-} from "@simplewebauthn/browser";
-import { passkeyBeginSchema, passkeyFinishSchema } from "@sycamore/shared";
 import { auth } from "../data/firebase";
 import { hostReauth } from "../data/reauth";
 import { browserStaffSignIn, securityCall } from "../data/security";
 import { staffWeb } from "../platform";
+import { passkeySignIn } from "./passkey";
 
 type Pending = { resolve: () => void; reject: (cause: Error) => void };
 
@@ -105,17 +100,11 @@ export function ReauthHost() {
         ),
       );
   }
+  // Confirms in this tab, and only as the person already signed in.
   async function passkey() {
-    const begin = await securityCall<{
-      id: string;
-      options: PublicKeyCredentialRequestOptionsJSON;
-    }>("beginPasskeySignIn", passkeyBeginSchema.parse({ email }));
-    const response = await startAuthentication({ optionsJSON: begin.options });
-    const result = await securityCall<{ token: string }>(
-      "finishPasskeySignIn",
-      passkeyFinishSchema.parse({ challengeId: begin.id, response }),
-    );
-    await signInWithCustomToken(auth, result.token);
+    const user = auth.currentUser;
+    if (!user) throw new Error("Sign in again.");
+    await passkeySignIn(auth, securityCall, email, user.uid);
   }
   return (
     <Dialog

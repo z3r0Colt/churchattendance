@@ -345,6 +345,100 @@ test("registers and verifies a real WebAuthn assertion with a virtual authentica
     fullPage: true,
   });
 });
+test("a passkey sign-in on the church security page lasts only for this tab", async ({
+  browser,
+}) => {
+  const uid = "phase7-passkey-tab",
+    email = `${uid}@example.test`,
+    signedIn = `Signed in as ${email}. Staff access is verified.`;
+  await auth.getUser(uid).catch(() =>
+    auth.createUser({
+      uid,
+      email,
+      password: "LocalDemo123!",
+      emailVerified: true,
+    }),
+  );
+  await grantTestStaff(uid, ["elder"]);
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  await page.goto("http://localhost:5174/staff-security");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
+  await page.getByLabel(/^Password/).fill("LocalDemo123!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Add passkey", exact: true }).click();
+  await expect(page.getByText("Passkey added.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  // A fresh load starts from the portal's own default, as a borrowed browser would.
+  await page.reload();
+  await page.getByLabel("Passkey account email").fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with passkey", exact: true })
+    .click();
+  await expect(page.getByText(signedIn)).toBeVisible();
+  const stored = await page.evaluate(async () => {
+    const indexed = (await indexedDB.databases()).some(
+      (row) => row.name === "firebaseLocalStorageDb",
+    )
+      ? await new Promise<string[]>((resolve, reject) => {
+          const open = indexedDB.open("firebaseLocalStorageDb");
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const database = open.result;
+            if (!database.objectStoreNames.contains("firebaseLocalStorage")) {
+              database.close();
+              return resolve([]);
+            }
+            const keys = database
+              .transaction("firebaseLocalStorage", "readonly")
+              .objectStore("firebaseLocalStorage")
+              .getAllKeys();
+            keys.onerror = () => reject(keys.error);
+            keys.onsuccess = () => {
+              database.close();
+              resolve(keys.result.map(String));
+            };
+          };
+        })
+      : [];
+    return {
+      indexed,
+      local: Object.keys(localStorage),
+      session: Object.keys(sessionStorage),
+    };
+  });
+  const users = (keys: string[]) =>
+    keys.filter((key) => key.startsWith("firebase:authUser:"));
+  expect(users(stored.indexed)).toEqual([]);
+  expect(users(stored.local)).toEqual([]);
+  expect(users(stored.session)).toHaveLength(1);
+  // Another tab in the same browser does not share the sign-in.
+  const other = await context.newPage();
+  await other.goto("http://localhost:5174/staff-security");
+  // The sign-in form shows while Firebase restores any stored account, so give it time.
+  await other.waitForTimeout(2000);
+  await expect(
+    other.getByRole("button", { name: "Sign in with passkey", exact: true }),
+  ).toBeVisible();
+  await expect(other.getByText(/^Signed in as/)).toHaveCount(0);
+  await other.close();
+  // Reloading this tab keeps it signed in.
+  await page.reload();
+  await expect(page.getByText(signedIn)).toBeVisible();
+  await context.close();
+});
 
 test("creates staff accounts, serializes security updates and recovers lost factors", async ({
   request,

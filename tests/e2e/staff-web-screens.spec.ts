@@ -422,6 +422,82 @@ test("the confirm dialog clears the password when it asks for an authenticator c
   await run.created.close();
 });
 
+test("Confirm with passkey confirms in this tab and the change continues", async ({
+  browser,
+}) => {
+  const uid = "phase12-confirm-passkey",
+    email = `${uid}@example.test`;
+  await getAuth()
+    .getUser(uid)
+    .catch(() =>
+      getAuth().createUser({
+        uid,
+        email,
+        password: "LocalDemo123!",
+        displayName: "Fictional Administrator",
+        emailVerified: true,
+      }),
+    );
+  await grantTestStaff(uid, ["admin"]);
+  const run = await context(browser, phone());
+  const { page } = run;
+  const cdp = await run.created.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  // Passkeys are added on the church security page, which shares the relying party.
+  await page.goto("http://localhost:5174/staff-security");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
+  await page.getByLabel(/^Password/).fill("LocalDemo123!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Add passkey", exact: true }).click();
+  await expect(page.getByText("Passkey added.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  const stale = await answerStale(page);
+  await signInWeb(page, email);
+  const menu = page.getByRole("button", { name: "Menu", exact: true });
+  await menu.click();
+  await page.getByRole("button", { name: "Account security" }).click();
+  // A reload would clear this mark.
+  await page.evaluate(() => {
+    (window as unknown as { tabMark: string }).tabMark = "kept";
+  });
+  const confirm = page.getByRole("alertdialog", { name: "Confirm it is you" });
+  const created = `phase12-passkey-confirmed-${Date.now()}@example.test`;
+  stale.calls = 1;
+  await page.getByRole("button", { name: "Add staff account" }).click();
+  await page.getByLabel(/^Sign-in email/).fill(created);
+  await page.getByLabel(/^Display name/).fill("Fictional Helper");
+  await page.getByRole("checkbox", { name: "readOnly" }).check();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText(email);
+  await confirm
+    .getByRole("button", { name: "Confirm with passkey", exact: true })
+    .click();
+  await expect(confirm).toBeHidden();
+  await expect(page.getByLabel("Account setup link")).toBeVisible();
+  expect((await getAuth().getUserByEmail(created)).uid).toBeTruthy();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { tabMark?: string }).tabMark,
+    ),
+  ).toBe("kept");
+  await menu.click();
+  await expect(page.locator(".nav-user")).toContainText(
+    "Fictional Administrator",
+  );
+  await run.created.close();
+});
+
 test("the sign-in authenticator step starts empty and Start again clears the password", async ({
   browser,
 }) => {
