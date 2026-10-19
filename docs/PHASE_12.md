@@ -15,7 +15,7 @@ Decisions made before implementation: the staff web lives on the portal's Hostin
 The staff web is the desktop renderer built a second time for browsers (`apps/desktop/vite.web.config.ts`, `npm run build:web -w @sycamore/desktop`). The build constant `__STAFF_WEB__` decides the differences, and they all live in `renderer/platform.ts`, `renderer/data/firebase.ts`, `renderer/data/auth.ts` and the shell in `App.tsx`. Screens, data hooks, shared zod schemas, report calculations and callables are the same code on both, so the server's role checks and rules apply unchanged.
 
 * **No desktop bridge.** Every call to a named preload function goes through `native` in `platform.ts`, which is `undefined` in the web build. Saving CSV/XLSX downloads the file, PDF reports open the printable page in a new tab, the bulletin PDF preview opens in a tab and directions open Google Maps in a new tab. The web bundle carries no preload, `ipcRenderer` or native function names, and an end-to-end test checks the built files.
-* **Hosting.** The build writes to `apps/portal/dist/staff/` after the portal build, and `firebase.json` rewrites `/staff` and `/staff/**` to `/staff/index.html`. Portal visitors never load the staff bundle. The site's existing CSP, `no-store` caching and frame denial apply to it.
+* **Hosting.** The build writes to `apps/portal/dist/staff/` after the portal build, and `firebase.json` rewrites `/staff` and `/staff/**` to `/staff/index.html`. Portal visitors never load the staff bundle. The site's existing CSP, `no-store` caching and frame denial apply to it. Its `connect-src` has no `blob:`, so the bulletin preview opens the downloaded PDF in memory and never fetches its own `blob:` URL.
 * **Kiosk.** The household kiosk needs the locked-down desktop window, so the web build hides the kiosk settings, and a kiosk sign-in in a browser shows "The kiosk runs on the church PC" with only Sign out.
 
 ## Sign-in and assurance
@@ -55,6 +55,8 @@ The staff web is the desktop renderer built a second time for browsers (`apps/de
 * with a mark unsaved and the page scrolled to the bottom of the roll, Lock now shows its warning dialog in view; when the connection returns the dialog closes, the tab reaches the sign-in page with no names on screen and the mark is in the records, while Keep working closes the dialog and the person is still signed in after the marks save;
 * passkey sign-in to the staff web with a virtual authenticator and a real WebAuthn assertion;
 * the built staff web bundle contains no desktop bridge names.
+
+`tests/e2e/staff-web-csp.spec.ts` serves the staff web page with the live site's `connect-src`, read from `firebase.json` and widened only to the local emulators and Vite, and checks that a Pastor's bulletin **Preview PDF** opens a tab with no error and nothing refused. It applies only `connect-src`, because Vite's dev page uses inline scripts, and it grants local network access because a page served by the test has no local address. Headless Chromium has no PDF viewer, so it checks that the tab opens, not how the PDF looks.
 
 `tests/e2e/security.spec.ts` checks that a passkey sign-in on the church security page stores no account in IndexedDB or localStorage, is not shared with a second tab and survives a reload of the same tab. `apps/desktop/renderer/security/passkey.test.ts` checks that the helper sets session persistence before signing in and that a passkey for another account signs nobody in.
 

@@ -180,22 +180,19 @@ export function Bulletin({ roles }: { roles: Role[] }) {
             disabled={busy || !bulletin?.file}
             onClick={() =>
               void act(async () => {
-                const url = await previewPdf(bulletin!.file!.path);
-                const bytes = new Uint8Array(
-                  await (await fetch(url)).arrayBuffer(),
-                );
-                URL.revokeObjectURL(url);
-                if (native) await native.previewPdf(Array.from(bytes));
-                else {
-                  const blob = URL.createObjectURL(
-                    new Blob([bytes], { type: "application/pdf" }),
+                const pdf = await previewPdf(bulletin!.file!.path);
+                if (native)
+                  await native.previewPdf(
+                    Array.from(new Uint8Array(await pdf.arrayBuffer())),
                   );
-                  const opened = window.open(blob, "_blank", "noopener");
+                else {
+                  const url = URL.createObjectURL(pdf);
+                  const opened = window.open(url, "_blank", "noopener");
                   if (!opened)
                     setNotice(
                       "The PDF opened in a separate tab if pop-ups are allowed.",
                     );
-                  setTimeout(() => URL.revokeObjectURL(blob), 60000);
+                  setTimeout(() => URL.revokeObjectURL(url), 60000);
                 }
               }, "PDF preview opened.")
             }

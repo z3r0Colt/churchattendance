@@ -356,7 +356,10 @@ export async function uploadBulletinPdf(file: File, week: string) {
     bulletinFileSchema.parse({ week, ...uploaded }),
   );
 }
+// The PDF itself, held in memory. Callers read it directly, because the live site's
+// CSP refuses fetch() of blob: URLs.
 export async function previewPdf(path: string) {
-  const bytes = await getBlob(ref(storage, path));
-  return URL.createObjectURL(bytes);
+  return new Blob([await getBlob(ref(storage, path))], {
+    type: "application/pdf",
+  });
 }
