@@ -1,9 +1,10 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { DateTime } from "luxon";
+import { grantTestStaff } from "./staff-fixture";
 if (
   !process.env.FIRESTORE_EMULATOR_HOST ||
   !process.env.FIREBASE_AUTH_EMULATOR_HOST
@@ -60,6 +61,13 @@ const linkSignIn = (
   request.post(`${identity}/accounts:signInWithEmailLink?key=demo-key`, {
     data: { email, oobCode, returnSecureToken: true },
   });
+async function passwordToken(request: APIRequestContext, email: string) {
+  const response = await request.post(
+    `${identity}/accounts:signInWithPassword?key=demo-key`,
+    { data: { email, password: "LocalDemo123!", returnSecureToken: true } },
+  );
+  return (await response.json()).idToken as string;
+}
 async function memberToken(request: APIRequestContext, uid: string) {
   const link = await sendLink(request, `${uid}@example.test`);
   const response = await linkSignIn(request, `${uid}@example.test`, link.code);
@@ -525,5 +533,277 @@ test.describe("member details", () => {
       fullPage: true,
       animations: "disabled",
     });
+  });
+});
+
+test.describe("member requests", () => {
+  const staff: Record<string, string> = {};
+  test.beforeAll(async ({ request }) => {
+    for (const [uid, roles] of [
+      ["m10-elder", ["elder"]],
+      ["m10-admin", ["admin"]],
+      ["m10-deacon", ["deacon"]],
+    ] as const) {
+      await auth.getUser(uid).catch(() =>
+        auth.createUser({
+          uid,
+          email: `${uid}@example.test`,
+          password: "LocalDemo123!",
+        }),
+      );
+      await grantTestStaff(uid, roles);
+      staff[uid] = await passwordToken(request, `${uid}@example.test`);
+    }
+    staff.pastor = await passwordToken(request, "pastor@example.test");
+  });
+  test.beforeEach(async () => {
+    for (const name of ["memberRequests", "mercyRequests", "portalBudgets"])
+      await db.recursiveDelete(db.collection(name));
+  });
+  test.afterAll(async () => {
+    for (const name of ["memberRequests", "mercyRequests", "portalBudgets"])
+      await db.recursiveDelete(db.collection(name));
+  });
+
+  test("sends prayer requests only to the Session and shows the member their progress", async ({
+    request,
+  }) => {
+    const member = await memberToken(request, "link-member");
+    const prayer = {
+      requestId: crypto.randomUUID(),
+      kind: "prayer",
+      body: "Fictional prayer for a job interview",
+    };
+    await call(request, member, "submitMemberRequest", prayer);
+    // A retried send is received once and counts once.
+    await call(request, member, "submitMemberRequest", prayer);
+    const stored = await db.doc(`memberRequests/${prayer.requestId}`).get();
+    expect(stored.get("body")).toBeUndefined();
+    expect(stored.get("encrypted")).toBeTruthy();
+    expect(stored.get("personId")).toBe("james");
+    expect(
+      (await db.collection("portalBudgets").get()).docs[0].get("count"),
+    ).toBe(1);
+
+    const records = await call(
+      request,
+      staff["m10-elder"],
+      "getPrivateRecords",
+      {
+        collection: "memberRequests",
+      },
+    );
+    expect(records.rows).toMatchObject([
+      { id: prayer.requestId, body: prayer.body, status: "received" },
+    ]);
+    for (const account of ["m10-admin", "m10-deacon"])
+      await call(
+        request,
+        staff[account],
+        "getPrivateRecords",
+        { collection: "memberRequests" },
+        403,
+      );
+
+    const mine = await call(request, member, "myMemberRequests");
+    expect(mine).toMatchObject([
+      { id: prayer.requestId, kind: "prayer", progress: "Received" },
+    ]);
+    expect(JSON.stringify(mine)).not.toContain("job interview");
+
+    // Members cannot move a request; the Session can.
+    await call(
+      request,
+      member,
+      "updateMemberRequest",
+      { id: prayer.requestId, expectedRevision: 1, status: "closed" },
+      403,
+    );
+    await call(request, staff["m10-elder"], "updateMemberRequest", {
+      id: prayer.requestId,
+      expectedRevision: 1,
+      status: "acknowledged",
+    });
+    await call(
+      request,
+      staff["m10-elder"],
+      "updateMemberRequest",
+      { id: prayer.requestId, expectedRevision: 1, status: "closed" },
+      409,
+    );
+    expect((await call(request, member, "myMemberRequests"))[0].progress).toBe(
+      "Received by the Session",
+    );
+  });
+
+  test("routes practical help to deacon triage without exposing details to the member or unassigned officers", async ({
+    request,
+  }) => {
+    const member = await memberToken(request, "link-member");
+    const help = {
+      requestId: crypto.randomUUID(),
+      kind: "practical",
+      body: "Fictional rides to physical therapy",
+      category: "transport",
+      urgent: true,
+      neededBy: "",
+    };
+    await call(request, member, "submitMemberRequest", help);
+    const stored = await db.doc(`mercyRequests/${help.requestId}`).get();
+    expect(stored.data()).toMatchObject({
+      householdId: "calder",
+      personId: "james",
+      category: "transport",
+      status: "new",
+      source: "member",
+      deaconUids: [],
+    });
+    expect(stored.get("details")).toBeUndefined();
+    expect(
+      await db.doc(`memberRequests/${help.requestId}`).get(),
+    ).toHaveProperty("exists", false);
+
+    // The elder triages without reading the details. An unassigned deacon sees nothing.
+    const elder = await call(request, staff["m10-elder"], "getMercyWorkspace");
+    const row = elder.requests.find(
+      (value: { id: string }) => value.id === help.requestId,
+    );
+    expect(row).toMatchObject({ source: "member", status: "new" });
+    expect(row.details).toBeUndefined();
+    const deacon = await call(
+      request,
+      staff["m10-deacon"],
+      "getMercyWorkspace",
+    );
+    expect(
+      deacon.requests.some(
+        (value: { id: string }) => value.id === help.requestId,
+      ),
+    ).toBe(false);
+    await call(request, staff.pastor, "triageMercyRequest", {
+      id: help.requestId,
+      expectedRevision: 1,
+      action: "approve",
+      deaconUids: ["m10-deacon"],
+    });
+    const assigned = await call(
+      request,
+      staff["m10-deacon"],
+      "getMercyWorkspace",
+    );
+    expect(
+      assigned.requests.find(
+        (value: { id: string }) => value.id === help.requestId,
+      ).details,
+    ).toBe(help.body);
+
+    const mine = await call(request, member, "myMemberRequests");
+    expect(mine).toEqual([
+      {
+        id: help.requestId,
+        kind: "practical",
+        category: "transport",
+        submittedAt: expect.any(String),
+        progress: "Deacons assigned",
+      },
+    ]);
+    // A request officers raised for the same person is not the member's own.
+    await db.doc("mercyRequests/officer-raised").set({
+      householdId: "calder",
+      personId: "james",
+      category: "meals",
+      status: "new",
+      deaconUids: [],
+      createdAt: Timestamp.now(),
+    });
+    expect(await call(request, member, "myMemberRequests")).toHaveLength(1);
+  });
+
+  test("limits requests per member per day", async ({ request }) => {
+    const member = await memberToken(request, "link-member");
+    for (let count = 0; count < 5; count++)
+      await call(request, member, "submitMemberRequest", {
+        requestId: crypto.randomUUID(),
+        kind: "pastoral",
+        body: `Fictional request ${count}`,
+      });
+    await call(
+      request,
+      member,
+      "submitMemberRequest",
+      {
+        requestId: crypto.randomUUID(),
+        kind: "pastoral",
+        body: "One too many",
+      },
+      429,
+    );
+    // An unlinked account cannot send at all.
+    const other = await memberToken(request, "link-other");
+    await db.doc("portalAccess/link-other").delete();
+    await call(
+      request,
+      other,
+      "submitMemberRequest",
+      { requestId: crypto.randomUUID(), kind: "prayer", body: "Not linked" },
+      403,
+    );
+  });
+
+  test("explains the audience before sending and the Session acknowledges it in the desktop", async ({
+    page,
+    request,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const link = await sendLink(
+      request,
+      "link-member@example.test",
+      "/?tab=requests",
+    );
+    await page.goto(link.url);
+    await page.getByLabel("Email").fill("link-member@example.test");
+    await page
+      .getByRole("button", { name: "Finish signing in", exact: true })
+      .click();
+    await expect(
+      page.getByText(/Who reads this: Read by the Session/),
+    ).toBeVisible();
+    await page.getByRole("radio", { name: "Practical help" }).check();
+    await expect(
+      page.getByText(/Who reads this: Read by the deacons assigned to help/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Send to the deacons", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("radio", { name: "Prayer request" }).check();
+    await page.getByLabel("Your request").fill("Fictional prayer for travel");
+    await page
+      .getByRole("button", { name: "Send to the Session", exact: true })
+      .click();
+    await expect(
+      page.getByText("Your request was sent to the Session."),
+    ).toBeVisible();
+    await expect(page.getByText(/Received$/)).toBeVisible();
+    await page.screenshot({
+      path: "test-results/phase10-member-requests.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("http://127.0.0.1:5173");
+    await page.getByLabel("Email").fill("pastor@example.test");
+    await page.getByLabel("Password").fill("LocalDemo123!");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page.getByRole("button", { name: /Pastoral care/ }).click();
+    await page.getByRole("tab", { name: "Member requests (1)" }).click();
+    await expect(page.getByText("Fictional prayer for travel")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Acknowledge", exact: true })
+      .click();
+    await expect(
+      page.getByRole("tab", { name: "Member requests", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/· Acknowledged/)).toBeVisible();
   });
 });

@@ -115,6 +115,8 @@ export type MercyRequest = {
   revision: number;
   createdAt: string;
   createdBy: string;
+  // Set when a member asked for help through the portal.
+  source?: "member";
   // Present only for the assigned deacons and the Pastor.
   details?: string;
   outcome?: string;

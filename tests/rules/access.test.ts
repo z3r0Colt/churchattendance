@@ -112,6 +112,7 @@ beforeEach(async () => {
         "mercyTasks",
         "mercyVisits",
         "bereavementDates",
+        "memberRequests",
         "workflows",
         "workflowVersions",
         "workflowRuns",
@@ -160,6 +161,7 @@ describe("Session boundary", () => {
     "mercyTasks",
     "mercyVisits",
     "bereavementDates",
+    "memberRequests",
     "workflows",
     "workflowVersions",
     "workflowRuns",
@@ -188,6 +190,39 @@ describe("Session boundary", () => {
       );
     });
   }
+});
+describe("member portal accounts", () => {
+  // A linked member has a verified email and no staff role. Every portal
+  // feature runs through callables, so direct access stays closed.
+  const member = () =>
+    env.authenticatedContext("member-james", {
+      email_verified: true,
+      auth_time: Math.floor(Date.now() / 1000),
+      firebase: { sign_in_provider: "password", identities: {} },
+    });
+  it("cannot read or write people, requests or photos directly", async () => {
+    for (const path of [
+      "people/alex",
+      "memberRequests/private",
+      "mercyRequests/private",
+      "directoryPreferences/alex",
+    ]) {
+      await assertFails(getDoc(doc(member().firestore(), path)));
+      await assertFails(
+        setDoc(doc(member().firestore(), path), { body: "Client write" }),
+      );
+    }
+    await assertFails(
+      getBytes(ref(member().storage(), "photos/alex/avatar.png")),
+    );
+    await assertFails(
+      uploadBytes(
+        ref(member().storage(), "photos/alex/replacement.png"),
+        new Uint8Array([1]),
+        { contentType: "image/png" },
+      ),
+    );
+  });
 });
 describe("roll call and identity", () => {
   it("denies first-factor-only, unverified, revoked and forged assurance access", async () => {

@@ -24,6 +24,7 @@ import {
   queueMessage,
 } from "../communications/queue.js";
 import { contactEvents, contactPolicy } from "./contact.js";
+import { waitingMemberRequests } from "../member/requests.js";
 
 type Visit = {
   id: string;
@@ -223,9 +224,10 @@ export async function processShepherdingDigests(now: Date) {
     }
   }
   if (clock.daily) {
-    const [followUps, mercyVisits] = await Promise.all([
+    const [followUps, mercyVisits, memberRequests] = await Promise.all([
       db.collection("followUps").where("done", "==", false).get(),
       db.collection("mercyVisits").where("status", "==", "planned").get(),
+      waitingMemberRequests(zone),
     ]);
     // Deacon-led visits an officer was invited to, as time and household only.
     const invited = (uids: string[]) =>
@@ -269,6 +271,12 @@ export async function processShepherdingDigests(now: Date) {
             names: own
               .filter((visit) => visitState(visit, now) === "overdue")
               .map((visit) => household(visit.householdId)),
+          },
+          {
+            // Every Session officer reads these. The summary gives the kind and
+            // date only, never the member's name or words.
+            title: "New prayer and pastoral requests",
+            names: memberRequests,
           },
           {
             // Follow-up titles are private, so the summary names only the person.

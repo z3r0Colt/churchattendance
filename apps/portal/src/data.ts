@@ -28,11 +28,13 @@ import {
   memberContactSchema,
   memberHouseholdSchema,
   memberPhotoSchema,
+  memberRequestSchema,
   memberRsvpSchema,
   onlineFormSchema,
   safeReturnPath,
   type DirectoryEntry,
   type DirectoryPreferences,
+  type MyRequest,
   type Occurrence,
 } from "@sycamore/shared";
 export const local =
@@ -226,6 +228,9 @@ export async function uploadPhoto(file: File, expectedPhoto: boolean) {
     memberPhotoSchema.parse({ contentType: "image/jpeg", data, expectedPhoto }),
   );
 }
+export const submitRequest = (value: unknown) =>
+  callPortal("submitMemberRequest", memberRequestSchema.parse(value));
+export const getMyRequests = () => callPortal<MyRequest[]>("myMemberRequests");
 export function portalError(error: unknown) {
   return error instanceof Error && !error.message.startsWith("[")
     ? error.message

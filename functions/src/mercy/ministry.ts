@@ -100,6 +100,7 @@ const triageKeys = [
   "revision",
   "createdAt",
   "createdBy",
+  "source",
 ] as const;
 
 export const saveMercySettings = onCall(async (request) => {

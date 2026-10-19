@@ -674,18 +674,39 @@ test("sends a daily summary of the officer's own visits and follow-ups without p
     assignedToUid: "p8-elder",
     dueDate: "2027-03-22",
   });
+  // Every Session officer sees waiting member requests by kind and date only.
+  await db.doc("memberRequests/p8-prayer").set({
+    personId: "mary",
+    kind: "prayer",
+    status: "received",
+    body: "Fictional private prayer words",
+    createdAt: Timestamp.fromDate(new Date("2027-03-20T15:00:00Z")),
+    revision: 1,
+  });
   // 6:59 AM is before the summary hour, then 8:00 AM twice.
   await tick(request, "2027-03-23T10:59:00Z");
   expect(await digests()).toHaveLength(0);
   await tick(request, "2027-03-23T12:00:00Z");
   await tick(request, "2027-03-23T12:01:00Z");
   const sent = await digests();
-  expect(sent.map((row) => row.id)).toEqual(["daily_2027-03-23_ruth_email"]);
-  const body = sent[0].get("body");
+  // The waiting request reaches every Session officer, including the Pastor.
+  expect(sent.map((row) => row.id)).toEqual([
+    "daily_2027-03-23_james_email",
+    "daily_2027-03-23_ruth_email",
+  ]);
+  const body = sent[1].get("body");
   expect(body).toContain("Visits today (1)\n6:00 PM · Calder");
   expect(body).toContain("Follow-ups due (1)\nMary Baker");
   expect(body).not.toContain("Fictional private follow-up title");
   expect(body).not.toContain("Fictional purpose");
+  for (const row of sent) {
+    expect(row.get("body")).toContain(
+      "New prayer and pastoral requests (1)\nPrayer request from Mar 20",
+    );
+    expect(row.get("body")).not.toContain("Fictional private prayer words");
+  }
+  expect(sent[0].get("body")).not.toContain("Mary Baker");
+  await db.doc("memberRequests/p8-prayer").delete();
 });
 test("saves the digest schedule and channel from Settings", async ({
   page,

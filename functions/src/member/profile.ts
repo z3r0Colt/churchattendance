@@ -26,7 +26,7 @@ const eligible = ["communicant", "baptized", "nonResident", "adherent"];
 
 // Recheck the mapping and person inside the transaction, so a revoked
 // account or a status change between the first check and the write is honored.
-async function linkedPerson(
+export async function linkedPerson(
   transaction: Transaction,
   uid: string,
   personId: string,

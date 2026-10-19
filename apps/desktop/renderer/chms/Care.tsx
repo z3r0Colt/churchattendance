@@ -12,8 +12,11 @@ import {
   SESSION_ROLES,
   hasRole,
   type Role,
+  memberRequestKindLabels,
+  sessionRequestStatusLabels,
   type CareNote,
   type FollowUp,
+  type MemberRequest,
 } from "@sycamore/shared";
 import {
   completeDiaconalTask,
@@ -21,8 +24,10 @@ import {
   saveCareNote,
   saveDiaconalTask,
   saveFollowUp,
+  updateMemberRequest,
   useCareData,
 } from "../data/chms";
+import { ExportButton } from "../components/ExportButton";
 import {
   Picker,
   Records,
@@ -126,6 +131,27 @@ export function Care({ roles }: { roles: Role[] }) {
   const tasks = data.tasks
     .filter((row) => !person || row.personId === person)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const requests = data.requests
+    .filter((row) => !person || row.personId === person)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const waiting = data.requests.filter(
+    (row) => row.status === "received",
+  ).length;
+  async function moveRequest(
+    row: MemberRequest,
+    status: "acknowledged" | "closed",
+  ) {
+    setError("");
+    try {
+      await updateMemberRequest({
+        id: row.id,
+        expectedRevision: row.revision,
+        status,
+      });
+    } catch (failure) {
+      setError(friendlyError(failure));
+    }
+  }
   return (
     <>
       <div className="page-heading">
@@ -178,6 +204,10 @@ export function Care({ roles }: { roles: Role[] }) {
             <Tab value="followUps">Follow-ups</Tab>
             <Tab value="discipline">Discipline record</Tab>
             <Tab value="deacon">Diaconal tasks</Tab>
+            <Tab value="requests">
+              Member requests
+              {waiting ? ` (${waiting})` : ""}
+            </Tab>
           </TabList>
         </>
       )}
@@ -217,6 +247,62 @@ export function Care({ roles }: { roles: Role[] }) {
               });
             }}
           />
+        </>
+      )}
+      {tab === "requests" && session && (
+        <>
+          <p className="muted">
+            Prayer and pastoral care requests members sent through the portal.
+            Members see only that a request was received, acknowledged or
+            closed. Reply to them in person; record care as a note.
+          </p>
+          <ExportButton
+            rows={requests.map((row) => ({
+              id: row.id,
+              Person: name(row.personId),
+              Received: row.createdAt.slice(0, 10),
+              Kind: memberRequestKindLabels[row.kind],
+              Status: sessionRequestStatusLabels[row.status],
+              Request: row.body,
+            }))}
+          />
+          {!requests.length ? (
+            <p>No member requests match this view.</p>
+          ) : (
+            <div className="request-cards">
+              {requests.map((row) => (
+                <section
+                  key={row.id}
+                  className="surface communication-panel session-panel"
+                >
+                  <h2>
+                    {memberRequestKindLabels[row.kind]} from{" "}
+                    {name(row.personId)}
+                  </h2>
+                  <p className="muted">
+                    Received{" "}
+                    {DateTime.fromISO(row.createdAt).toFormat("LLL d, yyyy")} ·{" "}
+                    {sessionRequestStatusLabels[row.status]}
+                  </p>
+                  <p className="message-body">{row.body}</p>
+                  <div className="actions">
+                    {row.status === "received" && (
+                      <Button
+                        onClick={() => void moveRequest(row, "acknowledged")}
+                      >
+                        Acknowledge
+                      </Button>
+                    )}
+                    {row.status !== "closed" && (
+                      <Button onClick={() => void moveRequest(row, "closed")}>
+                        Close request
+                      </Button>
+                    )}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </>
       )}
       {tab === "followUps" && (

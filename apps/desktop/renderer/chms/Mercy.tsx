@@ -511,6 +511,7 @@ export function Mercy() {
                   Household: household(row.householdId),
                   Person: person(row.personId),
                   Help: mercyCategoryLabels[row.category],
+                  From: row.source === "member" ? "Member" : "Officer",
                   Urgent: row.urgent ? "Yes" : "No",
                   "Needed by": row.neededBy,
                   Status: mercyStatusLabels[row.status],
@@ -543,6 +544,7 @@ export function Mercy() {
                         </td>
                         <td>
                           {mercyCategoryLabels[row.category]}
+                          {row.source === "member" ? " · Member request" : ""}
                           {row.urgent ? " · Urgent" : ""}
                           {row.neededBy ? ` · by ${row.neededBy}` : ""}
                         </td>

@@ -48,6 +48,7 @@ export * from "./workflows/api.js";
 export * from "./workflows/triggers.js";
 export * from "./member/accounts.js";
 export * from "./member/profile.js";
+export * from "./member/requests.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
@@ -349,6 +350,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "mercyNotes",
         "mercyTasks",
         "mercyVisits",
+        "memberRequests",
         "importantDates",
         "bereavementDates",
         "workflows",
@@ -392,6 +394,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "householdLocations",
         "flockAssessments",
         "bereavementDates",
+        "memberRequests",
         "workflows",
         "workflowVersions",
         "workflowRuns",

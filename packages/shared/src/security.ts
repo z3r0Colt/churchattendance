@@ -28,6 +28,7 @@ export const encryptedCollections = [
   "pastoralVisits",
   "flockAssessments",
   "bereavementDates",
+  "memberRequests",
 ] as const;
 export const privateCollections = [
   ...encryptedCollections,

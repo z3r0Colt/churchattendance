@@ -1,10 +1,20 @@
 import { z } from "zod";
 import { DateTime } from "luxon";
-import { householdInputSchema, personInputSchema } from "./domain.js";
+import {
+  dateSchema,
+  householdInputSchema,
+  personInputSchema,
+} from "./domain.js";
+import {
+  mercyCategories,
+  type MercyCategory,
+  type MercyStatus,
+} from "./mercy.js";
 export const memberTabs = [
   "directory",
   "events",
   "profile",
+  "requests",
   "privacy",
   "account",
 ] as const;
@@ -100,4 +110,110 @@ export function isAdultOn(birthDate: string, today: string) {
   // Luxon moves Feb 29 to Feb 28 in other years, so a leap-day birthday
   // reaches adulthood on Feb 28.
   return born.plus({ years: ADULT_AGE }) <= now;
+}
+
+// Member requests. Prayer and pastoral requests go to the whole Session;
+// practical-help requests join the deacons' triage queue. No attachments.
+export const memberRequestKinds = ["prayer", "pastoral", "practical"] as const;
+export type MemberRequestKind = (typeof memberRequestKinds)[number];
+export const memberRequestKindLabels: Record<MemberRequestKind, string> = {
+  prayer: "Prayer request",
+  pastoral: "Pastoral care request",
+  practical: "Practical help",
+};
+// Shown before a member sends a request, so they know who will read it.
+export const memberRequestAudience: Record<MemberRequestKind, string> = {
+  prayer:
+    "Read by the Session: the Pastor, the Clerk and the Elders. It is not shared with the congregation.",
+  pastoral:
+    "Read by the Session: the Pastor, the Clerk and the Elders. It is not shared with the congregation.",
+  practical:
+    "Read by the deacons assigned to help and by the Pastor. The Elders and deacon chairs see only that help was asked for and what kind.",
+};
+const requestBody = z.string().trim().min(1).max(4000);
+export const memberRequestSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      requestId: z.uuid(),
+      kind: z.enum(["prayer", "pastoral"]),
+      body: requestBody,
+    })
+    .strict(),
+  z
+    .object({
+      requestId: z.uuid(),
+      kind: z.literal("practical"),
+      body: requestBody,
+      category: z.enum(mercyCategories),
+      urgent: z.boolean().default(false),
+      neededBy: z.union([dateSchema, z.literal("")]).default(""),
+    })
+    .strict(),
+]);
+export type MemberRequestInput = z.infer<typeof memberRequestSchema>;
+export const MEMBER_REQUESTS_PER_DAY = 5;
+export const sessionRequestStatuses = [
+  "received",
+  "acknowledged",
+  "closed",
+] as const;
+export type SessionRequestStatus = (typeof sessionRequestStatuses)[number];
+export const sessionRequestStatusLabels: Record<SessionRequestStatus, string> =
+  {
+    received: "New",
+    acknowledged: "Acknowledged",
+    closed: "Closed",
+  };
+export const memberRequestStatusSchema = z
+  .object({
+    id: z.uuid(),
+    expectedRevision: z.number().int().nonnegative(),
+    status: z.enum(["acknowledged", "closed"]),
+  })
+  .strict();
+export function sessionRequestTransition(
+  from: SessionRequestStatus,
+  to: SessionRequestStatus,
+) {
+  return (
+    (from === "received" && (to === "acknowledged" || to === "closed")) ||
+    (from === "acknowledged" && to === "closed")
+  );
+}
+export type MemberRequest = {
+  id: string;
+  personId: string;
+  kind: "prayer" | "pastoral";
+  status: SessionRequestStatus;
+  body: string;
+  revision: number;
+  createdAt: string;
+};
+// What a member sees of their own request: its kind, date and progress.
+// Officer notes, outcomes, decline reasons and assignments never leave the server.
+export type MyRequest = {
+  id: string;
+  kind: MemberRequestKind;
+  category: MercyCategory | "";
+  submittedAt: string;
+  progress: string;
+};
+export function memberRequestProgress(
+  status: SessionRequestStatus | MercyStatus,
+) {
+  switch (status) {
+    case "received":
+    case "new":
+      return "Received";
+    case "acknowledged":
+      return "Received by the Session";
+    case "approved":
+      return "Deacons assigned";
+    case "inProgress":
+      return "In progress";
+    case "resolved":
+      return "Completed";
+    default:
+      return "Closed";
+  }
 }

@@ -6,7 +6,7 @@ Phase 10 extends the member portal from Phase 4 with passwordless sign-in, self-
 |---|---|---|
 | 1 | Email-link sign-in, safe return targets, sign-in email change | Implemented |
 | 2 | Member contact, photo and household address editing | Implemented |
-| 3 | Prayer and pastoral requests to the Session, practical-help requests to the deacons | Planned |
+| 3 | Prayer and pastoral requests to the Session, practical-help requests to the deacons | Implemented |
 | 4 | Occurrence changes, public calendar and calendar subscriptions | Planned |
 | 5 | Per-event reminders | Planned |
 
@@ -48,3 +48,19 @@ The **My details** tab lets a linked member change their own contact details, ph
 **Photo.** A member adds, replaces or removes their own photo, which takes effect at once with no staff review. The browser scales the image to at most 600 pixels and re-encodes it as JPEG, which also drops camera and location details. The server accepts JPEG, PNG or WebP up to 1 MB, checks the file's leading bytes against its declared type, stores it under `photos/{personId}/` with the Admin SDK and deletes the replaced file. A replacement must say whether a photo existed when the page opened, so two devices cannot silently overwrite each other. Members have no direct Storage access: photos are read through `portalPhoto`, which returns a member's own photo, or another member's photo only while that person is listed in the directory and has chosen **Share my photo with members** (off by default). Staff continue to see photos in the desktop as before.
 
 **Household address.** Any adult in the household can change the household address and home phone directly. An adult is a linked member whose recorded birth date is at least 18 years before today in the church time zone (a Feb 29 birthday counts from Feb 28). A member without a recorded birth date, or under 18, sees the household details read-only and is asked to contact the church office. A changed address marks any confirmed map location for Session review, as in Phase 8. Edits are audited with the member's account as the actor.
+
+## Member requests
+
+The **Requests** tab lets a linked member send a prayer request, a pastoral care request or a request for practical help, and follow its progress.
+
+**Audience first.** Choosing a kind shows who will read it before anything is sent, and the send button names the audience. Prayer and pastoral requests are read by the whole Session (the Pastor, the Clerk and the Elders) and are never shared with the congregation. Practical help is read by the deacons assigned to help and by the Pastor; the Elders and deacon chairs see only that help was asked for and what kind. The server picks the collection from the kind, so a request cannot be sent to another audience.
+
+**Prayer and pastoral requests** are stored in `memberRequests`, a Session-only collection denied to every direct client. The member's words are sealed with the private record key ring, bound to the document path and included in key migration. Session officers read them through the audited private-records API (each read writes a `private.read` Session event) on **Pastoral care, Member requests**, which shows a waiting count. An officer can acknowledge a request and close it; each step checks the record revision and moves forward only. Replies happen in person, and any care given is recorded as an ordinary Session note. Admins outside the Session and deacons are denied.
+
+**Practical help** becomes a mercy request with `source: "member"`, the member's household and person, the kind of help, an optional needed-by date and urgency, and the member's words sealed as the request details. It waits in the deacons' triage queue like any other request and is marked **Member request** there. Phase 9 rules apply unchanged: details are readable only by assigned deacons and the Pastor, and the Session and chairs triage without reading them. Approval can start the Phase 9 "request approved" workflow trigger.
+
+**What the member sees.** **My requests** lists the member's own requests by kind, date and progress: Received, Received by the Session, Deacons assigned, In progress, Completed or Closed. It never returns the request text, officer names, notes, outcomes, decline reasons or assignments. Mercy requests officers raised for the same person are not listed.
+
+**Duplicates and abuse.** Each draft carries a random request ID, so a retried send is stored once. An ID that already exists returns the same confirmation without revealing the other record. A member can send five requests per church-local day; the counter lives in `portalBudgets` with the existing TTL. Requests take no attachments, and the form asks members not to include others' details without their agreement.
+
+**Daily summary.** The Session daily summary from Phase 8 adds **New prayer and pastoral requests**, listing each waiting request by kind and date only ("Prayer request from Mar 20"). It never includes the member's name or words. Because every Session officer may read these requests, the section goes to every officer who receives the daily summary.

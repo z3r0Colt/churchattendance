@@ -199,3 +199,20 @@ form.card p {
 .profile-grid .card {
   margin: 0;
 }
+.request-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.request-list li {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #dadfdc;
+}
+.profile-grid > *,
+form > * {
+  min-width: 0;
+}

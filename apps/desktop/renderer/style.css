@@ -479,3 +479,4 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .flow-approval { border-left: 4px solid #7A67AB; }
 .flow-branch { font-size: 12px; color: var(--colorNeutralForeground3); margin-top: 4px; }
 .workflow-message { border-left: 3px solid var(--colorNeutralStroke1); padding: 4px 12px; margin: 8px 0; white-space: pre-wrap; }
+.request-cards { display: grid; gap: 16px; margin-top: 16px; }

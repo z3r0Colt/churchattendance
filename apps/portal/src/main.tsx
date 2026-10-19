@@ -45,6 +45,7 @@ import "./style.css";
 import { StaffSecurity } from "./StaffSecurity";
 import { AccountSettings, FinishSignIn, SignIn } from "./Account";
 import { MyDetails } from "./Profile";
+import { Requests } from "./Requests";
 // Read once at load: the link is removed from the address bar before React renders.
 const initialLink =
   location.pathname === "/staff-security" ? null : pendingSignInLink();
@@ -422,6 +423,7 @@ function Member() {
             <Tab value="directory">Directory</Tab>
             <Tab value="events">Events & my RSVPs</Tab>
             <Tab value="profile">My details</Tab>
+            <Tab value="requests">Requests</Tab>
             <Tab value="privacy">My sharing choices</Tab>
             <Tab value="account">Account</Tab>
           </TabList>
@@ -474,6 +476,8 @@ function Member() {
             </>
           ) : tab === "account" ? (
             <AccountSettings />
+          ) : tab === "requests" ? (
+            <Requests />
           ) : tab === "profile" ? (
             <MyDetails
               key={JSON.stringify([

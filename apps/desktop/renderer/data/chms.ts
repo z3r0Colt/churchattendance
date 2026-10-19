@@ -44,7 +44,9 @@ import {
   type Service,
   type ServiceType,
   type HistoryEvent,
+  type MemberRequest,
   type Sacrament,
+  memberRequestStatusSchema,
 } from "@sycamore/shared";
 import { auth, db, functions, storage } from "./firebase";
 import { usePrivateRecords } from "./private";
@@ -89,6 +91,7 @@ export async function chmsCall<T = unknown>(
       "controlWorkflow",
       "controlWorkflowRun",
       "decideWorkflowApproval",
+      "updateMemberRequest",
     ].includes(name)
   )
     window.dispatchEvent(new Event("private-records-changed"));
@@ -194,6 +197,7 @@ export function useCareData(roles: Role[]) {
     session,
   );
   const tasks = usePrivateRecords<DiaconalTask>("diaconalTasks", true);
+  const requests = usePrivateRecords<MemberRequest>("memberRequests", session);
   const [users, setUsers] = useState<Assignee[]>([]);
   useEffect(() => {
     if (session)
@@ -207,6 +211,7 @@ export function useCareData(roles: Role[]) {
     followUps: followUps.rows,
     privateRecords: privateRecords.rows,
     tasks: tasks.rows,
+    requests: requests.rows,
     users,
     error:
       [
@@ -215,6 +220,7 @@ export function useCareData(roles: Role[]) {
         followUps.error,
         privateRecords.error,
         tasks.error,
+        requests.error,
       ].find(Boolean) || "",
   };
 }
@@ -284,6 +290,8 @@ export const saveServingAssignment = (value: unknown) =>
   chmsCall("saveServingAssignment", servingSchema.parse(value));
 export const saveCareNote = (value: unknown) =>
   chmsCall("saveCareNote", careNoteSchema.parse(value));
+export const updateMemberRequest = (value: unknown) =>
+  chmsCall("updateMemberRequest", memberRequestStatusSchema.parse(value));
 export const saveFollowUp = (value: unknown) =>
   chmsCall("saveFollowUp", followUpSchema.parse(value));
 export const saveDiaconalTask = (value: unknown) =>

@@ -226,7 +226,8 @@ mercySettings/church         chairUids[], revision, updatedAt, updatedBy   (merc
 mercyAssignments/{householdId} householdId, deaconUids[], revision, updatedAt, updatedBy   (mercy API; Session and chairs edit)
 mercyRequests/{id}           householdId, personId, category, urgent, neededBy, status (new | approved | inProgress |
                              resolved | declined), deaconUids[], encrypted{details, outcome, declineReason}, approvedBy,
-                             approvedAt, resolvedBy, resolvedAt, createdAt, createdBy, revision, updatedAt, updatedBy
+                             approvedAt, resolvedBy, resolvedAt, createdAt, createdBy, source (member, when a member asked
+                             through the portal), revision, updatedAt, updatedBy
                              (mercy API; content for assigned deacons and the Pastor, triage fields for Session and chairs)
 mercyNotes/{id}              householdId, requestId, date, encrypted{body}, authorUid, sharedWithSession, sharedBy, sharedAt,
                              createdAt, revision, updatedAt, updatedBy   (mercy API; assigned deacons and the Pastor, Session once shared)
@@ -238,6 +239,9 @@ importantDates/{id}          personId, kind (weddingAnniversary | baptismAnniver
 bereavementDates/{id}        personId, relatedPersonId, kind (deathAnniversary | lateSpouseBirthday | lateWeddingAnniversary |
                              other), date, encrypted{note}, endKind, endYear, endCount, remindDaysBefore, remindUid,
                              createdAt, revision, updatedAt, updatedBy   (Session API only)
+memberRequests/{id}          personId, kind (prayer | pastoral), encrypted{body}, status (received | acknowledged | closed),
+                             createdAt, createdBy (member uid), revision, updatedAt, updatedBy   (Session API only; the
+                             member sees kind, date and progress through the portal)
 workflows/{id}               name, description, trigger, steps[], status (draft | active | paused | archived), publishedVersion,
                              createdAt, revision, updatedAt, updatedBy   (Session API only; the draft)
 workflowVersions/{id_vN}     workflowId, version, name, trigger, steps[], publishedAt, publishedBy   (Session API only; immutable)

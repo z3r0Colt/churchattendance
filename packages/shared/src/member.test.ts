@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   isAdultOn,
   memberContactSchema,
+  memberRequestProgress,
+  memberRequestSchema,
   memberReturnTab,
   photoMatchesType,
   safeReturnPath,
+  sessionRequestTransition,
 } from "./index";
 
 describe("member sign-in return path", () => {
@@ -67,5 +70,36 @@ describe("member self-service rules", () => {
       },
     ])
       expect(memberContactSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe("member requests", () => {
+  it("routes by kind and accepts help fields only for practical requests", () => {
+    const requestId = "6f1c1f7e-3d64-4c38-9a53-2f3b8c3a9e10";
+    expect(
+      memberRequestSchema.safeParse({ requestId, kind: "prayer", body: "Hi" })
+        .success,
+    ).toBe(true);
+    for (const value of [
+      { requestId, kind: "prayer", body: "Hi", category: "meals" },
+      { requestId, kind: "practical", body: "Hi" },
+      { requestId, kind: "prayer", body: "   " },
+      { requestId, kind: "prayer", body: "Hi", audience: "deacons" },
+      { requestId: "not-a-uuid", kind: "prayer", body: "Hi" },
+    ])
+      expect(memberRequestSchema.safeParse(value).success).toBe(false);
+  });
+  it("moves Session requests forward only", () => {
+    expect(sessionRequestTransition("received", "acknowledged")).toBe(true);
+    expect(sessionRequestTransition("received", "closed")).toBe(true);
+    expect(sessionRequestTransition("acknowledged", "closed")).toBe(true);
+    expect(sessionRequestTransition("closed", "acknowledged")).toBe(false);
+    expect(sessionRequestTransition("acknowledged", "received")).toBe(false);
+  });
+  it("tells members progress without outcomes or reasons", () => {
+    expect(memberRequestProgress("new")).toBe("Received");
+    expect(memberRequestProgress("approved")).toBe("Deacons assigned");
+    expect(memberRequestProgress("declined")).toBe("Closed");
+    expect(memberRequestProgress("resolved")).toBe("Completed");
   });
 });
