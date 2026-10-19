@@ -210,11 +210,11 @@ test("finishes a link sign-in in the portal and ignores a malicious return targe
     .getByRole("button", { name: "Finish signing in", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Welcome, James Calder" }),
+    page.getByRole("heading", { name: "Welcome, James" }),
   ).toBeVisible();
   await expect(page).toHaveURL(`${portal}/`);
   await expect(
-    page.getByRole("tab", { name: "Directory", exact: true }),
+    page.getByRole("tab", { name: "Home", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
 
@@ -464,7 +464,10 @@ test.describe("member details", () => {
       data: png.toString("base64"),
       expectedPhoto: true,
     });
-    const [exists] = await getStorage().bucket().file(first).exists();
+    const [exists] = await getStorage()
+      .bucket("demo-sycamore.appspot.com")
+      .file(first)
+      .exists();
     expect(exists).toBe(false);
     await call(
       request,

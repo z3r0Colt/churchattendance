@@ -231,6 +231,14 @@ Full screen, light theme, no nav. Big search box reading "Type your last name or
 ### 5.10 Settings
 Sections for Church (name, address, time zone), Service types, Elder districts, Users and roles, Email (Microsoft 365 connection status), Text (Twilio status and number), Bulletin (day, time, reminder person, OneDrive folder, subject, standard message), Custom fields, Backups, and Theme for this PC.
 
+### 5.11 Member portal
+The portal uses the same warm background, white cards with 12px corners, and the display font for the wordmark, greetings and card headings.
+
+* After sign-in a member lands on **Home**: the date, "Welcome, {first name}", a green card with this Lord's Day's active service times, the next three member gatherings with one-tap Attending, Maybe and Not attending buttons, and two large links to Send a request and Directory.
+* The member sections are **Home, Events, Directory, Requests and Me**. Me holds My details, My sharing choices, Calendar links and Account as a second row of tabs.
+* On phones (600px and narrower) the section tabs become a fixed bottom bar with an icon above each label, and the page leaves room for it.
+* Sunday reads as the Lord's Day in dates and date badges.
+
 ## 6. Patterns
 
 * **Panels** are white with a 1px border and 10px corners on the warm background. Do not put a panel inside another panel; group related content with headings and dividers instead.

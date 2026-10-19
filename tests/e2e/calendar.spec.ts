@@ -9,7 +9,11 @@ if (
   !process.env.FIREBASE_AUTH_EMULATOR_HOST
 )
   throw new Error("Calendar tests require emulators");
-if (!getApps().length) initializeApp({ projectId: "demo-sycamore" });
+if (!getApps().length)
+  initializeApp({
+    projectId: "demo-sycamore",
+    storageBucket: "demo-sycamore.appspot.com",
+  });
 const db = getFirestore(),
   auth = getAuth(),
   base = "http://127.0.0.1:5001/demo-sycamore/us-central1",
@@ -387,6 +391,7 @@ test("lists the public calendar and manages a member calendar link in the portal
   await page.getByLabel("Email").fill("cal-member@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("tab", { name: "Me", exact: true }).click();
   await page.getByRole("tab", { name: "Calendar links", exact: true }).click();
   await page.getByLabel("Name this subscription").fill("My phone");
   await page

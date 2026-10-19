@@ -239,3 +239,206 @@ form > * {
   overflow-wrap: anywhere;
   font-size: 13px;
 }
+
+/* Design refresh: the portal shares the desktop's warm ground and serif. */
+.portal {
+  --font-display: Cambria, Georgia, "Times New Roman", serif;
+}
+body,
+.portal.fui-FluentProvider {
+  background: #f6f4ee;
+}
+header {
+  background: #f6f4ee;
+  border-bottom-color: #e2ded5;
+}
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.intro h1,
+.card h2,
+.home h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+.intro h1 {
+  font-size: 32px;
+}
+.card {
+  border-color: #e2ded5;
+  border-radius: 12px;
+}
+footer {
+  border-top-color: #e2ded5;
+}
+.member-tabs,
+.me-tabs {
+  margin: 4px 0 8px;
+}
+.home {
+  display: grid;
+  gap: 18px;
+  max-width: 720px;
+}
+.lords-day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #2f6b4f;
+  color: #ffffff;
+}
+.lords-day .eyebrow {
+  color: #dff3ea;
+}
+.lords-day .service {
+  font-size: 15px;
+  color: #dff3ea;
+}
+.lords-day .service.first {
+  font-family: var(--font-display);
+  font-size: 23px;
+  color: #ffffff;
+}
+.coming-up {
+  display: grid;
+  gap: 10px;
+}
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.section-title h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.event-card.card {
+  margin: 0;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.event-head {
+  display: flex;
+  gap: 12px;
+}
+.event-head > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.event-head small {
+  color: #5b625e;
+}
+.date-badge {
+  flex: 0 0 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: #f6f4ee;
+}
+.date-badge small {
+  font-size: 10px;
+  color: #5b625e;
+}
+.date-badge strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+}
+.rsvp-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.quick-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.quick-links button {
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e2ded5;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1f2321;
+  text-align: left;
+  cursor: pointer;
+}
+.quick-links small,
+.quiet {
+  color: #5b625e;
+}
+@media (max-width: 600px) {
+  /* On phones the member sections become a bottom tab bar. */
+  .portal main {
+    padding-bottom: 96px;
+  }
+  .member-tabs.fui-TabList {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0;
+    padding: 6px 6px 14px;
+    background: #ffffff;
+    border-top: 1px solid #e2ded5;
+  }
+  /* Fluent lays a tab out as a row; stack the icon above the label. */
+  .member-tabs .fui-Tab {
+    display: grid !important;
+    grid-auto-flow: row !important;
+    grid-template-columns: auto !important;
+    justify-items: center;
+    align-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 0 2px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
+  .member-tabs .fui-Tab[aria-selected="true"] {
+    background: #e3eee7;
+  }
+  .me-tabs.fui-TabList {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .intro h1 {
+    font-size: 28px;
+  }
+}
+@media (max-width: 600px) {
+  /* Fluent places the icon and label in separate columns; stack them. */
+  .member-tabs .fui-Tab__icon {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+  .member-tabs .fui-Tab__content {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    padding: 0 !important;
+    white-space: nowrap;
+  }
+  .member-tabs .fui-Tab {
+    min-width: 0;
+    padding: 0 !important;
+    overflow: visible;
+  }
+}

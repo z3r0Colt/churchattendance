@@ -122,7 +122,7 @@ export function StaffSecurity() {
   return (
     <FluentProvider theme={lightTheme} className="portal">
       <main>
-        <div className="wordmark">SYCAMORE RPC</div>
+        <div className="wordmark">Sycamore</div>
         <Title3 as="h1">Staff account security</Title3>
         {error && <MessageBar intent="error">{error}</MessageBar>}
         {notice && <MessageBar intent="info">{notice}</MessageBar>}

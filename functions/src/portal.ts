@@ -198,7 +198,7 @@ export const portalMemberEvents = onCall(portalOptions, async (request) => {
 });
 export const portalMe = onCall(portalOptions, async (request) => {
   const current = await member(request);
-  const [preferences, responses, household, zone] = await Promise.all([
+  const [preferences, responses, household, zone, types] = await Promise.all([
     db.doc(`directoryPreferences/${current.person.id}`).get(),
     db
       .collectionGroup("rsvps")
@@ -206,10 +206,12 @@ export const portalMe = onCall(portalOptions, async (request) => {
       .get(),
     db.doc(`households/${current.person.householdId}`).get(),
     getChurchZone(),
+    db.collection("serviceTypes").where("isActive", "==", true).get(),
   ]);
   return {
     person: {
       id: current.person.id,
+      firstName: current.person.preferredName || current.person.firstName,
       name: `${current.person.firstName} ${current.person.lastName}`,
       email: current.person.email,
       phone: current.person.mobilePhone,
@@ -230,6 +232,21 @@ export const portalMe = onCall(portalOptions, async (request) => {
       ),
     },
     hasPhoto: !!current.person.photoPath,
+    // Active Lord's Day service times for the portal home.
+    worship: types.docs
+      .filter((row) => row.get("dayOfWeek") === 0)
+      .sort((a, b) =>
+        String(a.get("defaultTime")).localeCompare(
+          String(b.get("defaultTime")),
+        ),
+      )
+      .map((row) => ({
+        name: String(row.get("name")),
+        time: DateTime.fromFormat(
+          String(row.get("defaultTime")),
+          "HH:mm",
+        ).toFormat("h:mm a"),
+      })),
     preferences: {
       ...directoryPreferencesSchema.parse({
         listed: preferences.get("listed") || false,

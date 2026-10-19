@@ -408,7 +408,7 @@ async function portalLogin(page: Page) {
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Welcome, James Calder", exact: true }),
+    page.getByRole("heading", { name: "Welcome, James", exact: true }),
   ).toBeVisible();
 }
 test("supports mobile member sharing and RSVP without exposing the staff shell", async ({
@@ -421,6 +421,26 @@ test("supports mobile member sharing and RSVP without exposing the staff shell",
   await expect(
     page.getByRole("button", { name: "Settings", exact: true }),
   ).toHaveCount(0);
+  // Home shows this Lord's Day and answers an RSVP in one tap.
+  await expect(
+    page.getByText("Lord's Day Morning, 10:30 AM", { exact: true }),
+  ).toBeVisible();
+  const choices = page.getByRole("group", {
+    name: `My response for Congregational meal ${date}`,
+  });
+  await choices.getByRole("button", { name: "Maybe", exact: true }).click();
+  await expect(
+    page.getByText("Your RSVP was saved.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    choices.getByRole("button", { name: "Maybe", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.screenshot({
+    path: "test-results/design-portal-home.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.getByRole("tab", { name: "Me", exact: true }).click();
   await page
     .getByRole("tab", { name: "My sharing choices", exact: true })
     .click();
@@ -446,9 +466,7 @@ test("supports mobile member sharing and RSVP without exposing the staff shell",
     fullPage: true,
     animations: "disabled",
   });
-  await page
-    .getByRole("tab", { name: "Events & my RSVPs", exact: true })
-    .click();
+  await page.getByRole("tab", { name: "Events", exact: true }).click();
   await page
     .getByLabel(`My response for Congregational meal ${date}`)
     .selectOption("yes");

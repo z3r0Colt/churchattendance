@@ -14,6 +14,7 @@ describe("member sign-in return path", () => {
   it("keeps only known portal tabs on the portal origin", () => {
     expect(safeReturnPath("/")).toBe("/");
     expect(safeReturnPath("/?tab=events")).toBe("/?tab=events");
+    expect(safeReturnPath("/?tab=home")).toBe("/?tab=home");
     expect(memberReturnTab("/?tab=account")).toBe("account");
   });
   it("rejects other origins, paths and tabs", () => {

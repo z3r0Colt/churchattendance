@@ -11,6 +11,7 @@ import {
   type MercyStatus,
 } from "./mercy.js";
 export const memberTabs = [
+  "home",
   "directory",
   "events",
   "profile",

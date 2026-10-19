@@ -47,11 +47,40 @@ import { AccountSettings, FinishSignIn, SignIn } from "./Account";
 import { MyDetails } from "./Profile";
 import { Requests } from "./Requests";
 import { PublicCalendarView, Subscriptions } from "./Calendar";
+import { Home } from "./Home";
+
+// Personal settings live together under Me.
+const meTabs = ["profile", "privacy", "calendar", "account"];
+const icons: Record<string, string> = {
+  home: "M4 11l8-7 8 7v9h-5v-6H9v6H4z",
+  events: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
+  directory:
+    "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 000-6M21 20c0-2-1-4-3-5",
+  requests: "M4 5h16v11H8l-4 4z",
+  me: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6",
+};
+function TabIcon({ name }: { name: string }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={icons[name]} />
+    </svg>
+  );
+}
 // Read once at load: the link is removed from the address bar before React renders.
 const initialLink =
   location.pathname === "/staff-security" ? null : pendingSignInLink();
 const initialTab =
-  memberReturnTab(initialLink?.target ?? `/${location.search}`) || "directory";
+  memberReturnTab(initialLink?.target ?? `/${location.search}`) || "home";
 function App() {
   const session = usePortalAuth();
   const [link, setLink] = useState(initialLink);
@@ -63,7 +92,7 @@ function App() {
     <FluentProvider theme={lightTheme} className="portal">
       <header>
         <a className="wordmark" href="/">
-          SYCAMORE RPC
+          Sycamore
         </a>
         <span>Church portal</span>
         {session.user && (
@@ -308,7 +337,12 @@ function Member() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [directory, setDirectory] = useState<DirectoryEntry[]>([]);
   const [events, setEvents] = useState<PortalEvent[]>([]);
-  const [tab, setTab] = useState<string>(initialTab);
+  const [tab, setTab] = useState<string>(
+    meTabs.includes(initialTab) ? "me" : initialTab,
+  );
+  const [meTab, setMeTab] = useState<string>(
+    meTabs.includes(initialTab) ? initialTab : "profile",
+  );
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -374,14 +408,14 @@ function Member() {
   return (
     <>
       <div className="intro">
-        <span className="eyebrow">WITHIN THE CONGREGATION</span>
+        <span className="eyebrow">
+          {DateTime.now()
+            .toFormat("cccc, LLLL d")
+            .replace(/^Sunday/, "Lord's Day")}
+        </span>
         <Title3 as="h1">
-          {profile ? `Welcome, ${profile.person.name}` : "Member area"}
+          {profile ? `Welcome, ${profile.person.firstName}` : "Member area"}
         </Title3>
-        <p>
-          The directory includes only people who have chosen to share their
-          details.
-        </p>
       </div>
       {error && <MessageBar intent="error">{error}</MessageBar>}
       {notice && <MessageBar intent="success">{notice}</MessageBar>}
@@ -421,18 +455,47 @@ function Member() {
       ) : (
         <>
           <TabList
+            className="member-tabs"
+            aria-label="Member sections"
             selectedValue={tab}
             onTabSelect={(_, row) => setTab(String(row.value))}
           >
-            <Tab value="directory">Directory</Tab>
-            <Tab value="events">Events & my RSVPs</Tab>
-            <Tab value="profile">My details</Tab>
-            <Tab value="requests">Requests</Tab>
-            <Tab value="calendar">Calendar links</Tab>
-            <Tab value="privacy">My sharing choices</Tab>
-            <Tab value="account">Account</Tab>
+            {(
+              [
+                ["home", "Home"],
+                ["events", "Events"],
+                ["directory", "Directory"],
+                ["requests", "Requests"],
+                ["me", "Me"],
+              ] as const
+            ).map(([value, label]) => (
+              <Tab key={value} value={value} icon={<TabIcon name={value} />}>
+                {label}
+              </Tab>
+            ))}
           </TabList>
-          {tab === "directory" ? (
+          {tab === "me" && (
+            <TabList
+              className="me-tabs"
+              aria-label="My settings"
+              selectedValue={meTab}
+              onTabSelect={(_, row) => setMeTab(String(row.value))}
+            >
+              <Tab value="profile">My details</Tab>
+              <Tab value="privacy">My sharing choices</Tab>
+              <Tab value="calendar">Calendar links</Tab>
+              <Tab value="account">Account</Tab>
+            </TabList>
+          )}
+          {tab === "home" ? (
+            <Home
+              profile={profile}
+              events={events}
+              busy={busy}
+              perform={(action, message) => void perform(action, message)}
+              go={setTab}
+            />
+          ) : tab === "directory" ? (
             <>
               <div className="toolbar">
                 <Field label="Search the member directory">
@@ -479,13 +542,13 @@ function Member() {
                 <p>No directory entries are being shared yet.</p>
               )}
             </>
-          ) : tab === "account" ? (
-            <AccountSettings />
           ) : tab === "requests" ? (
             <Requests />
-          ) : tab === "calendar" ? (
+          ) : tab === "me" && meTab === "account" ? (
+            <AccountSettings />
+          ) : tab === "me" && meTab === "calendar" ? (
             <Subscriptions />
-          ) : tab === "profile" ? (
+          ) : tab === "me" && meTab === "profile" ? (
             <MyDetails
               key={JSON.stringify([
                 profile.contact,
@@ -497,7 +560,7 @@ function Member() {
               busy={busy}
               perform={perform}
             />
-          ) : tab === "privacy" ? (
+          ) : tab === "me" ? (
             <Sharing
               key={profile.preferences.expectedRevision}
               value={profile.preferences}

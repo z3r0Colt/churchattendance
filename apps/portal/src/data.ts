@@ -72,7 +72,14 @@ export const callPortal = async <T>(
 ): Promise<T> => (await httpsCallable<unknown, T>(functions, name)(input)).data;
 export type PortalEvent = Occurrence & { description: string; zone: string };
 export type MemberProfile = {
-  person: { id: string; name: string; email: string; phone: string };
+  person: {
+    id: string;
+    firstName: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  worship: { name: string; time: string }[];
   contact: {
     preferredName: string;
     email: string;
