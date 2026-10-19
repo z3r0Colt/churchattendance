@@ -15,6 +15,7 @@ import {
   Textarea,
 } from "@fluentui/react-components";
 import { ExportButton } from "../components/ExportButton";
+import { ReauthHost } from "../security/Reauth";
 import { columnLabel, displayValue, statusTone } from "@sycamore/shared";
 import type { ReportRow } from "@sycamore/shared";
 export type Choice = { id: string; name: string };
@@ -91,19 +92,21 @@ export function Records({
       </div>
       {!!rows.length && (
         <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
+          <table className="card-table" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
                 {keys.map((key) => (
-                  <th key={key}>{columnLabel(key)}</th>
+                  <th key={key} role="columnheader">
+                    {columnLabel(key)}
+                  </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {rows.map((row, index) => (
-                <tr key={String(row.id ?? index)}>
+                <tr key={String(row.id ?? index)} role="row">
                   {keys.map((key, column) => (
-                    <td key={key}>
+                    <td key={key} role="cell" data-label={columnLabel(key)}>
                       {column === 0 && choose ? (
                         <Button
                           appearance="transparent"
@@ -288,6 +291,8 @@ export function RecordEditor({
             </DialogActions>
           </DialogBody>
         </form>
+        {/* A sensitive save asks to confirm the sign-in in a dialog nested here. */}
+        <ReauthHost />
       </DialogSurface>
     </Dialog>
   );
@@ -328,20 +333,22 @@ export function ActionTable({
       </div>
       {!!rows.length && (
         <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
+          <table className="card-table" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
                 {keys.map((key) => (
-                  <th key={key}>{columnLabel(key)}</th>
+                  <th key={key} role="columnheader">
+                    {columnLabel(key)}
+                  </th>
                 ))}
-                {actions && <th>Actions</th>}
+                {actions && <th role="columnheader">Actions</th>}
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {rows.map((row, index) => (
-                <tr key={String(row.id ?? index)}>
+                <tr key={String(row.id ?? index)} role="row">
                   {keys.map((key) => (
-                    <td key={key}>
+                    <td key={key} role="cell" data-label={columnLabel(key)}>
                       {["Status", "State"].includes(columnLabel(key)) &&
                       typeof row[key] === "string" &&
                       row[key] ? (
@@ -351,7 +358,15 @@ export function ActionTable({
                       )}
                     </td>
                   ))}
-                  {actions && <td className="row-actions">{actions(index)}</td>}
+                  {actions && (
+                    <td
+                      className="row-actions"
+                      role="cell"
+                      data-label="Actions"
+                    >
+                      {actions(index)}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

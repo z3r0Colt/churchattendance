@@ -91,6 +91,7 @@ import { Communion } from "./chms/Communion";
 import { Imports } from "./chms/Imports";
 import { StaffPasswordForm, StaffEnrollment } from "./security/Factors";
 import { Security } from "./security/Security";
+import { ReauthHost } from "./security/Reauth";
 import { PasskeySignIn } from "./security/PasskeySignIn";
 import { browserStaffSignIn, securityCall } from "./data/security";
 import { staffWeb } from "./platform";
@@ -629,9 +630,11 @@ function Workspace({
         )}
         {!data.online && (
           <MessageBar intent="warning">
-            {staffWeb
-              ? "You are offline. Marks are kept in this tab until the connection returns, so keep this tab open."
-              : "You are offline. Attendance changes stay on this PC until the connection returns."}
+            {staffWeb && page !== "attendance"
+              ? "You are offline. Only attendance marks work offline in the browser. Changes on this page need a connection."
+              : staffWeb
+                ? "You are offline. Marks are kept in this tab until the connection returns, so keep this tab open."
+                : "You are offline. Attendance changes stay on this PC until the connection returns."}
           </MessageBar>
         )}
         {data.error && (
@@ -970,6 +973,7 @@ function Workspace({
           </>
         )}
       </main>
+      <ReauthHost />
       {visitor && service && (
         <VisitorDrawer
           serviceId={service.id}

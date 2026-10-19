@@ -2,10 +2,15 @@ import { httpsCallable } from "firebase/functions";
 import { signInWithCustomToken } from "firebase/auth";
 import { auth, functions } from "./firebase";
 import { native, staffSecurityUrl } from "../platform";
-export const securityCall = async <T = unknown>(
+import { withRecentSignIn } from "./reauth";
+// Sensitive account actions ask the person to confirm it is them, then try once more.
+export const securityCall = <T = unknown>(
   name: string,
   input: unknown = {},
-): Promise<T> => (await httpsCallable<unknown, T>(functions, name)(input)).data;
+): Promise<T> =>
+  withRecentSignIn(
+    async () => (await httpsCallable<unknown, T>(functions, name)(input)).data,
+  );
 const random = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
     byte.toString(16).padStart(2, "0"),

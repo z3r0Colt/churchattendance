@@ -116,3 +116,6 @@ export type SecurityEvent = {
   at: string;
   target: string;
 };
+// Sent as the error detail when an action needs a sign-in within the last five minutes,
+// so the staff app can ask the person to confirm it is them and try again.
+export const RECENT_SIGN_IN_REASON = "recent-sign-in";

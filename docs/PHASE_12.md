@@ -5,7 +5,7 @@ Phase 12 gives staff the permitted desktop jobs in a browser, starting with atte
 | Part | Scope | Status |
 |---|---|---|
 | 1 | Separate staff web build, in-page MFA or passkey sign-in, no private data in browser storage, phone menu and phone attendance | Implemented |
-| 2 | A narrow-screen path for every other permitted workflow, reauthentication for sensitive actions, keyboard, screen reader and theme checks | Planned |
+| 2 | A narrow-screen path for every other permitted workflow, reauthentication for sensitive actions, keyboard, screen reader and theme checks | Implemented |
 | 3 | Release gates: live provider and security checks, managed backup and restore verification, signed Windows packaging and update publishing | Planned |
 
 Decisions made before implementation: the staff web lives on the portal's Hosting site and origin under `/staff/`, as its own build. Phone attendance keeps offline marks in memory only. A staff web sign-in lasts only for the browser tab.
@@ -50,8 +50,46 @@ The staff web is the desktop renderer built a second time for browsers (`apps/de
 * passkey sign-in to the staff web with a virtual authenticator and a real WebAuthn assertion;
 * the built staff web bundle contains no desktop bridge names.
 
-## Part 1 limits
+## Every screen on a phone (part 2)
 
-* Other screens work in the browser but have not yet had their narrow-screen pass; wide grids scroll sideways. Part 2 covers each workflow.
-* Reauthentication for sensitive actions still uses the existing five-minute recent sign-in checks on the server; Part 2 adds the in-page prompt.
-* Before production use, add the staff web URL to the release checks: the Hosting rewrite and CSP on the live site, passkey sign-in on the live origin, and a real phone on the church network.
+Part 2 is a layout and confirmation pass. Screens, rules, callables and the data model are unchanged, so each role reaches exactly the jobs it reaches on the desktop.
+
+* **Grids.** The shared grids (`Records` and `ActionTable`, used for most lists) show one card per record below 760px. The first field is the card's title, each other field carries its column name, and empty fields are left out. Explicit table, row and cell roles keep the table structure for screen readers. The few custom tables (reports detail, delivery logs, contact gaps, maps lists and similar) keep a sideways scroller inside the page, as DESIGN.md allows.
+* **Tabs, buttons and fields.** Tab rows wrap onto a second line, button rows and filter bars wrap, fields and dropdowns shrink to the screen and long button labels wrap. Nothing on any screen reaches past the edge of a 360 or 390px phone, and wide content never widens the page.
+* **Calendar.** The month heading wraps, and the month grid stays readable at phone width; the list view remains available.
+* **Maps and workflows.** Locations keep their household list beside the offline plot, and workflows keep their step list beside the diagram, so neither picture is the only way to finish a job.
+* **Offline wording.** On the staff web, a page other than attendance says "Only attendance marks work offline in the browser. Changes on this page need a connection." before anyone starts editing.
+
+### Confirm it is you
+
+Account changes that the server already limits to a sign-in within the last five minutes now ask in the page instead of failing: adding a staff account, changing roles, disabling, enabling, revoking or recovering an account, and moving private records to new encryption. Passkey changes and desktop approval stay on the church security page, which already asks for a fresh sign-in.
+
+* The server's refusal carries the reason `recent-sign-in` (`RECENT_SIGN_IN_REASON` in `packages/shared`). `securityCall` sees it, opens **Confirm it is you** and runs the action once more after a successful confirmation.
+* The dialog names the signed-in account and offers its password (and authenticator code when the account has one), **Confirm with passkey** in the staff web, or **Confirm in browser** on the desktop. It confirms the same account only; it never switches accounts.
+* **Cancel** changes nothing and says "Confirmation cancelled. Nothing was changed."
+* A confirm dialog opened from a form nests inside that form's dialog, which Fluent's modal handling needs; a sibling dialog left the form unreachable after it closed.
+
+### Accessibility, themes and the booth display
+
+* Every destination each role can open, and every tab on it, is checked at phone width; Pastor screens in light and dark, deacon screens at 360px, and the volunteer's two destinations.
+* axe (`@axe-core/playwright` 4.13.0, WCAG 2 A and AA) finds no serious or critical problems on any Pastor or deacon destination in either theme or on the booth display in dark. Fluent's hidden focus sentinels (`data-tabster-dummy`) are excluded because they are focusable placeholders by design.
+* The phone menu opens, moves through destinations and closes from the keyboard alone. The menu becomes visible immediately so focus moves into it.
+* Every Pastor destination fits the 1024 by 768 booth display in both themes.
+
+### Tests
+
+`tests/e2e/staff-web-screens.spec.ts`:
+
+* every Pastor destination and tab at 390px in light (with axe) and every destination in dark (with axe);
+* every Pastor destination at 1024 by 768 in light and dark (axe in dark);
+* a deacon at 360px reaches Deacon tasks and Mercy ministry and every tab, sees no Session-only destinations and no Messages, with axe on each;
+* a volunteer sees only Attendance and Account security;
+* the phone menu by keyboard alone;
+* a sensitive account change answered as stale: Cancel creates nothing and leaves the form usable; Confirm with the password creates the account;
+* the statistical report's figures in the browser equal the desktop's.
+
+## Remaining limits
+
+* The confirm test simulates the server's "sign-in too old" answer for the first call, because a fresh test sign-in is always recent. The server's five-minute rule itself has unit tests.
+* Custom tables scroll sideways rather than becoming cards.
+* Before production use, add the staff web URL to the release checks: the Hosting rewrite and CSP on the live site, passkey sign-in and confirmation on the live origin, and a real phone on the church network. Part 3 covers these.

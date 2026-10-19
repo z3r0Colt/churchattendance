@@ -1534,9 +1534,11 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
       visibility 0.18s;
     box-shadow: var(--shadow16);
   }
+  /* Visible at once on opening, so focus can move into the menu straight away. */
   .app .workspace.nav-open .sidebar {
     visibility: visible;
     transform: none;
+    transition: transform 0.18s ease;
   }
   .app .sidebar .nav-item {
     min-height: 48px;
@@ -1658,5 +1660,103 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   .app .signin {
     width: 100%;
     padding: 24px 20px;
+  }
+}
+/* Every staff screen on a phone (Phase 12 part 2): tabs, button rows and fields
+   fit the screen, and the shared grids show one labelled card per record. */
+@media (max-width: 760px) {
+  .app .content .fui-TabList {
+    flex-wrap: wrap;
+  }
+  .app .content .actions,
+  .app .content .heading-tools,
+  .app .content .report-filters,
+  .app .content .section-heading {
+    flex-wrap: wrap;
+  }
+  .app .content .fui-Dropdown,
+  .app .content .fui-Select,
+  .app .content .fui-Combobox,
+  .app .content .fui-Input,
+  .app .content .fui-Textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .app .content .fui-Button {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .app .table-card {
+    padding: 12px;
+  }
+  .card-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .card-table,
+  .card-table tbody,
+  .card-table tr {
+    display: block;
+    width: 100%;
+  }
+  .card-table tr {
+    margin-bottom: 10px;
+    padding: 4px 12px;
+    border: 1px solid var(--colorNeutralStroke1);
+    border-radius: 8px;
+    background: var(--colorNeutralBackground1);
+  }
+  .app .card-table td {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--colorNeutralStroke2);
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .app .card-table td:last-child {
+    border-bottom: 0;
+  }
+  .card-table td::before {
+    content: attr(data-label);
+    flex: 0 0 38%;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--colorNeutralForeground2);
+  }
+  .app .card-table td.row-actions {
+    flex-wrap: wrap;
+  }
+  .card-table td.row-actions::before {
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 760px) {
+  /* A card leads with its first field as the title and leaves out empty fields. */
+  .app .card-table td:first-child {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .card-table td:first-child::before {
+    content: none;
+  }
+  .app .card-table td:first-child .fui-Button {
+    padding-left: 0;
+    font-size: 16px;
+  }
+  .app .card-table td:empty {
+    display: none;
+  }
+  .month-heading {
+    flex-wrap: wrap;
+  }
+  .month-heading h2 {
+    min-width: 0;
+    flex: 1;
   }
 }

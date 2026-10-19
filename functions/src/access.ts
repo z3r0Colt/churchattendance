@@ -1,6 +1,11 @@
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { hasRole, roleSchema, type Role } from "@sycamore/shared";
+import {
+  hasRole,
+  RECENT_SIGN_IN_REASON,
+  roleSchema,
+  type Role,
+} from "@sycamore/shared";
 import { getAuth } from "firebase-admin/auth";
 import { db } from "./admin.js";
 import { hasAssurance, recentAuthentication } from "./security/policy.js";
@@ -64,6 +69,7 @@ export function requireRecent(request: CallableRequest) {
     throw new HttpsError(
       "unauthenticated",
       "Sign in again before changing security settings.",
+      { reason: RECENT_SIGN_IN_REASON },
     );
 }
 export function parse<T>(schema: z.ZodType<T>, data: unknown): T {
