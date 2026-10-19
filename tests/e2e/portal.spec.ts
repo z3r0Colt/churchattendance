@@ -410,6 +410,7 @@ test("throttles public requests without retaining a raw network address", async 
 async function portalLogin(page: Page) {
   await page.goto("http://127.0.0.1:5174");
   await page.getByRole("tab", { name: "Member sign in", exact: true }).click();
+  await page.getByRole("tab", { name: "Use my password", exact: true }).click();
   await page.getByLabel("Email").fill("member-james@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();

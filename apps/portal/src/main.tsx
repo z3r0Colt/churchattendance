@@ -16,7 +16,11 @@ import {
 } from "@fluentui/react-components";
 import { DateTime } from "luxon";
 import { lightTheme } from "../../desktop/renderer/theme/brand";
-import type { DirectoryEntry, DirectoryPreferences } from "@sycamore/shared";
+import {
+  memberReturnTab,
+  type DirectoryEntry,
+  type DirectoryPreferences,
+} from "@sycamore/shared";
 import {
   auth,
   getDirectory,
@@ -27,8 +31,8 @@ import {
   portalConfigured,
   portalError,
   rsvp,
+  pendingSignInLink,
   saveSharing,
-  signIn,
   signOutPortal,
   submitForm,
   usePortalAuth,
@@ -38,9 +42,19 @@ import {
 } from "./data";
 import "./style.css";
 import { StaffSecurity } from "./StaffSecurity";
+import { AccountSettings, FinishSignIn, SignIn } from "./Account";
+// Read once at load: the link is removed from the address bar before React renders.
+const initialLink =
+  location.pathname === "/staff-security" ? null : pendingSignInLink();
+const initialTab =
+  memberReturnTab(initialLink?.target ?? `/${location.search}`) || "directory";
 function App() {
   const session = usePortalAuth();
-  const [tab, setTab] = useState("events");
+  const [link, setLink] = useState(initialLink);
+  const [tab, setTab] = useState(link ? "signin" : "events");
+  useEffect(() => {
+    if (session.user) setLink(null);
+  }, [session.user]);
   return (
     <FluentProvider theme={lightTheme} className="portal">
       <header>
@@ -69,6 +83,14 @@ function App() {
           <Spinner label="Opening portal" />
         ) : session.user ? (
           <Member key={session.user.uid} />
+        ) : link ? (
+          <FinishSignIn
+            pending={link}
+            done={() => {
+              setLink(null);
+              setTab("signin");
+            }}
+          />
         ) : (
           <>
             <div className="intro">
@@ -88,7 +110,7 @@ function App() {
               <Tab value="signin">Member sign in</Tab>
             </TabList>
             {tab === "signin" ? (
-              <SignIn />
+              <SignIn returnTo={`/?tab=${initialTab}`} />
             ) : tab === "visit" ? (
               <OnlineForm kind="visitor" />
             ) : (
@@ -102,51 +124,6 @@ function App() {
         within the congregation.
       </footer>
     </FluentProvider>
-  );
-}
-function SignIn() {
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    setBusy(true);
-    setError("");
-    try {
-      await signIn(String(data.get("email")), String(data.get("password")));
-    } catch {
-      setError("Sign-in failed. Check your email, password and connection.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <form className="card narrow" onSubmit={submit}>
-      <h2>Member sign in</h2>
-      <p>
-        Use the account linked by the church administrator. Public form
-        submission does not create a member login.
-      </p>
-      <Field label="Email" required>
-        <Input name="email" type="email" required autoComplete="username" />
-      </Field>
-      <Field label="Password" required>
-        <Input
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-        />
-      </Field>
-      {error && <MessageBar intent="error">{error}</MessageBar>}
-      <Button
-        type="submit"
-        appearance="primary"
-        disabled={busy || !portalConfigured}
-      >
-        Sign in
-      </Button>
-    </form>
   );
 }
 function PublicEvents() {
@@ -324,7 +301,7 @@ function Member() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [directory, setDirectory] = useState<DirectoryEntry[]>([]);
   const [events, setEvents] = useState<PortalEvent[]>([]);
-  const [tab, setTab] = useState("directory");
+  const [tab, setTab] = useState<string>(initialTab);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -440,6 +417,7 @@ function Member() {
             <Tab value="directory">Directory</Tab>
             <Tab value="events">Events & my RSVPs</Tab>
             <Tab value="privacy">My sharing choices</Tab>
+            <Tab value="account">Account</Tab>
           </TabList>
           {tab === "directory" ? (
             <>
@@ -487,6 +465,8 @@ function Member() {
                 <p>No directory entries are being shared yet.</p>
               )}
             </>
+          ) : tab === "account" ? (
+            <AccountSettings />
           ) : tab === "privacy" ? (
             <Sharing
               key={profile.preferences.expectedRevision}

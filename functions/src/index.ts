@@ -46,6 +46,7 @@ export * from "./mercy/visits.js";
 export * from "./care/dates.js";
 export * from "./workflows/api.js";
 export * from "./workflows/triggers.js";
+export * from "./member/accounts.js";
 
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);

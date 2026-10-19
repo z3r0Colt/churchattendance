@@ -9,6 +9,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
+  isSignInWithEmailLink,
+  sendSignInLinkToEmail,
+  signInWithEmailLink,
+  verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import {
   connectFunctionsEmulator,
@@ -23,6 +27,7 @@ import {
   directoryPreferencesSchema,
   memberRsvpSchema,
   onlineFormSchema,
+  safeReturnPath,
   type DirectoryEntry,
   type DirectoryPreferences,
   type Occurrence,
@@ -83,6 +88,77 @@ export async function signIn(email: string, password: string) {
   await signInWithEmailAndPassword(auth, email, password);
 }
 export const signOutPortal = () => signOut(auth);
+const linkEmailKey = "sycamore.memberLinkEmail";
+// The link returns only to this portal's own origin, which Firebase also
+// checks against the project's authorized domains.
+export async function requestSignInLink(email: string, returnTo: string) {
+  const url = new URL("/", location.origin);
+  url.searchParams.set("return", safeReturnPath(returnTo));
+  await sendSignInLinkToEmail(auth, email, {
+    url: url.toString(),
+    handleCodeInApp: true,
+  });
+  try {
+    localStorage.setItem(linkEmailKey, email);
+  } catch {
+    // Opening the link then asks for the email again.
+  }
+}
+export function pendingSignInLink() {
+  if (!isSignInWithEmailLink(auth, location.href)) return null;
+  const link = location.href;
+  const target = safeReturnPath(new URL(link).searchParams.get("return"));
+  // Keep the one-time code out of history and reloads before it is used.
+  history.replaceState(null, "", "/");
+  let email = "";
+  try {
+    email = localStorage.getItem(linkEmailKey) || "";
+  } catch {
+    email = "";
+  }
+  return { link, target, email };
+}
+export async function finishSignInLink(link: string, email: string) {
+  await setPersistence(auth, browserSessionPersistence);
+  await signInWithEmailLink(auth, email, link);
+  try {
+    localStorage.removeItem(linkEmailKey);
+  } catch {
+    // Nothing to forget.
+  }
+}
+export function signInLinkError(error: unknown) {
+  const code = (error as { code?: string }).code || "";
+  if (
+    code === "auth/invalid-action-code" ||
+    code === "auth/expired-action-code"
+  )
+    return "This sign-in link has expired or was already used. Request a new link.";
+  if (code === "auth/invalid-email" || code === "auth/missing-email")
+    return "Enter the email address the link was sent to.";
+  if (code === "auth/user-disabled")
+    return "This account is unavailable. Contact the church office.";
+  if (
+    code === "auth/internal-error" ||
+    code === "auth/admin-restricted-operation"
+  )
+    return "This email is not linked to a member account. Contact the church office.";
+  return "Sign-in could not be finished. Request a new link.";
+}
+export async function changeSignInEmail(email: string) {
+  if (!auth.currentUser) throw new Error("Sign in again first.");
+  try {
+    await verifyBeforeUpdateEmail(auth.currentUser, email, {
+      url: new URL("/", location.origin).toString(),
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "auth/requires-recent-login")
+      throw new Error(
+        "Sign out and sign in again, then change your sign-in email.",
+      );
+    throw error;
+  }
+}
 export const verifyEmail = async () => {
   if (auth.currentUser) await sendEmailVerification(auth.currentUser);
 };
