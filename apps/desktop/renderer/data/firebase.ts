@@ -15,9 +15,7 @@ import {
 } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
-import { staffWeb } from "../platform";
-export const emulators =
-  import.meta.env.VITE_USE_EMULATORS === "true" || import.meta.env.DEV;
+import { emulators, staffWeb } from "../platform";
 export const configured =
   emulators || !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
 const app = initializeApp({

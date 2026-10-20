@@ -29,7 +29,8 @@ import {
   type Person,
   type Role,
 } from "@sycamore/shared";
-import { auth, db, emulators, functions, storage } from "./firebase";
+import { emulators } from "../platform";
+import { auth, db, functions, storage } from "./firebase";
 export { emulators };
 export type MessageView = {
   id: string;
