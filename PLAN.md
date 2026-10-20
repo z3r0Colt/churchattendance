@@ -1,8 +1,21 @@
-# Church Attendance & Management (Windows) Plan
+# Church Attendance & Management Plan
 
-A Windows desktop program with member and staff web access for Sycamore Reformed Presbyterian Church (sycamorerpc.org). It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and supports church administration and shepherding. Giving and tithing are left out on purpose.
+A church attendance, administration and shepherding application, originally built for Sycamore Reformed Presbyterian Church. The approved next product is an online PWA managed for separate churches on Firebase. Giving and accounting remain excluded.
 
 Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records coverage and acceptance criteria. Phase 7 security/account and Phase 8 shepherding implementations are now included; their live setup and staging checks are separate. Phases 9 through 11 and Phase 12 parts 1 and 2 are implemented. Phase 12 part 3 remains pending. See the [implementation status](docs/FEATURE_EXPANSION.md#implementation-status). Earlier milestone notes describe their implemented baseline, subject to the Phase 7 security changes.
+
+## 0. Approved PWA service direction
+
+Approved October 20, 2026. [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) defines Phases 13 through 18 and their acceptance checks. All six phases are planned, not implemented by this documentation change.
+
+- Deliver staff and member access through an online PWA on Firebase Hosting. Retain the existing Firebase backend and privacy boundaries.
+- Maintain one codebase with separate Firebase projects, identities, records, secrets and encryption keys for each church. Colt manages setup and releases. Start with a service-owned subdomain, with a church-owned subdomain optional.
+- Replace customer-specific source edits with validated branding and deployment configuration. The existing Presbyterian membership/governance model remains unchanged for now.
+- Retire native Windows releases, code signing, kiosk support and offline record persistence as launch requirements. Existing source remains temporarily while web replacements are verified.
+- Require server-acknowledged saves, honest connection/error states, safe PWA updates and memory-only church records. No offline workspace is promised.
+- Complete repeatable provisioning, secure administrator enrollment, backups/recovery, operator tooling and pilot acceptance before paid rollout. Keep manual subscription/scholarship administration separate from church records. Pricing is not fixed by this plan.
+
+These decisions supersede conflicting Windows, kiosk, offline and single-customer requirements below and in earlier phase documents. Earlier milestones and implementation notes describe the existing source, not the completed PWA service. Section 4.3 continues to describe the implemented data model until a later implementation commit updates it. Giving/accounting, denomination configuration and existing-person duplicate merging are not added to this milestone.
 
 ## 1. Goals
 
@@ -11,7 +24,7 @@ Scope extension approved on October 18, 2026. All ten feature areas from the Ten
 3. Reports the Session and Clerk actually use, exported to CSV or XLSX.
 4. Email and SMS to the whole congregation or any filtered group.
 5. Several PCs share the same live data (sound booth PC, pastor's PC, and others later), from church or from home.
-6. The sound booth PC keeps working on the Lord's Day even if the internet drops.
+6. Staff can see whether work is confirmed saved. An internet connection is required, and no offline attendance is promised.
 7. Simple enough for a volunteer to run without training.
 
 Not in scope: giving, pledges, accounting, online donation pages.
@@ -58,7 +71,7 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Every service is taken name by name. There is no headcount only mode
 * Children are marked on the same roll with their household. No separate children's check-in and no labels
 * Visitor quick add right on the attendance screen, so visitors are counted by name too
-* Optional **self check-in kiosk mode** (tablet or second monitor, search by last name or phone)
+* Self check-in kiosk is retired from the PWA service scope. Existing native implementation is historical.
 * Absence alerts, for example "flag anyone absent 3 Lord's Days in a row" sent to their shepherding elder
 * Configurable absence thresholds, consented email/SMS elder digests and contact-gap detection (Phase 8)
 * Separate named communion participation and in-person/online worship attendance, with historical reports (Phase 11)
@@ -136,7 +149,7 @@ A yearly overview with average attendance per service by month, a 12 month trend
 * Member directory and personal RSVP, plus visitor/event forms (implemented in Phase 4)
 * Passwordless member email links, self-service contact/photo editing and care requests (Phase 10)
 * Responsive staff attendance and all permitted management workflows on phones (Phase 12)
-* Desktop offline attendance remains supported alongside web access
+* Online-only PWA delivery replaces native/offline release requirements under Phases 13 through 18. Existing source behavior is documented in Phase 12 until changed.
 
 ### 3.10 Officer administration
 * Officer ordination, installation, terms, rotation and end-of-service records (Phase 11)
@@ -146,7 +159,7 @@ A yearly overview with average attendance per service by month, a 12 month trend
 
 ## 4. Technical Design
 
-The app is a Windows desktop program built with Electron, backed by Google Firebase. Firebase handles sign in, the shared database, live updates between PCs, offline use, and the server code for texting and email. There is no server for the church to run or patch.
+The implemented baseline includes Electron and responsive web builds backed by Firebase. The approved target is Firebase-hosted staff/member PWA delivery with a separate Firebase project per church. Firebase handles authentication, records, file storage and backend jobs. Twilio and Microsoft Graph remain external providers. The stack and layout tables below describe the existing source until the PWA phases replace the native delivery path.
 
 ### 4.1 Stack
 | Part | Choice | Why |
@@ -445,6 +458,8 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 
 ## 6. Phased Roadmap
 
+Phases 1 through 12 describe the earlier implementation. Their native Windows, kiosk and offline launch requirements are superseded by section 0. The next work is [Phases 13 through 18](docs/PWA_SERVICE_PLAN.md), beginning with church configuration and branding.
+
 **Phase 1, Attendance core (MVP, about 5 to 7 weeks)**
 * Firebase project, Electron app setup, logins and roles, security rules with tests
 * Offline cache turned on and tested for the booth PC
@@ -524,19 +539,15 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 * Shared validation and report logic without exposing native Electron APIs to the web
 * Live MFA/passkey, provider and calendar delivery checks, managed backup/restore verification and signed Windows release checks
 
-See [Expanded feature requirements](docs/FEATURE_EXPANSION.md) for the ten-area coverage table and the release criteria for each phase. The existing single-church Firebase project stays the deployment boundary. This extension does not add multi-church hosting or financial features.
+See [Expanded feature requirements](docs/FEATURE_EXPANSION.md) for the ten-area coverage table and the release criteria for each phase. For Phases 7 through 12, one church per Firebase project remains the deployment boundary. Phases 13 through 18 add managed deployments for multiple churches using separate projects. Financial features remain excluded.
 
-## 7. Running Costs (estimate for a 150 person church)
-| Item | Cost |
-|---|---|
-| Software | Free (built in house) |
-| Firebase (Blaze pay as you go plan, needed for Cloud Functions) | likely $0 to $3 per month at this size, since the free daily allowance covers most use. A budget alert is set at $10 |
-| Twilio number | about $1.15 per month |
-| Texts | about $0.008 to $0.01 each, so a weekly 150 person text is about $6 per month |
-| 10DLC registration | one time about $4 to $45 depending on brand type, small monthly campaign fee |
-| Email | Free through the existing Microsoft 365 (shared mailbox needs no license) |
-| Church domain name | already owned (sycamorerpc.org), normal renewal only |
-| Code signing certificate (optional, stops Windows warnings) | about $100 to $300 per year, or about $10 per month through Azure Trusted Signing |
+## 7. Service costs and sustainability
+
+The service aims to cover operating costs, with available surplus supporting ministry scholarships. Subscription prices and scholarship capacity remain provisional until pilot costs and support time are measured.
+
+Track Firebase/Google Cloud usage per church, including Functions, schedulers, Secret Manager, Storage, backups, authentication and Hosting. Free allowances are not a guarantee of zero cost. Track domain costs, operational recovery and support time as well. Configure billing alerts and appropriate application limits without describing alerts as a guaranteed spending cap.
+
+Twilio numbers, registration and message usage are separate church costs. Email depends on the configured church provider and account. Verify current provider prices at onboarding. Windows signing/installer expenses are not part of the approved PWA launch.
 
 ## 8. Decisions
 1. Several PCs (sound booth and pastor to start), shared through Firebase.
@@ -561,7 +572,10 @@ These four make up the Session group, so they are the only ones who can see past
 1. Clerk of Session is not known yet. The Pastor can give any user the Clerk role from Settings at any time.
 
 ## 9. Next Step
-Phase 7 implementation is included. Verify its live MFA/passkey, key recovery and native Windows handoff setup before releasing private records. Phase 8 shepherding is implemented; verify live digest delivery and, if the Session enables lookups, the Census geocoder on staging. Phase 9 care workflows and diaconal ministry is implemented; verify live workflow, deacon summary and date reminder delivery on staging, and deploy the scheduler with the private record key secret. Phase 10 member self-service and calendar is implemented; verify email-link sign-in, the account blocking function, calendar feeds in real calendar apps and event reminder delivery on staging. Phase 11 church records and data tools is implemented; it needs no new live provider setup, but try a real church export through the import preview on staging before loading the roll. Phase 12 part 1 is implemented: the staff web at `/staff/` on the portal site, with in-page MFA or passkey sign-in, memory-only records, tab-only sign-in and phone attendance; see `docs/PHASE_12.md`. Part 2 is implemented: every permitted screen has a phone path (card grids, wrapping tabs and toolbars), sensitive account changes ask to confirm the sign-in in the page, and axe, keyboard, theme and booth-display checks run for each role. Part 3 (release gates, which need the live project) is next. Existing live provisioning and Windows release work remain required.
+
+Implement Phase 13 in [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md). Begin with a public/protected configuration split and remove customer-facing Sycamore assumptions. Prove two fictional church identities from the same source before PWA packaging and repeatable Firebase provisioning. Do not deploy live projects or send real messages as part of local implementation.
+
+Existing security/provider acceptance, managed backups and recovery remain release gates. Windows signing, native handoff and offline restart acceptance are retired from the PWA service. The implementation notes below describe existing behavior until the relevant phase changes it.
 
 ### Phase 12 implementation details
 

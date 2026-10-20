@@ -9,6 +9,16 @@ Windows desktop church management app for **Sycamore Reformed Presbyterian Churc
 * `PLAN.md` is the product plan and the source of truth for scope and the data model.
 * `DESIGN.md` is the UI design system and screen specs.
 
+## Approved product direction
+
+The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phases 13 through 18 are planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.
+
+The target is staff/member PWAs on Firebase Hosting, with one maintained codebase and a separate Firebase project, credentials and encryption keys for each church. Preserve the existing Presbyterian model and security/privacy rules. Giving/accounting and denomination configuration remain deferred. Separate operator subscription/scholarship administration is not congregation financial tracking and must not be added to church collections.
+
+Existing source paths and command descriptions below remain accurate for the baseline. Retain Electron temporarily, but do not expand native features or require signing/installers for the PWA launch. No offline attendance is required. When implementing online-only behavior, replace obsolete offline/kiosk tests with meaningful connection-loss and server-acknowledgment tests. Never disable unrelated tests to get green. Continue field-level attendance writes for multi-user concurrency.
+
+Public branding must be allowlisted separately from protected settings. Production builds must fail clearly on missing/wrong church configuration. Use explicit project selection and fictional fixtures. Local tooling implementation does not authorize live provisioning, billing, DNS changes or real provider sends. Update the actual data model and permission documentation in the same commit that introduces schema changes.
+
 ## Stack
 
 * Desktop app built with Electron, React, TypeScript and Vite, with Fluent UI React v9

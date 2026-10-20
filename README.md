@@ -1,6 +1,12 @@
-# Sycamore RPC attendance
+# Church attendance and management
 
-Attendance and communication for the Windows desktop app described in `PLAN.md` and `DESIGN.md`.
+Attendance, communication and shepherding with staff and member web access. Product scope lives in `PLAN.md` and UI rules in `DESIGN.md`.
+
+## Next development milestone
+
+The approved direction is an online PWA service on Firebase, with church branding and a separate Firebase project for each church. Read [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) for Phases 13 through 18, implementation order and release gates. Start with Phase 13 church configuration and branding.
+
+This is a plan, not a completed migration. Existing commands below still describe the baseline. Native Windows releases, signing, kiosk and offline persistence are no longer PWA launch requirements. Provisioning, security/provider acceptance, backups and recovery remain required. Giving/accounting and denomination configuration are deferred.
 
 ## Approved expansion
 

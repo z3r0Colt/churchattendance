@@ -1,5 +1,7 @@
 # Phase 12 staff mobile access and release
 
+> October 20, 2026 scope update. [Managed church PWA development plan](PWA_SERVICE_PLAN.md) defines the next work. Windows signing/releases, native handoff, kiosk and offline requirements in this earlier document are superseded for the PWA service. Existing implementation descriptions remain historical until changed. Security, privacy, provider acceptance and backup/recovery requirements remain. The service will manage separate Firebase projects per church rather than a shared tenant database.
+
 Phase 12 gives staff the permitted desktop jobs in a browser, starting with attendance on a phone, and closes the release gates. It is built in parts. Scope and acceptance criteria are in [Expanded feature requirements](FEATURE_EXPANSION.md).
 
 | Part | Scope | Status |

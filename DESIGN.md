@@ -2,7 +2,22 @@
 
 The visual direction was chosen in October 2026 from mockups of the attendance, dashboard, person profile and portal screens: a warm, quiet ground, a grouped sidebar, Cambria display headings, number tiles and household name chips on the roll.
 
-The UI design system and screen specs for the Sycamore RPC church management app. Agents and developers follow this file for every screen. Product scope lives in `PLAN.md`.
+The UI design system and screen specs for the church management app, originally developed for Sycamore RPC. Agents and developers follow this file for every screen. Product scope lives in `PLAN.md`.
+
+## 0. Approved PWA service design
+
+The October 20, 2026 direction in [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) governs the next implementation. This section describes planned behavior. Existing screenshots and native/offline specs below are historical where they conflict with it.
+
+- Staff and members use an online PWA on their church origin. Installation is optional and does not change authorization. Use one PWA installation identity per church origin initially, with a deliberate member/staff entry path.
+- Use validated church branding in the sign-in screen, shell, installation name/icons and exports. Retain Fluent components, readable typography, theme support, WCAG AA contrast and fixed confidentiality labels. Public branding never includes protected settings or member records.
+- Replace Windows-specific wording with browser/device wording. Sign-in remains session-scoped by default. Do not add persistent staff sign-in or private record caching for installation convenience.
+- Kiosk screens and Windows installer/update prompts are excluded from supported PWA navigation.
+- Connection states distinguish Connected, Saving, Saved, Connection required and failed/unconfirmed writes. A local optimistic mark is not a saved mark. Known disconnection disables new write actions. Losing connectivity during saving must show that the result is not yet confirmed.
+- Do not claim changes are saved on the device or promise offline recovery. Warn about pending work before navigation/update where supported. Revocation, idle lock and sign-out still clear private content and do not wait indefinitely for pending writes.
+- A PWA update notice never forces a reload over edits or unconfirmed operations. Cached files may show a connection-required page, not an offline church workspace.
+- Keep phone and desktop access to the same permitted workflows. Test browser exports and PDFs, including a clear print-to-PDF fallback where needed.
+
+The existing role matrix and all Session/deacon privacy boundaries remain unchanged. The product roadmap and acceptance checks live in `PLAN.md` and the linked service plan.
 
 ## 1. Principles
 
@@ -10,7 +25,7 @@ The UI design system and screen specs for the Sycamore RPC church management app
 2. **Built for the sound booth.** Roll call happens in a dim booth during the minutes before worship, often by a volunteer. Big targets, high contrast, keyboard friendly, and nothing that needs a second click when one will do.
 3. **One job per screen.** Each screen answers one question, such as "who is here today" or "who has the elder not seen lately".
 4. **Show what is private.** Session only data always carries a lock icon and the words "Session only", so no one is surprised about who can see it.
-5. **Never lose a check mark.** Offline and sync state is always visible, and saved work is never thrown away.
+5. **Tell the truth about saved work.** Connection and save status are always visible. Only server-confirmed changes count as saved. Never imply unconfirmed work will survive closing the app.
 
 ## 2. Foundations
 
