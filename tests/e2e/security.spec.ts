@@ -518,6 +518,10 @@ test("a passkey sign-in on the church security page lasts only for this tab", as
     },
   });
   await page.goto("http://localhost:5174/staff-security");
+  // A browser page never offers to keep a staff sign-in.
+  await expect(
+    page.getByRole("checkbox", { name: "Keep this PC signed in" }),
+  ).toHaveCount(0);
   await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
   await page.getByLabel(/^Password/).fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();

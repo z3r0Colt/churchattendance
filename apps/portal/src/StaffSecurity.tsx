@@ -119,7 +119,7 @@ export function StaffSecurity() {
         {notice && <MessageBar intent="info">{notice}</MessageBar>}
         {!user ? (
           <>
-            <StaffPasswordForm auth={auth} />
+            <StaffPasswordForm auth={auth} tabOnly />
             <PasskeySignIn auth={auth} call={callPortal} />
           </>
         ) : !eligible ? (
