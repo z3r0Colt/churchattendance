@@ -13,5 +13,6 @@ export default defineConfig({
     esbuildOptions: { preserveSymlinks: true },
   },
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
-  build: { outDir: "../dist/renderer", emptyOutDir: true },
+  build: { manifest: true, outDir: "../dist/renderer", emptyOutDir: true },
 });
+

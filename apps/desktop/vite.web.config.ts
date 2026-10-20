@@ -17,5 +17,6 @@ export default defineConfig({
   server: { host: "127.0.0.1", port: 5175, strictPort: true },
   // The portal build empties apps/portal/dist, so this build always runs after it:
   // in the root build script and in the Hosting predeploy in firebase.json.
-  build: { outDir: "../../portal/dist/staff", emptyOutDir: true },
+  build: { manifest: true, outDir: "../../portal/dist/staff", emptyOutDir: true },
 });
+
