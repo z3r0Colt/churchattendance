@@ -301,7 +301,10 @@ function Workspace({
   const [busy, setBusy] = useState(false);
   // On narrow screens the sidebar becomes a menu that opens over the page.
   const [navOpen, setNavOpen] = useState(false);
-  const [lockWarning, setLockWarning] = useState(false);
+  // While Lock now waits on unsaved marks, this holds the sync error already
+  // showing, so a mark rejected during the wait is told apart and not hidden.
+  const [lockWarning, setLockWarning] = useState<{ error: string }>();
+  const lockRejected = !!lockWarning && data.error !== lockWarning.error;
   const menuButton = useRef<HTMLButtonElement>(null);
   const editor = hasRole(roles, EDITOR_ROLES);
   const volunteer = roles.length === 1 && roles[0] === "attendanceVolunteer";
@@ -354,11 +357,12 @@ function Workspace({
     return () => window.removeEventListener("keydown", close);
   }, [navOpen]);
   // A lock waiting on unsaved marks finishes by itself once they reach the records.
+  // A rejected mark keeps the dialog open, because the sign-out reload would wipe its error.
   useEffect(() => {
-    if (lockWarning && !data.pending) void signOutUser();
-  }, [lockWarning, data.pending]);
+    if (lockWarning && !data.pending && !lockRejected) void signOutUser();
+  }, [lockWarning, data.pending, lockRejected]);
   function lock() {
-    if (staffWeb && data.pending) setLockWarning(true);
+    if (staffWeb && data.pending) setLockWarning({ error: data.error });
     else void signOutUser();
   }
   const service = data.services.find(
@@ -633,24 +637,27 @@ function Workspace({
       </nav>
       {/* A dialog stays in view however far down the roll the person has scrolled. */}
       <Dialog
-        open={lockWarning}
+        open={!!lockWarning}
         modalType="alert"
         onOpenChange={(_, state) => {
-          if (!state.open) setLockWarning(false);
+          if (!state.open) setLockWarning(undefined);
         }}
       >
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>Marks still saving</DialogTitle>
+            <DialogTitle>
+              {lockRejected ? "Some marks did not save" : "Marks still saving"}
+            </DialogTitle>
             <DialogContent>
-              Some marks have not reached the church records yet. Locking now
-              loses them. The lock finishes by itself once they save.
+              {lockRejected
+                ? `${data.error} Check the roll before you lock.`
+                : "Some marks have not reached the church records yet. Locking now loses them. The lock finishes by itself once they save."}
             </DialogContent>
             <DialogActions>
               <Button appearance="primary" onClick={() => void signOutUser()}>
                 Lock anyway
               </Button>
-              <Button onClick={() => setLockWarning(false)}>
+              <Button onClick={() => setLockWarning(undefined)}>
                 Keep working
               </Button>
             </DialogActions>

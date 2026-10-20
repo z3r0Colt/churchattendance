@@ -374,6 +374,51 @@ test("Keep working closes the Lock now warning and stays signed in after the mar
   expect(dialogs).toEqual([]);
   await context.close();
 });
+test("Lock now stays open and says so when a waiting mark is rejected", async ({
+  browser,
+}) => {
+  const roster = getFirestore().doc("attendanceRoster/anna");
+  const status = (await roster.get()).get("membershipStatus");
+  const context = await browser.newContext(phone);
+  try {
+    const page = await context.newPage();
+    const dialogs = recordDialogs(page);
+    await signIn(page, "volunteer@example.test");
+    await openRoll(page);
+    await page.getByText("Non-resident members", { exact: true }).click();
+    await markOffline(page, context, "Anna Calder");
+    // Anna is set to Former while the phone is offline, so the rules refuse the queued mark.
+    await roster.update({ membershipStatus: "former" });
+    await page.getByRole("button", { name: "Lock now" }).click();
+    await expect(
+      page.getByRole("alertdialog", { name: "Marks still saving" }),
+    ).toBeVisible();
+    await context.setOffline(false);
+    const warning = page.getByRole("alertdialog", {
+      name: "Some marks did not save",
+    });
+    await expect(warning).toBeVisible();
+    await expect(warning).toContainText("rejected and has been undone");
+    await expect(warning).toContainText("Check the roll before you lock.");
+    // The lock must not finish by itself. A short wait gives a lock that
+    // wrongly finished the time to reach the sign-in page.
+    await page.waitForTimeout(3000);
+    await expect(warning).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Sign in", exact: true }),
+    ).toHaveCount(0);
+    await warning.getByRole("button", { name: "Lock anyway" }).click();
+    await expectLocked(page, dialogs);
+    const services = await getFirestore()
+      .collection("services")
+      .where("date", "==", date)
+      .get();
+    expect(services.docs.some((row) => row.data().present?.anna)).toBe(false);
+  } finally {
+    await roster.update({ membershipStatus: status });
+    await context.close();
+  }
+});
 test("a staff member signs in to the staff web with a passkey", async ({
   browser,
 }) => {
