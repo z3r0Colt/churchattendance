@@ -13,6 +13,9 @@ async function login(page: Page, email = "volunteer@example.test") {
   ).not.toHaveText("Choose a service");
   await page.getByLabel("Service date").fill("2026-11-01");
   const start = page.getByRole("button", { name: "Start roll call" });
+  // Wait for the query's decision instead of probing an intermediate cache miss.
+  const roll = page.getByRole("button", { name: /^James Calder,/ });
+  await expect(start.or(roll)).toBeVisible();
   if (await start.isVisible()) await start.click();
   await expect(
     page.getByRole("button", { name: "James Calder,", exact: false }),
@@ -147,16 +150,17 @@ test("household Undo preserves worship modes and expires when changing services"
     name: "Start roll call",
     exact: true,
   });
+  // Wait for the query's decision instead of probing an intermediate cache miss.
+  const roll = page.getByRole("button", { name: /^James Calder,/ });
+  await expect(start.or(roll)).toBeVisible();
   if (await start.isVisible()) await start.click();
   await expect(
     page.getByRole("button", { name: /^James Calder,/ }),
   ).toBeVisible();
   await page.getByLabel("Service date").fill("2026-11-01");
-  const family = page
-    .locator("section.household")
-    .filter({
-      has: page.getByRole("heading", { name: "Calder", exact: true }),
-    });
+  const family = page.locator("section.household").filter({
+    has: page.getByRole("heading", { name: "Calder", exact: true }),
+  });
   const action = family.getByRole("button", {
     name: /^(Mark all \d+|Clear household)$/,
   });
