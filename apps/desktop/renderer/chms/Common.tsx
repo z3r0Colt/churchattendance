@@ -65,11 +65,29 @@ export function Picker({
     </Field>
   );
 }
+// A table wider than the screen scrolls sideways inside this box. It takes focus and
+// a name so someone using a keyboard can reach it and scroll it with the arrow keys.
+export function TableScroll({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="table-scroll" role="region" aria-label={label} tabIndex={0}>
+      {children}
+    </div>
+  );
+}
 export function Records({
+  label,
   rows,
   choose,
   empty = "Nothing to show here yet.",
 }: {
+  // Names the table for screen readers, usually its heading or purpose.
+  label: string;
   rows: ReportRow[];
   choose?: (index: number) => void;
   empty?: string;
@@ -91,7 +109,7 @@ export function Records({
         </span>
       </div>
       {!!rows.length && (
-        <div className="table-scroll">
+        <TableScroll label={label}>
           <table className="card-table" role="table">
             <thead role="rowgroup">
               <tr role="row">
@@ -127,7 +145,7 @@ export function Records({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       )}
     </section>
   );
@@ -304,11 +322,14 @@ export function StatusPill({ text }: { text: string }) {
 }
 // A grid with the shared Export button and an Actions column for each row.
 export function ActionTable({
+  label,
   rows,
   actions,
   empty,
   session = false,
 }: {
+  // Names the table for screen readers, usually its heading or purpose.
+  label: string;
   rows: ReportRow[];
   actions?: (index: number) => ReactNode;
   empty: string;
@@ -332,7 +353,7 @@ export function ActionTable({
         </span>
       </div>
       {!!rows.length && (
-        <div className="table-scroll">
+        <TableScroll label={label}>
           <table className="card-table" role="table">
             <thead role="rowgroup">
               <tr role="row">
@@ -371,7 +392,7 @@ export function ActionTable({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       )}
     </section>
   );

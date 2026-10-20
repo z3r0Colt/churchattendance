@@ -8,6 +8,7 @@ import {
 import AxeBuilder from "@axe-core/playwright";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { grantTestStaff } from "./staff-fixture";
 if (
   !process.env.FIRESTORE_EMULATOR_HOST ||
@@ -266,6 +267,74 @@ test("every Pastor destination fits the booth display in light and dark", async 
       label: dark ? "booth dark" : "booth light",
     });
     await run.created.close();
+  }
+});
+
+test("a table wider than the booth display scrolls from the keyboard", async ({
+  browser,
+}) => {
+  // Long fictional entries make Access history wider than the booth display. The
+  // ids sort first, so they are on the first page of history whatever else is there.
+  const db = getFirestore();
+  const ids = [1, 2, 3].map((index) => `000-phase12-wide-${index}`);
+  const batch = db.batch();
+  for (const id of ids)
+    batch.set(db.doc(`securityEvents/${id}`), {
+      actorUid: `fictional-actor-${"a".repeat(48)}`,
+      action: "private.read",
+      outcome: "success",
+      scope: "security",
+      target: `careNotes/fictional-record-${"0123456789".repeat(8)}`,
+      at: Timestamp.now(),
+    });
+  await batch.commit();
+  const run = await context(browser, booth, true);
+  const { page } = run;
+  try {
+    await signInDesktop(page, "pastor@example.test");
+    await open(page, "Account security", false);
+    const history = page.locator("main.content .table-scroll", {
+      hasText: "fictional-record-",
+    });
+    // The check below means something only if the table really is too wide.
+    expect(
+      await history.evaluate((box) => box.scrollWidth > box.clientWidth),
+    ).toBe(true);
+    await accessible(page, "booth dark wide Account security");
+    const scrollers = page.locator("main.content .table-scroll");
+    expect(await scrollers.count()).toBeGreaterThan(0);
+    for (const scroller of await scrollers.all()) {
+      await expect(scroller).toHaveAttribute("tabindex", "0");
+      await expect(scroller).toHaveAccessibleName(/\S/);
+    }
+    await expect(history).toHaveAccessibleName("Access history");
+    // Tab reaches the table, shows a focus ring, and the arrow keys scroll it.
+    await page
+      .getByRole("button", { name: "Refresh access history", exact: true })
+      .focus();
+    for (let step = 0; step < 5; step++) {
+      if (await history.evaluate((box) => box === document.activeElement))
+        break;
+      await page.keyboard.press("Tab");
+    }
+    await expect(history).toBeFocused();
+    expect(
+      await history.evaluate((box) => {
+        const style = getComputedStyle(box);
+        return style.outlineStyle === "none"
+          ? 0
+          : parseFloat(style.outlineWidth);
+      }),
+    ).toBeGreaterThanOrEqual(2);
+    await page.keyboard.press("ArrowRight");
+    await expect
+      .poll(() => history.evaluate((box) => box.scrollLeft))
+      .toBeGreaterThan(0);
+  } finally {
+    await run.created.close();
+    const cleanup = db.batch();
+    for (const id of ids) cleanup.delete(db.doc(`securityEvents/${id}`));
+    await cleanup.commit();
   }
 });
 

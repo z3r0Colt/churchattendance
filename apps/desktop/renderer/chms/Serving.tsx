@@ -83,6 +83,7 @@ export function Serving({ roles }: { roles: Role[] }) {
         </Field>
       </div>
       <Records
+        label="Serving assignments"
         rows={assignments.map((row) => ({
           id: row.id,
           Role: row.role,

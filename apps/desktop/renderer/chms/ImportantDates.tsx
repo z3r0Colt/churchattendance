@@ -37,7 +37,12 @@ import {
   saveImportantDate,
   useImportantDates,
 } from "../data/dates";
-import { RecordEditor, friendlyError, type EditorField } from "./Common";
+import {
+  RecordEditor,
+  friendlyError,
+  type EditorField,
+  TableScroll,
+} from "./Common";
 
 type Row = ImportantDate | BereavementDate;
 type Editing = {
@@ -266,7 +271,9 @@ export function ImportantDates({ roles }: { roles: Role[] }) {
         {!rows.length ? (
           <p>No dates yet.</p>
         ) : (
-          <div className="table-scroll">
+          <TableScroll
+            label={bereavement ? "Bereavement dates" : "Important dates"}
+          >
             <table>
               <thead>
                 <tr>
@@ -298,7 +305,7 @@ export function ImportantDates({ roles }: { roles: Role[] }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
       {removing && (

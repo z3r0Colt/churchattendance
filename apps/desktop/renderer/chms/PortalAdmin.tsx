@@ -174,6 +174,7 @@ export function PortalAdministration({ roles }: { roles: Role[] }) {
       {tab === "requests" ? (
         <>
           <Records
+            label="Incoming requests"
             rows={requests.map((row) => ({
               id: row.id,
               Name: `${row.firstName} ${row.lastName}`,
@@ -260,6 +261,7 @@ export function PortalAdministration({ roles }: { roles: Role[] }) {
             Choose an event to publish
           </Button>
           <Records
+            label="Online events"
             rows={data.events.map((event) => {
               const publication = publications.rows.find(
                 (row) => row.id === event.id,
@@ -317,6 +319,7 @@ export function PortalAdministration({ roles }: { roles: Role[] }) {
             Link member account
           </Button>
           <Records
+            label="Member access"
             rows={access.rows.map((row) => ({
               id: row.id,
               AccountUID: row.id,

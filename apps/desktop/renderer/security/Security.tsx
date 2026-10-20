@@ -133,6 +133,7 @@ export function Security({ roles }: { roles: Role[] }) {
             Refresh accounts
           </Button>
           <Records
+            label="Staff accounts"
             rows={accounts.map((account) => ({
               id: account.uid,
               Name: account.displayName || account.email,
@@ -186,6 +187,7 @@ export function Security({ roles }: { roles: Role[] }) {
             Refresh access history
           </Button>
           <Records
+            label="Access history"
             rows={events.map((row) => ({
               id: row.id,
               Time: row.at,

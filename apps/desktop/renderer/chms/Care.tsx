@@ -232,6 +232,7 @@ export function Care({ roles }: { roles: Role[] }) {
             Add note or visit
           </Button>
           <Records
+            label="Notes and visits"
             rows={notes.map((row) => ({
               id: row.id,
               Person: name(row.personId),
@@ -311,6 +312,7 @@ export function Care({ roles }: { roles: Role[] }) {
             Add follow-up
           </Button>
           <Records
+            label="Follow-ups"
             rows={followUps.map((row) => ({
               id: row.id,
               Task: row.title,
@@ -355,6 +357,7 @@ export function Care({ roles }: { roles: Role[] }) {
                 Append discipline record
               </Button>
               <Records
+                label="Discipline record"
                 rows={(privateRecord?.disciplineHistory || []).map((row) => ({
                   Date: row.date,
                   Entry: row.entry,
@@ -379,6 +382,7 @@ export function Care({ roles }: { roles: Role[] }) {
             </>
           )}
           <Records
+            label="Diaconal tasks"
             rows={tasks.map((row) => ({
               id: row.id,
               Task: row.title,
@@ -408,6 +412,7 @@ export function Care({ roles }: { roles: Role[] }) {
                 <MessageBar intent="error">{joint.error}</MessageBar>
               )}
               <Records
+                label="Joint visits"
                 rows={joint.visits.map((row) => ({
                   id: row.id,
                   When: DateTime.fromISO(row.start)

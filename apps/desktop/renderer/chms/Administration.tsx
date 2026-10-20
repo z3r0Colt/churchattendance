@@ -161,6 +161,7 @@ export function Administration({ roles }: { roles: Role[] }) {
           available.
         </p>
         <Records
+          label="Service types"
           rows={types.rows.map((row) => ({
             id: row.id,
             Service: row.name,
@@ -210,6 +211,7 @@ export function Administration({ roles }: { roles: Role[] }) {
           a linked account with a Session role.
         </p>
         <Records
+          label="Elder districts"
           rows={districts.rows.map((row) => {
             const elder = people.rows.find(
               (person) => person.id === row.elderPersonId,

@@ -93,6 +93,7 @@ Account changes that the server already limits to a sign-in within the last five
 * Every destination each role can open, and every tab on it, is checked at phone width; Pastor screens in light and dark, deacon screens at 360px, and the volunteer's two destinations.
 * axe (`@axe-core/playwright` 4.13.0, WCAG 2 A and AA) finds no serious or critical problems on any Pastor or deacon destination in either theme or on the booth display in dark. Fluent's hidden focus sentinels (`data-tabster-dummy`) are excluded because they are focusable placeholders by design.
 * The phone menu opens, moves through destinations and closes from the keyboard alone. The menu becomes visible immediately so focus moves into it.
+* Every table that can scroll sideways (the shared grids and the custom tables) sits in `TableScroll` from `chms/Common.tsx`: a region named for the table (its heading or purpose, such as "Access history") that Tab reaches, with the focus ring inside its edge, so the arrow keys scroll it. Before this, a table made wide by long entries, such as Access history at 1024px, could not be scrolled from the keyboard.
 * Every Pastor destination fits the 1024 by 768 booth display in both themes.
 
 ### Tests
@@ -101,6 +102,7 @@ Account changes that the server already limits to a sign-in within the last five
 
 * every Pastor destination and tab at 390px in light (with axe) and every destination in dark (with axe);
 * every Pastor destination at 1024 by 768 in light and dark (axe in dark);
+* Account security at 1024 by 768 in dark with long fictional Access history entries (removed afterwards): the table is wider than its panel, axe finds nothing serious, every table scroller has `tabindex="0"` and a name, and Tab reaches Access history, shows a 2px focus ring and the arrow keys scroll it;
 * a deacon at 360px reaches Deacon tasks and Mercy ministry and every tab, sees no Session-only destinations and no Messages, with axe on each;
 * a volunteer sees only Attendance and Account security;
 * the phone menu by keyboard alone;

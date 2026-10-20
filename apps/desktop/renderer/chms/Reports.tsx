@@ -369,7 +369,7 @@ export function AdvancedReports({ roles }: { roles: Role[] }) {
                   </Field>
                 </div>
               )}
-              <Records rows={directoryData} />
+              <Records label="Photo directory" rows={directoryData} />
             </>
           ) : (
             <>
@@ -385,11 +385,17 @@ export function AdvancedReports({ roles }: { roles: Role[] }) {
                   alt="Monthly average attendance"
                 />
               )}
-              <Records rows={tab === "annual" ? summary : monthly} />
-              <Records rows={changes} />
+              <Records
+                label={
+                  tab === "annual" ? "Statistical report" : "Meeting summary"
+                }
+                rows={tab === "annual" ? summary : monthly}
+              />
+              <Records label="Membership changes" rows={changes} />
               <details>
                 <summary>Baptism and profession source records</summary>
                 <Records
+                  label="Baptism and profession source records"
                   rows={data.sacraments
                     .filter((row) => row.date.startsWith(String(year)))
                     .map((row) => ({

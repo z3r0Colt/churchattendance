@@ -105,6 +105,7 @@ export function Quorum({
         </Button>
       </div>
       <ActionTable
+        label="Adopted rules"
         session
         empty="No quorum rules yet. Add the rule your Session follows, with its source."
         rows={policies.map((row) => ({
@@ -156,6 +157,7 @@ export function Quorum({
         </Button>
       </div>
       <ActionTable
+        label="Meetings"
         session
         empty="No meetings recorded yet."
         rows={meetings.map((row) => {
@@ -223,6 +225,7 @@ export function Quorum({
       )}
       {opened && detail && (
         <ActionTable
+          label="Electorate"
           session
           empty="No one was considered for this electorate."
           rows={detail.entries.map((row) => ({

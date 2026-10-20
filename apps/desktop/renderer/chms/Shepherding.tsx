@@ -45,6 +45,7 @@ import {
   RecordEditor,
   friendlyError,
   type EditorField,
+  TableScroll,
 } from "./Common";
 import { ContactGaps } from "./ContactGaps";
 import { Locations } from "./Locations";
@@ -294,7 +295,7 @@ export function Shepherding({ roles }: { roles: Role[] }) {
             {!shown.length ? (
               <p>No visits match this view.</p>
             ) : (
-              <div className="table-scroll">
+              <TableScroll label="Visits">
                 <table>
                   <thead>
                     <tr>
@@ -337,7 +338,7 @@ export function Shepherding({ roles }: { roles: Role[] }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
           </section>
         </>
@@ -383,7 +384,7 @@ export function Shepherding({ roles }: { roles: Role[] }) {
             {!workload.length ? (
               <p>No visits are planned yet.</p>
             ) : (
-              <div className="table-scroll">
+              <TableScroll label="Visit workload by officer">
                 <table>
                   <thead>
                     <tr>
@@ -416,7 +417,7 @@ export function Shepherding({ roles }: { roles: Role[] }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
           </section>
         </>
@@ -477,6 +478,7 @@ export function Shepherding({ roles }: { roles: Role[] }) {
                 {coverage.filter((row) => row.state === "notScheduled").length}
               </p>
               <Records
+                label="Visit round coverage"
                 rows={coverage.map((row) => ({
                   id: row.householdId,
                   Household: household(row.householdId),

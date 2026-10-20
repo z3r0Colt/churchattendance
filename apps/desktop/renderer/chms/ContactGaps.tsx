@@ -31,6 +31,7 @@ import {
   RecordEditor,
   StatusPill,
   type EditorField,
+  TableScroll,
 } from "./Common";
 
 const stateLabels: Record<ContactState, string> = {
@@ -192,7 +193,7 @@ export function ContactGaps({
         {!rows.length ? (
           <p>No people match this view.</p>
         ) : (
-          <div className="table-scroll">
+          <TableScroll label="Contact gaps">
             <table>
               <thead>
                 <tr>
@@ -228,7 +229,7 @@ export function ContactGaps({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
       {open && (
@@ -244,6 +245,7 @@ export function ContactGaps({
                   {display(open.measuredFrom)}.
                 </p>
                 <Records
+                  label="Contact history"
                   rows={timeline.map((row, index) => ({
                     id: `${row.refId}-${index}`,
                     Date: display(row.date),

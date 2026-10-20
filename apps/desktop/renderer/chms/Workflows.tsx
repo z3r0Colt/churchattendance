@@ -45,7 +45,7 @@ import {
   useWorkflowData,
   type WorkflowPreview,
 } from "../data/workflows";
-import { Picker, friendlyError } from "./Common";
+import { Picker, friendlyError, TableScroll } from "./Common";
 
 type Draft = WorkflowDraft & { revision: number };
 const stepKinds: Record<WorkflowStep["kind"], string> = {
@@ -324,7 +324,7 @@ export function Workflows() {
             {!data?.workflows.length ? (
               <p>No workflows yet. Start from a template above.</p>
             ) : (
-              <div className="table-scroll">
+              <TableScroll label="Workflows">
                 <table>
                   <thead>
                     <tr>
@@ -371,7 +371,7 @@ export function Workflows() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
           </section>
         </>
@@ -1064,7 +1064,7 @@ export function Workflows() {
             {!runs.length ? (
               <p>No runs match this view.</p>
             ) : (
-              <div className="table-scroll">
+              <TableScroll label="Workflow runs">
                 <table>
                   <thead>
                     <tr>
@@ -1184,7 +1184,7 @@ export function Workflows() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
           </section>
           {openRun && (

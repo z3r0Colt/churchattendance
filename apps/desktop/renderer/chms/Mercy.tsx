@@ -52,6 +52,7 @@ import {
   RecordEditor,
   friendlyError,
   type EditorField,
+  TableScroll,
 } from "./Common";
 
 type Editing = {
@@ -525,7 +526,7 @@ export function Mercy() {
             {!requests.length ? (
               <p>No requests match this view.</p>
             ) : (
-              <div className="table-scroll">
+              <TableScroll label="Mercy requests">
                 <table>
                   <thead>
                     <tr>
@@ -628,7 +629,7 @@ export function Mercy() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
           </section>
         </>
@@ -641,6 +642,7 @@ export function Mercy() {
               : "Households assigned to you."}
           </p>
           <Records
+            label="Mercy households"
             rows={(viewer?.triage
               ? households
               : households.filter((row) => assigned.has(row.id))
@@ -710,7 +712,7 @@ export function Mercy() {
             {!notes.length ? (
               <p>No mercy notes you can read.</p>
             ) : (
-              <div className="table-scroll">
+              <TableScroll label="Mercy notes">
                 <table>
                   <thead>
                     <tr>
@@ -754,13 +756,14 @@ export function Mercy() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
           </section>
         </>
       )}
       {data && tab === "tasks" && (
         <Records
+          label="Mercy tasks"
           rows={tasks.map((row) => ({
             id: row.id,
             Task: row.title,
@@ -806,7 +809,7 @@ export function Mercy() {
                 {!visits.length ? (
                   <p>No deacon visits are planned.</p>
                 ) : (
-                  <div className="table-scroll">
+                  <TableScroll label="Deacon visits">
                     <table>
                       <thead>
                         <tr>
@@ -857,7 +860,7 @@ export function Mercy() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </TableScroll>
                 )}
               </section>
             </>
@@ -875,6 +878,7 @@ export function Mercy() {
                 <MessageBar intent="error">{invited.error}</MessageBar>
               )}
               <Records
+                label="Deacon visits you are invited to"
                 rows={invited.visits
                   .filter((row) => row.ministry === "mercy")
                   .map((row) => ({

@@ -246,6 +246,7 @@ export function Officers({ roles, zone }: { roles: Role[]; zone: string }) {
             </MessageBar>
           )}
           <ActionTable
+            label="Office records"
             session
             rows={recordRows}
             empty="No office records yet. Add each officer's ordination and installation."
@@ -273,6 +274,7 @@ export function Officers({ roles, zone }: { roles: Role[]; zone: string }) {
             count and dates only.
           </p>
           <ActionTable
+            label="Term reviews"
             session
             empty="No terms end in the next 60 days."
             rows={reviews.map((row) => ({
@@ -352,6 +354,7 @@ export function Officers({ roles, zone }: { roles: Role[]; zone: string }) {
             </p>
           </section>
           <ActionTable
+            label="Recorded criteria"
             session
             empty="No one on the roll to review."
             rows={eligibility.map((row) => ({

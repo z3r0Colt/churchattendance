@@ -36,7 +36,7 @@ import {
   savePdf,
 } from "../data/reports";
 import { ExportButton } from "../components/ExportButton";
-import { friendlyError, Picker } from "./Common";
+import { friendlyError, Picker, TableScroll } from "./Common";
 export type ReportRequest = {
   kind: AttendanceReportKind;
   filter?: Partial<AttendanceReportFilter>;
@@ -406,7 +406,17 @@ export function AttendanceReports({
               {!visible.length ? (
                 <p>No records match this view.</p>
               ) : (
-                <div className="table-scroll">
+                <TableScroll
+                  label={
+                    view === "detail"
+                      ? "Report detail"
+                      : view === "data"
+                        ? kind === "roll"
+                          ? "Membership changes"
+                          : "Source rows"
+                        : "Review records"
+                  }
+                >
                   <table>
                     <thead>
                       <tr>
@@ -425,7 +435,7 @@ export function AttendanceReports({
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </TableScroll>
               )}
             </section>
           </>

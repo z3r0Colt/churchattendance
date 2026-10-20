@@ -278,6 +278,7 @@ export function People({
                 />
               </div>
               <Records
+                label="People"
                 rows={filtered.map((row) => ({
                   id: row.id,
                   Name: `${row.firstName} ${row.lastName}`,
@@ -298,6 +299,7 @@ export function People({
             </>
           ) : (
             <Records
+              label="Households"
               rows={families.rows
                 .filter((row) =>
                   row.name.toLowerCase().includes(search.toLowerCase()),

@@ -31,7 +31,13 @@ import {
   useHouseholdLocations,
   type useShepherdingData,
 } from "../data/shepherding";
-import { Records, RecordEditor, StatusPill, friendlyError } from "./Common";
+import {
+  Records,
+  RecordEditor,
+  StatusPill,
+  friendlyError,
+  TableScroll,
+} from "./Common";
 import { native } from "../platform";
 
 export function Locations({
@@ -150,7 +156,7 @@ export function Locations({
         {!review.length ? (
           <p>Every household with an address has a confirmed location.</p>
         ) : (
-          <div className="table-scroll">
+          <TableScroll label="Locations to review">
             <table>
               <thead>
                 <tr>
@@ -222,7 +228,7 @@ export function Locations({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
       <section className="surface communication-panel session-panel">
@@ -273,6 +279,7 @@ export function Locations({
           </svg>
         )}
         <Records
+          label="Confirmed locations"
           rows={confirmed.map((row) => ({
             id: row.id,
             Household: row.name,

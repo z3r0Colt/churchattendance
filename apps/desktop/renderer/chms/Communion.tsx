@@ -175,6 +175,7 @@ export function Communion({ roles, zone }: { roles: Role[]; zone: string }) {
             )}
           </div>
           <ActionTable
+            label="Approved list"
             session
             empty="No one is on the roll yet."
             rows={listed.map((row) => {
@@ -304,6 +305,7 @@ export function Communion({ roles, zone }: { roles: Role[]; zone: string }) {
         <>
           <h2>Communion services</h2>
           <ActionTable
+            label="Communion services"
             session
             empty="No communion participation recorded yet."
             rows={records.map((row) => {
@@ -324,6 +326,7 @@ export function Communion({ roles, zone }: { roles: Role[]; zone: string }) {
           />
           <h2>Session decisions</h2>
           <ActionTable
+            label="Session decisions"
             session
             empty="No decisions recorded yet."
             rows={decisions.map((row) => ({

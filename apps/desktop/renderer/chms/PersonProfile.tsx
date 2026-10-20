@@ -286,6 +286,7 @@ export function PersonProfile({
       )}
       {tab === "attendance" && (
         <Records
+          label="Attendance"
           empty="No attendance has been recorded for this person."
           rows={attended.map((row) => ({
             id: row.id,
@@ -300,6 +301,7 @@ export function PersonProfile({
       )}
       {tab === "membership" && (
         <Records
+          label="Membership history"
           empty="No membership history has been recorded."
           rows={timeline.map((row) => ({
             id: row.id,

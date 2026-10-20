@@ -267,6 +267,7 @@ Month is the default view, with List beside it for a date range and export.
 
 ## 7. Accessibility
 * Full keyboard use on every screen, with a visible focus ring from Fluent tokens.
+* A table that scrolls sideways is a region named for the table. It takes keyboard focus, shows the focus ring inside its edge and scrolls with the arrow keys.
 * Screen reader labels on every control, with live region announcements for roll call counts and sync state.
 * Respect Windows text scaling up to 150% without clipping.
 * Honor "reduce motion" by turning off chart and toast animations.

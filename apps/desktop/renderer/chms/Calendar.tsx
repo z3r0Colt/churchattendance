@@ -178,6 +178,7 @@ export function Calendar({ roles }: { roles: Role[] }) {
             </Field>
           </div>
           <Records
+            label="Events"
             rows={occurrences.map((row) => ({
               id: row.id,
               Event: row.title,
@@ -296,6 +297,7 @@ export function Calendar({ roles }: { roles: Role[] }) {
             />
           )}
           <Records
+            label="RSVPs"
             empty="No responses for this date yet."
             rows={visible.map((row) => ({
               id: row.id,
@@ -384,6 +386,7 @@ export function Calendar({ roles }: { roles: Role[] }) {
       <details>
         <summary>Event series, including cancelled events</summary>
         <Records
+          label="Event series"
           rows={data.events.map((row) => ({
             id: row.id,
             Event: row.title,
@@ -460,6 +463,7 @@ function StaffSubscriptions() {
         </MessageBar>
       )}
       <Records
+        label="Calendar links"
         empty="No calendar links yet."
         rows={feeds.map((feed) => ({
           id: feed.id,

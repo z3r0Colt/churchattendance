@@ -275,6 +275,7 @@ export function Imports({ zone }: { zone: string }) {
             </p>
           </section>
           <ActionTable
+            label="Rows to review"
             empty="No rows."
             rows={preview.rows.map((row) => ({
               id: String(row.row),
@@ -400,6 +401,7 @@ export function Imports({ zone }: { zone: string }) {
       )}
       <h2>Earlier imports</h2>
       <ActionTable
+        label="Earlier imports"
         empty="No imports yet."
         rows={[...batches.rows]
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -447,6 +449,7 @@ export function Imports({ zone }: { zone: string }) {
         <>
           <h2>Rows in {opened.fileName}</h2>
           <Records
+            label={`Rows in ${opened.fileName}`}
             empty="No rows."
             rows={[...batchRows]
               .sort((a, b) => a.row - b.row)

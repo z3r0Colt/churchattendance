@@ -100,6 +100,7 @@ export function Groups({
         </MessageBar>
       )}
       <Records
+        label="Groups"
         rows={data.groups.map((row) => ({
           id: row.id,
           Name: row.name,
@@ -180,6 +181,7 @@ export function Groups({
             ))}
           </div>
           <Records
+            label="Meetings"
             rows={meetings.rows
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((row) => ({

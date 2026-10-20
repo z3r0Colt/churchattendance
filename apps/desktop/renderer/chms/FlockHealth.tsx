@@ -37,7 +37,7 @@ import {
   useContactHistory,
   type useShepherdingData,
 } from "../data/shepherding";
-import { Picker, Records, RecordEditor } from "./Common";
+import { Picker, Records, RecordEditor, TableScroll } from "./Common";
 
 export function FlockHealth({
   data,
@@ -278,7 +278,7 @@ export function FlockHealth({
         {!tableRows.length ? (
           <p>No people match this view.</p>
         ) : (
-          <div className="table-scroll">
+          <TableScroll label="Flock health">
             <table>
               <thead>
                 <tr>
@@ -308,7 +308,7 @@ export function FlockHealth({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
       {open && ready && (
@@ -318,6 +318,7 @@ export function FlockHealth({
               <DialogTitle>{name(open)} · Session only</DialogTitle>
               <DialogContent>
                 <Records
+                  label="Health indicators"
                   rows={indicators(open).map((row) => ({
                     id: row.key,
                     Indicator: healthIndicatorLabels[row.key],
@@ -326,6 +327,7 @@ export function FlockHealth({
                   }))}
                 />
                 <Records
+                  label="Assessments"
                   rows={assessments.rows
                     .filter((row) => row.personId === open)
                     .sort((a, b) => b.assessedOn.localeCompare(a.assessedOn))
