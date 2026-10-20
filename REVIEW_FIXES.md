@@ -36,6 +36,10 @@ These changes address the attached October 20, 2026 review. “Implemented” be
 | DOC-01 | Implemented. README, PLAN and DESIGN agree on implemented phases and link one implementation-status table. Live release acceptance stays pending. |
 | MAINT-01 | Partly addressed through explicit identity/revision/Undo contracts, smaller initial imports and shared status formatting. Broad decomposition of the remaining large screen files is still a maintenance task. |
 
+## Browser follow-up
+
+The first browser run passed 103 tests across the first two completed shards, including all 51 tests in shard 2. Shard 1 exposed a service-query readiness race in two attendance cases. The UI offered Start roll call on an initial cache miss before the existing service arrived, then detached that button. The follow-up correction waits for the server to establish that a meeting is absent before offering creation, while allowing cached meetings to open offline. The same attendance and Undo regressions verify this transition.
+
 ## Validation
 
 - Lint and TypeScript checks passed.

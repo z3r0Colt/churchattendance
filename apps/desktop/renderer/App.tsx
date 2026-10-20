@@ -841,7 +841,7 @@ function Workspace({
                 </div>
               </Field>
             </div>
-            {!data.loaded ? (
+            {!data.loaded || (!service && !data.servicesReady) ? (
               <Spinner label="Loading the roll" />
             ) : service ? (
               <RollCall

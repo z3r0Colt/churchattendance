@@ -27,7 +27,12 @@ import { auth, db, functions } from "./firebase";
 export function useAttendanceData(selectedDate = "") {
   const [people, setPeople] = useState<RosterPerson[]>([]);
   const [types, setTypes] = useState<ServiceType[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [serviceWindow, setServiceWindow] = useState({
+    rows: [] as Service[],
+    key: "",
+    ready: false,
+  });
+  const services = serviceWindow.rows;
   const [timeZone, setTimeZone] = useState("America/Indiana/Indianapolis");
   const [pending, setPending] = useState(false);
   const [cacheOnly, setCacheOnly] = useState(true);
@@ -88,6 +93,7 @@ export function useAttendanceData(selectedDate = "") {
       { zone: timeZone },
     );
     let active = true;
+    const windowKey = `${selectedDate}|${timeZone}`;
     const stop = onSnapshot(
       query(
         collection(db, "services"),
@@ -96,11 +102,15 @@ export function useAttendanceData(selectedDate = "") {
       ),
       { includeMetadataChanges: true },
       (snapshot) => {
-        setServices(
-          snapshot.docs.map(
+        // Keep readiness with its rows so a previous date's ready state cannot
+        // turn a new query's initial cache miss into a false invitation to create.
+        setServiceWindow({
+          rows: snapshot.docs.map(
             (row) => ({ ...row.data(), id: row.id }) as Service,
           ),
-        );
+          key: windowKey,
+          ready: !snapshot.metadata.fromCache || !navigator.onLine,
+        });
         setCacheOnly(snapshot.metadata.fromCache);
         // waitForPendingWrites covers marks queued on dates no longer in the visible query.
         if (snapshot.metadata.hasPendingWrites) setPending(true);
@@ -176,6 +186,9 @@ export function useAttendanceData(selectedDate = "") {
     cacheOnly,
     online,
     loaded,
+    servicesReady:
+      serviceWindow.key === `${selectedDate}|${timeZone}` &&
+      serviceWindow.ready,
     error,
     setError,
     mark,
