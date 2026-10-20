@@ -17,12 +17,14 @@
     "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p apps/desktop && tsc --noEmit -p functions && tsc --noEmit -p apps/portal && tsc --noEmit -p tests",
     "test": "vitest run --configLoader runner",
     "test:rules": "firebase emulators:exec --project demo-sycamore --only firestore,storage \"vitest run --config vitest.rules.config.ts --configLoader runner\"",
-    "test:e2e": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/seed.mjs && playwright test\"",
+    "test:e2e": "npm run build && npm run check:bundles && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/seed.mjs && playwright test\"",
     "build": "npm run build -w @sycamore/shared && npm run build -w @sycamore/desktop && npm run build -w @sycamore/portal && npm run build:web -w @sycamore/desktop && npm run build -w @sycamore/functions",
     "dist": "npm run build && npm exec -w @sycamore/desktop -- electron-builder --win nsis --publish never",
     "dev:portal": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/portal-dev.mjs\"",
     "dev:portal:ui": "npm run dev -w @sycamore/portal",
-    "dev:staff": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/staff-web-dev.mjs\""
+    "dev:staff": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/staff-web-dev.mjs\"",
+    "audit:dependencies": "node scripts/audit-dependencies.mjs",
+    "check:bundles": "node scripts/check-bundle-budgets.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
@@ -36,6 +38,9 @@
     "globals": "^16.4.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",
-    "vitest": "^3.2.4"
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6"
   }
 }

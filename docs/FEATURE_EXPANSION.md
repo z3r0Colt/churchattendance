@@ -4,6 +4,17 @@ Approved October 18, 2026, following the comparison with TendFlock. The user req
 
 The expansion started from Phase 6 on commit `85d52003325083ee907e5e38bada50ad95267262`. Phase 7 security/account implementation is now included; see [Phase 7 setup and limits](PHASE_7.md). Phase 8 shepherding is included; see [Phase 8 workflows and limits](PHASE_8.md). Phase 9 care workflows and diaconal ministry is included; see [Phase 9 workflows and limits](PHASE_9.md). Live MFA/device, delivery and rollout checks remain separate. Phases 10 and 11 are included, see [Phase 10](PHASE_10.md) and [Phase 11](PHASE_11.md). Phase 12 parts 1 and 2 are included, see [Phase 12](PHASE_12.md). Earlier provisioning, managed backups and Windows release checks remain open. `PLAN.md` remains the source of truth for scope and the implemented data model. Update that model and `AGENTS.md` when a phase introduces a new collection or permission boundary.
 
+## Implementation status
+
+| Work | Source implementation | Acceptance remaining |
+|---|---|---|
+| Phases 1–11 | Implemented, subject to tracked review fixes | Live provider and native Windows acceptance |
+| Phase 12 parts 1–2 | Implemented | Current emulator regressions and device acceptance |
+| Phase 12 part 3 | Pending | Provisioning, signed release, backups and restore |
+| Existing-person duplicate merge | Pending design and implementation | Reference reconciliation, consent and private-record review |
+
+Implementation does not certify live deployment. Open work and evidence are tracked in `REVIEW_FIXES.md`.
+
 ## Coverage of the requested areas
 
 | ID | Requested area | Existing foundation | Required addition | Phase |

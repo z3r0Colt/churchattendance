@@ -1,0 +1,8 @@
+[
+  {
+    "package": "braces",
+    "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "expires": "2026-11-20T00:00:00Z",
+    "reason": "Firebase CLI development watcher dependency. Registry has no patched braces release as of 2026-10-20. Not packaged in the desktop renderer or deployed Functions. Only trusted repository watch patterns are used. Revisit the CLI dependency before expiry. Do not expose the development server to untrusted clients."
+  }
+]

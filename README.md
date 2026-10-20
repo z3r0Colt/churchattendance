@@ -4,7 +4,7 @@ Attendance and communication for the Windows desktop app described in `PLAN.md` 
 
 ## Approved expansion
 
-All ten feature areas from the October 18 TendFlock comparison are in scope. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) maps them to Phases 7 through 12. Phase 7 implements staff MFA/passkey access, encrypted private records and account/security administration. Read [Phase 7 setup](docs/PHASE_7.md) before staging or deployment. Phase 8 implements the Session shepherding workspace. Phases 9 through 12 remain planned. Live configuration and release checks below still apply.
+All ten feature areas from the October 18 TendFlock comparison are in scope. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) maps them to Phases 7 through 12. Phase 7 implements staff MFA/passkey access, encrypted private records and account/security administration. Read [Phase 7 setup](docs/PHASE_7.md) before staging or deployment. Phase 8 implements the Session shepherding workspace. Phases 9 through 11 and Phase 12 parts 1 and 2 are implemented. Phase 12 part 3 remains pending. See the [implementation status](docs/FEATURE_EXPANSION.md#implementation-status). Live configuration and release checks below still apply.
 
 ## Run locally
 

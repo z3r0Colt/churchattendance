@@ -10,5 +10,6 @@ export default defineConfig({
     viewport: { width: 1366, height: 768 },
     trace: "retain-on-failure",
     channel: process.env.PLAYWRIGHT_CHANNEL,
+    launchOptions: { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH },
   },
 });
