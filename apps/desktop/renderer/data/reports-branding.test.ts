@@ -15,7 +15,7 @@ describe("report identity", () => {
       expect(html).not.toContain("SYCAMORE");
       await exportReportWorkbook("Session only · Attendance", [{ Total: 1 }], [{ Name: "Fictional Person" }], [{ Total: 1 }]);
       const book = new ExcelJS.Workbook();
-      await book.xlsx.load(Buffer.from(state.bytes));
+      await book.xlsx.load(Uint8Array.from(state.bytes).buffer);
       expect(book.creator).toBe(name);
       for (const sheet of book.worksheets) {
         expect(sheet.getCell("A1").value).toBe(name);
