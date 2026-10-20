@@ -70,7 +70,7 @@ export function BrandingSettings({ legacyName }: { legacyName: string }) {
       <Field label="Accessible brand palette"><Select value={draft.palette} disabled={busy || !loaded} onChange={(_, data) => setDraft({ ...draft, palette: data.value as typeof draft.palette })}>
         <option value="forest">Forest</option><option value="navy">Navy</option><option value="plum">Plum</option>
       </Select></Field>
-      <Field label="Public logo (PNG)"><input type="file" accept="image/png" disabled={busy || !loaded} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void logo(file); event.currentTarget.value = ""; }} /></Field>
+      <Field label="Public logo (PNG)"><input aria-label="Public logo (PNG)" type="file" accept="image/png" disabled={busy || !loaded} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void logo(file); event.currentTarget.value = ""; }} /></Field>
       {draft.logo && <div><img src={draft.logo} alt="Public logo preview" width="80" height="80" style={{ objectFit: 'contain' }} /><Button disabled={busy} onClick={() => setDraft({ ...draft, logo: '' })}>Remove logo</Button></div>}
       <p>Publishing changes public identity and report headers. Review existing email footers and bulletin templates separately before enabling delivery.</p>
       <Button type="submit" appearance="primary" disabled={busy || !loaded}>{busy ? 'Publishing' : 'Publish public branding'}</Button>
