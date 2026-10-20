@@ -1,3 +1,4 @@
+import { churchDayLabel } from "@sycamore/shared";
 import { Button } from "@fluentui/react-components";
 import { DateTime } from "luxon";
 import { rsvp, type MemberProfile, type PortalEvent } from "./data";
@@ -70,7 +71,7 @@ export function Home({
                   <span>
                     <strong>{event.title}</strong>
                     <small>
-                      {start.toFormat("cccc, LLLL d · h:mm a")}
+                      {churchDayLabel(start, "cccc, LLLL d · h:mm a")}
                       {event.location ? ` · ${event.location}` : ""}
                     </small>
                   </span>

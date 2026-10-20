@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   collection,
+  query,
+  where,
+  waitForPendingWrites,
   deleteField,
   doc,
   FieldPath,
@@ -19,8 +22,9 @@ import {
   type Service,
   type ServiceType,
 } from "@sycamore/shared";
+import { DateTime } from "luxon";
 import { auth, db, functions } from "./firebase";
-export function useAttendanceData() {
+export function useAttendanceData(selectedDate = "") {
   const [people, setPeople] = useState<RosterPerson[]>([]);
   const [types, setTypes] = useState<ServiceType[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -39,7 +43,6 @@ export function useAttendanceData() {
       setError(
         "The records could not be loaded. Check your connection and sign in again.",
       );
-    const pendingCollections = new Map<string, boolean>();
     const stops = [
       onSnapshot(
         collection(db, "attendanceRoster"),
@@ -65,24 +68,6 @@ export function useAttendanceData() {
         failed,
       ),
       onSnapshot(
-        collection(db, "services"),
-        { includeMetadataChanges: true },
-        (snapshot) => {
-          setServices(
-            snapshot.docs.map(
-              (row) => ({ ...row.data(), id: row.id }) as Service,
-            ),
-          );
-          setCacheOnly(snapshot.metadata.fromCache);
-          pendingCollections.set(
-            "services",
-            snapshot.metadata.hasPendingWrites,
-          );
-          setPending([...pendingCollections.values()].some(Boolean));
-        },
-        failed,
-      ),
-      onSnapshot(
         doc(db, "settings", "church"),
         (snapshot) => {
           const zone = snapshot.data()?.timeZone;
@@ -97,6 +82,44 @@ export function useAttendanceData() {
       window.removeEventListener("offline", off);
     };
   }, []);
+  useEffect(() => {
+    const center = DateTime.fromISO(
+      selectedDate || DateTime.now().setZone(timeZone).toISODate()!,
+      { zone: timeZone },
+    );
+    let active = true;
+    const stop = onSnapshot(
+      query(
+        collection(db, "services"),
+        where("date", ">=", center.minus({ weeks: 5 }).toISODate()!),
+        where("date", "<=", center.plus({ weeks: 1 }).toISODate()!),
+      ),
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        setServices(
+          snapshot.docs.map(
+            (row) => ({ ...row.data(), id: row.id }) as Service,
+          ),
+        );
+        setCacheOnly(snapshot.metadata.fromCache);
+        // waitForPendingWrites covers marks queued on dates no longer in the visible query.
+        if (snapshot.metadata.hasPendingWrites) setPending(true);
+        void waitForPendingWrites(db)
+          .then(() => {
+            if (active) setPending(false);
+          })
+          .catch(() => undefined);
+      },
+      () =>
+        setError(
+          "Attendance could not be loaded. Check your connection and role.",
+        ),
+    );
+    return () => {
+      active = false;
+      stop();
+    };
+  }, [selectedDate, timeZone]);
   function mark(
     serviceId: string,
     personId: string,

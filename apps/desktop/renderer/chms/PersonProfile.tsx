@@ -10,12 +10,15 @@ import { LockClosedRegular } from "@fluentui/react-icons";
 import { DateTime } from "luxon";
 import {
   attendanceStrip,
+  officeRoleLabels,
+  type Office,
   statusLabels,
   type HistoryEvent,
   type Person,
   type Service,
   type ServiceType,
 } from "@sycamore/shared";
+import { useCollection } from "../data/chms";
 import { directoryPhoto } from "../data/chms";
 import { Records } from "./Common";
 import { Family } from "./Family";
@@ -58,6 +61,7 @@ export function PersonProfile({
   openCare: () => void;
 }) {
   const [tab, setTab] = useState("overview");
+  const offices = useCollection<Office>(`people/${person.id}/offices`);
   const [photo, setPhoto] = useState("");
   useEffect(() => {
     let active = true;
@@ -128,7 +132,28 @@ export function PersonProfile({
         <Tab value="attendance">Attendance</Tab>
         <Tab value="membership">Membership history</Tab>
         <Tab value="family">Family</Tab>
+        <Tab value="offices">Office history</Tab>
       </TabList>
+      {tab === "offices" && (
+        <>
+          {offices.error && (
+            <MessageBar intent="error">{offices.error}</MessageBar>
+          )}
+          <Records
+            label="Office history"
+            empty="No office history is recorded for this person."
+            rows={offices.rows.map((row) => ({
+              Office: officeRoleLabels[row.role],
+              Ordained: row.ordainedOn,
+              Installed: row.installedOn,
+              "Term ends": row.termEndsOn,
+              Ended: row.endedOn,
+              Reason: row.endReason,
+              Emeritus: row.emeritusOn,
+            }))}
+          />
+        </>
+      )}
       {tab === "family" && (
         <Family person={person} people={people} editor={editor} />
       )}

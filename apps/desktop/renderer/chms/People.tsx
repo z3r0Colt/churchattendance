@@ -36,17 +36,16 @@ export function People({
   roles,
   add,
   timeZone,
-  services,
   types,
   openCare,
 }: {
   roles: Role[];
   add: () => void;
   timeZone: string;
-  services: Service[];
   types: ServiceType[];
   openCare: () => void;
 }) {
+  const { rows: services } = useCollection<Service>("services");
   const people = useCollection<Person>("people"),
     families = useCollection<Family>("households"),
     districts = useCollection<ElderDistrict>("elderDistricts");

@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   Badge,
   Button,
@@ -67,40 +75,112 @@ import {
 } from "./data/attendance";
 import { darkTheme, lightTheme } from "./theme/brand";
 import { NavGroup, NavItem } from "./components/Nav";
-import { Messages } from "./communications/Messages";
-import { Bulletin } from "./communications/Bulletin";
-import { CommunicationSettingsPanel } from "./communications/Settings";
+const Messages = lazy(() =>
+  import("./communications/Messages").then((module) => ({
+    default: module.Messages,
+  })),
+);
+const Bulletin = lazy(() =>
+  import("./communications/Bulletin").then((module) => ({
+    default: module.Bulletin,
+  })),
+);
+const CommunicationSettingsPanel = lazy(() =>
+  import("./communications/Settings").then((module) => ({
+    default: module.CommunicationSettingsPanel,
+  })),
+);
 import { useUnreadSms } from "./data/communications";
 
-import { People } from "./chms/People";
-import { Administration } from "./chms/Administration";
-import { PortalAdministration } from "./chms/PortalAdmin";
-import { Groups } from "./chms/Groups";
-import { Calendar } from "./chms/Calendar";
-import { Serving } from "./chms/Serving";
-import { Care } from "./chms/Care";
-import { Shepherding } from "./chms/Shepherding";
-import { Mercy } from "./chms/Mercy";
-import { ImportantDates } from "./chms/ImportantDates";
-import { Workflows } from "./chms/Workflows";
-import { Kiosk } from "./chms/Kiosk";
-import { AdvancedReports } from "./chms/Reports";
+const People = lazy(() =>
+  import("./chms/People").then((module) => ({ default: module.People })),
+);
+const Administration = lazy(() =>
+  import("./chms/Administration").then((module) => ({
+    default: module.Administration,
+  })),
+);
+const PortalAdministration = lazy(() =>
+  import("./chms/PortalAdmin").then((module) => ({
+    default: module.PortalAdministration,
+  })),
+);
+const Groups = lazy(() =>
+  import("./chms/Groups").then((module) => ({ default: module.Groups })),
+);
+const Calendar = lazy(() =>
+  import("./chms/Calendar").then((module) => ({ default: module.Calendar })),
+);
+const Serving = lazy(() =>
+  import("./chms/Serving").then((module) => ({ default: module.Serving })),
+);
+const Care = lazy(() =>
+  import("./chms/Care").then((module) => ({ default: module.Care })),
+);
+const Shepherding = lazy(() =>
+  import("./chms/Shepherding").then((module) => ({
+    default: module.Shepherding,
+  })),
+);
+const Mercy = lazy(() =>
+  import("./chms/Mercy").then((module) => ({ default: module.Mercy })),
+);
+const ImportantDates = lazy(() =>
+  import("./chms/ImportantDates").then((module) => ({
+    default: module.ImportantDates,
+  })),
+);
+const Workflows = lazy(() =>
+  import("./chms/Workflows").then((module) => ({ default: module.Workflows })),
+);
+const Kiosk = lazy(() =>
+  import("./chms/Kiosk").then((module) => ({ default: module.Kiosk })),
+);
+const AdvancedReports = lazy(() =>
+  import("./chms/Reports").then((module) => ({
+    default: module.AdvancedReports,
+  })),
+);
 import { configureKiosk, enterKiosk } from "./data/chms";
 
-import {
-  AttendanceReports,
-  type ReportRequest,
-} from "./chms/AttendanceReports";
-import { Dashboard } from "./chms/Dashboard";
-import { Officers } from "./chms/Officers";
-import { Communion } from "./chms/Communion";
-import { Imports } from "./chms/Imports";
+import type { ReportRequest } from "./chms/AttendanceReports";
+const AttendanceReports = lazy(() =>
+  import("./chms/AttendanceReports").then((module) => ({
+    default: module.AttendanceReports,
+  })),
+);
+const Dashboard = lazy(() =>
+  import("./chms/Dashboard").then((module) => ({ default: module.Dashboard })),
+);
+const Officers = lazy(() =>
+  import("./chms/Officers").then((module) => ({ default: module.Officers })),
+);
+const Communion = lazy(() =>
+  import("./chms/Communion").then((module) => ({ default: module.Communion })),
+);
+const Imports = lazy(() =>
+  import("./chms/Imports").then((module) => ({ default: module.Imports })),
+);
 import { StaffPasswordForm, StaffEnrollment } from "./security/Factors";
-import { Security } from "./security/Security";
+const Security = lazy(() =>
+  import("./security/Security").then((module) => ({
+    default: module.Security,
+  })),
+);
 import { ReauthHost } from "./security/Reauth";
 import { PasskeySignIn } from "./security/PasskeySignIn";
 import { browserStaffSignIn, securityCall } from "./data/security";
 import { staffWeb } from "./platform";
+
+function WorkspaceContent({ children }: { children: ReactNode }) {
+  return (
+    <main className="content">
+      <Suspense fallback={<Spinner label="Loading this workspace" />}>
+        {children}
+      </Suspense>
+    </main>
+  );
+}
 
 type AttendanceData = ReturnType<typeof useAttendanceData>;
 type Page =
@@ -297,7 +377,8 @@ function Workspace({
   theme: string;
   changeTheme: (value: string) => void;
 }) {
-  const data = useAttendanceData();
+  const [date, setDate] = useState("");
+  const data = useAttendanceData(date);
   const [page, setPage] = useState<Page>("attendance");
   const [reportRequest, setReportRequest] = useState<
     ReportRequest | undefined
@@ -307,7 +388,6 @@ function Workspace({
   const [visitor, setVisitor] = useState(false);
   const [household, setHousehold] = useState(false);
   const [selectedType, setSelectedType] = useState("");
-  const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false);
   // On narrow screens the sidebar becomes a menu that opens over the page.
   const [navOpen, setNavOpen] = useState(false);
@@ -674,7 +754,7 @@ function Workspace({
           </DialogBody>
         </DialogSurface>
       </Dialog>
-      <main className="content">
+      <WorkspaceContent>
         {!data.online && (
           <MessageBar intent="warning">
             {staffWeb && page !== "attendance"
@@ -765,6 +845,7 @@ function Workspace({
               <Spinner label="Loading the roll" />
             ) : service ? (
               <RollCall
+                key={service.id}
                 data={data}
                 service={service}
                 editable={canMarkAttendance(roles)}
@@ -799,7 +880,6 @@ function Workspace({
           <People
             roles={roles}
             timeZone={data.timeZone}
-            services={data.services}
             types={data.types}
             openCare={() => setPage("care")}
             add={() => setHousehold(true)}
@@ -1019,7 +1099,7 @@ function Workspace({
             )}
           </>
         )}
-      </main>
+      </WorkspaceContent>
       <ReauthHost />
       {visitor && service && (
         <VisitorDrawer
@@ -1053,9 +1133,11 @@ function RollCall({
   // New marks are in person unless the volunteer switches to marking online worshippers.
   const [mode, setMode] = useState<"inPerson" | "online">("inPerson");
   const input = useRef<HTMLInputElement>(null);
-  const [undo, setUndo] = useState<{ ids: string[]; expires: number } | null>(
-    null,
-  );
+  const [undo, setUndo] = useState<{
+    serviceId: string;
+    marks: { id: string; mode: "inPerson" | "online" }[];
+    expires: number;
+  } | null>(null);
   const filtered = filterRoster(data.people, search, filter);
   const counts = attendanceCounts(data.people, service);
   const onRoll = data.people.filter(isOnRoll);
@@ -1170,7 +1252,11 @@ function RollCall({
               );
               if (allPresent)
                 setUndo({
-                  ids: family.map((person) => person.id),
+                  serviceId: service.id,
+                  marks: family.map((person) => ({
+                    id: person.id,
+                    mode: how(person.id),
+                  })),
                   expires: Date.now() + 8000,
                 });
             }}
@@ -1305,7 +1391,11 @@ function RollCall({
           Household cleared.{" "}
           <Button
             onClick={() => {
-              undo.ids.forEach((id) => data.mark(service.id, id, true, mode));
+              if (undo.serviceId === service.id && undo.expires > Date.now())
+                undo.marks.forEach(({ id, mode: originalMode }) => {
+                  if (!service.present[id])
+                    data.mark(undo.serviceId, id, true, originalMode);
+                });
               setUndo(null);
             }}
           >

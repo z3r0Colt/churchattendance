@@ -299,7 +299,10 @@ export function Security({ roles }: { roles: Role[] }) {
               );
               setSetupLink(result.setupLink);
             } else
-              await securityCall("setUserRoles", rolesInputSchema.parse(value));
+              await securityCall(
+                "setUserRoles",
+                rolesInputSchema.parse({ ...value, uid: editing.uid }),
+              );
             await loadAccounts();
           }}
           close={() => setEditing(null)}

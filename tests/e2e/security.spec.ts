@@ -744,6 +744,24 @@ test("creates staff accounts, serializes security updates and recovers lost fact
   await expect(
     page.getByRole("option", { name: "Session only record access" }),
   ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Fictional New Reader", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Edit church roles", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Manage staff account" });
+  await dialog
+    .getByRole("checkbox", { name: "readOnly", exact: true })
+    .uncheck();
+  await dialog
+    .getByRole("checkbox", { name: "attendanceVolunteer", exact: true })
+    .check();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect
+    .poll(async () => (await auth.getUser(created.uid)).customClaims?.roles)
+    .toEqual(["attendanceVolunteer"]);
   await page.screenshot({
     path: "test-results/phase7-security.png",
     fullPage: true,

@@ -121,7 +121,12 @@ const toggle = <T,>(list: T[], value: T, on: boolean) =>
   on ? [...new Set([...list, value])] : list.filter((item) => item !== value);
 
 export function Workflows() {
-  const { data, error: loadError } = useWorkflowData(true);
+  const {
+    data,
+    error: loadError,
+    loadMore,
+    loadingMore,
+  } = useWorkflowData(true);
   const congregation = usePublicChms();
   const [users, setUsers] = useState<Assignee[]>([]);
   const [tab, setTab] = useState("workflows");
@@ -320,6 +325,20 @@ export function Workflows() {
                 {data?.workflows.length || 0} workflow
                 {data?.workflows.length === 1 ? "" : "s"}
               </span>
+              <ExportButton
+                rows={(data?.workflows || []).map((row) => ({
+                  Name: row.name,
+                  Trigger: workflowTriggerLabels[row.trigger.kind],
+                  Status: row.status,
+                  "Active version": row.publishedVersion || "None",
+                  "Open runs":
+                    data?.runs.filter(
+                      (run) =>
+                        run.workflowId === row.id &&
+                        !["completed", "cancelled"].includes(run.status),
+                    ).length || 0,
+                }))}
+              />
             </div>
             {!data?.workflows.length ? (
               <p>No workflows yet. Start from a template above.</p>
@@ -376,6 +395,14 @@ export function Workflows() {
           </section>
         </>
       )}
+      {tab === "workflows" &&
+        draft &&
+        saved &&
+        saved.revision !== draft.revision && (
+          <MessageBar intent="warning">
+            This workflow changed. Reopen it before saving your draft.
+          </MessageBar>
+        )}
       {tab === "workflows" && draft && (
         <section className="surface communication-panel session-panel">
           <div className="section-heading">
@@ -498,7 +525,8 @@ export function Workflows() {
                         trigger: {
                           ...draft.trigger,
                           source: event.target.value as
-                            "importantDates" | "bereavementDates",
+                            | "importantDates"
+                            | "bereavementDates",
                           dateKinds: [],
                         },
                       })
@@ -899,7 +927,7 @@ export function Workflows() {
                 run(async () => {
                   await saveWorkflowDraft({
                     id: draft.id,
-                    expectedRevision: saved?.revision ?? draft.revision,
+                    expectedRevision: draft.revision,
                     name: draft.name,
                     description: draft.description,
                     trigger: draft.trigger,
@@ -907,7 +935,7 @@ export function Workflows() {
                   });
                   setDraft({
                     ...draft,
-                    revision: (saved?.revision ?? draft.revision) + 1,
+                    revision: draft.revision + 1,
                   });
                   setPreview(null);
                 }, "Draft saved")
@@ -1061,6 +1089,11 @@ export function Workflows() {
               </span>
               <ExportButton rows={runRows} />
             </div>
+            {data?.hasMore && (
+              <Button disabled={loadingMore} onClick={() => void loadMore()}>
+                Load older workflow runs
+              </Button>
+            )}
             {!runs.length ? (
               <p>No runs match this view.</p>
             ) : (

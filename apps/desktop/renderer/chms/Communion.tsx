@@ -64,8 +64,7 @@ export function Communion({ roles, zone }: { roles: Role[]; zone: string }) {
     .filter(
       (row) =>
         decided.has(row.id) ||
-        (!row.isDeceased &&
-          !["former", "visitor"].includes(row.membershipStatus)),
+        (!row.isDeceased && row.membershipStatus !== "former"),
     )
     .sort(
       (a, b) =>

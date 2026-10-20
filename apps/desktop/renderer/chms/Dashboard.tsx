@@ -1,3 +1,4 @@
+import { churchDayLabel } from "@sycamore/shared";
 import { useMemo, useState } from "react";
 import {
   Button,
@@ -345,7 +346,7 @@ export function Dashboard({
                         <span>
                           <strong>{row.title}</strong>
                           <small className="muted">
-                            {day.toFormat("cccc, LLLL d")}
+                            {churchDayLabel(day)}
                             {row.detail ? ` · ${row.detail}` : ""}
                           </small>
                         </span>

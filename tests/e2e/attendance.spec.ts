@@ -136,3 +136,58 @@ test("exports only the filtered report to an Excel workbook with three sheets", 
     ySplit: 3,
   });
 });
+
+test("household Undo preserves worship modes and expires when changing services", async ({
+  page,
+}) => {
+  await login(page);
+  // Both meetings must already exist to exercise navigation without unmounting the old roll by accident.
+  await page.getByLabel("Service date").fill("2026-11-08");
+  const start = page.getByRole("button", {
+    name: "Start roll call",
+    exact: true,
+  });
+  if (await start.isVisible()) await start.click();
+  await expect(
+    page.getByRole("button", { name: /^James Calder,/ }),
+  ).toBeVisible();
+  await page.getByLabel("Service date").fill("2026-11-01");
+  const family = page
+    .locator("section.household")
+    .filter({
+      has: page.getByRole("heading", { name: "Calder", exact: true }),
+    });
+  const action = family.getByRole("button", {
+    name: /^(Mark all \d+|Clear household)$/,
+  });
+  if ((await action.textContent()) === "Clear household") await action.click();
+  await expect(action).toHaveText(/Mark all/);
+  await action.click();
+  const james = family.getByRole("button", { name: /^James Calder,/ });
+  await expect(james).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("switch", { name: "Marking online worshippers" })
+    .check();
+  await james.click();
+  await expect(james).toHaveAttribute("aria-pressed", "false");
+  await james.click();
+  await expect(james).toHaveAccessibleName("James Calder, online");
+  await page
+    .getByRole("switch", { name: "Marking online worshippers" })
+    .uncheck();
+  await action.click();
+  await expect(james).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(james).toHaveAccessibleName("James Calder, online");
+  await expect(
+    family.getByRole("button", { name: "Ruth Calder, present", exact: true }),
+  ).toBeVisible();
+  await action.click();
+  await expect(
+    page.getByRole("button", { name: "Undo", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Service date").fill("2026-11-08");
+  await expect(
+    page.getByRole("button", { name: "Undo", exact: true }),
+  ).toHaveCount(0);
+});

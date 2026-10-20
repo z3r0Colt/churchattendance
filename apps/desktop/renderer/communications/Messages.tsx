@@ -146,6 +146,14 @@ export function Messages({
           select={setSelected}
         />
       )}
+      {(tab === "scheduled" || tab === "sent") && data.hasMoreMessages && (
+        <Button
+          disabled={data.loadingMoreMessages}
+          onClick={() => void data.loadMoreMessages()}
+        >
+          Load older messages
+        </Button>
+      )}
       {tab === "inbox" && (
         <section className="surface communication-panel">
           <div className="section-heading">
@@ -258,6 +266,15 @@ function PersonHistory({
           if (message) choose(message);
         }}
       />
+      {history.error && <MessageBar intent="error">{history.error}</MessageBar>}
+      {history.hasMore && (
+        <Button
+          disabled={history.loadingMore}
+          onClick={() => void history.loadMore()}
+        >
+          Load older messages
+        </Button>
+      )}
       <section className="surface communication-panel">
         <div className="section-heading">
           <Subtitle2>Incoming text history</Subtitle2>

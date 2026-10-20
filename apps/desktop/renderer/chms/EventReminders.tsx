@@ -27,6 +27,7 @@ export function EventReminders({
   groups: Group[];
 }) {
   const [rows, setRows] = useState<EventReminder[]>(event.reminders ?? []);
+  const [revision, setRevision] = useState(event.revision);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -44,9 +45,10 @@ export function EventReminders({
     try {
       await saveEventReminders({
         eventId: event.id,
-        expectedRevision: event.revision,
+        expectedRevision: revision,
         reminders: rows,
       });
+      setRevision(revision + 1);
       setNotice("Reminders saved for every date of this event.");
     } catch (failure) {
       setError(friendlyError(failure));
@@ -57,6 +59,20 @@ export function EventReminders({
   return (
     <section className="reminder-panel">
       <Subtitle2>Reminders for this event</Subtitle2>
+      {event.revision !== revision && (
+        <MessageBar intent="warning">
+          This event changed. Reload its reminders before saving.
+          <Button
+            onClick={() => {
+              setRows(event.reminders ?? []);
+              setRevision(event.revision);
+              setNotice("");
+            }}
+          >
+            Reload reminders
+          </Button>
+        </MessageBar>
+      )}
       <p className="muted">
         Sent before each date to people who have chosen to receive church email
         or texts. A changed or cancelled date stops reminders that have not gone

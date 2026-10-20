@@ -92,6 +92,10 @@ export function Records({
   choose?: (index: number) => void;
   empty?: string;
 }) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(rows.length / 100));
+  const currentPage = Math.min(page, pageCount - 1);
+  const offset = currentPage * 100;
   const keys = Object.keys(rows[0] || {}).filter((key) => key !== "id");
   return (
     <section className="surface table-card communication-panel">
@@ -108,6 +112,26 @@ export function Records({
           <ExportButton rows={rows} />
         </span>
       </div>
+      {pageCount > 1 && (
+        <div className="actions" aria-label={`${label} pages`}>
+          <Button
+            disabled={currentPage === 0}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            Previous page
+          </Button>
+          <span>
+            Page {currentPage + 1} of {pageCount}. Showing {offset + 1}–
+            {Math.min(offset + 100, rows.length)} of {rows.length}.
+          </span>
+          <Button
+            disabled={currentPage + 1 >= pageCount}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            Next page
+          </Button>
+        </div>
+      )}
       {!!rows.length && (
         <TableScroll label={label}>
           <table className="card-table" role="table">
@@ -121,28 +145,31 @@ export function Records({
               </tr>
             </thead>
             <tbody role="rowgroup">
-              {rows.map((row, index) => (
-                <tr key={String(row.id ?? index)} role="row">
-                  {keys.map((key, column) => (
-                    <td key={key} role="cell" data-label={columnLabel(key)}>
-                      {column === 0 && choose ? (
-                        <Button
-                          appearance="transparent"
-                          onClick={() => choose(index)}
-                        >
-                          {displayValue(row[key])}
-                        </Button>
-                      ) : ["Status", "State"].includes(columnLabel(key)) &&
-                        typeof row[key] === "string" &&
-                        row[key] ? (
-                        <StatusPill text={String(row[key])} />
-                      ) : (
-                        displayValue(row[key])
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {rows.slice(offset, offset + 100).map((row, localIndex) => {
+                const index = offset + localIndex;
+                return (
+                  <tr key={String(row.id ?? index)} role="row">
+                    {keys.map((key, column) => (
+                      <td key={key} role="cell" data-label={columnLabel(key)}>
+                        {column === 0 && choose ? (
+                          <Button
+                            appearance="transparent"
+                            onClick={() => choose(index)}
+                          >
+                            {displayValue(row[key])}
+                          </Button>
+                        ) : ["Status", "State"].includes(columnLabel(key)) &&
+                          typeof row[key] === "string" &&
+                          row[key] ? (
+                          <StatusPill text={String(row[key])} />
+                        ) : (
+                          displayValue(row[key])
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </TableScroll>
@@ -335,6 +362,10 @@ export function ActionTable({
   empty: string;
   session?: boolean;
 }) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(rows.length / 100));
+  const currentPage = Math.min(page, pageCount - 1);
+  const offset = currentPage * 100;
   const keys = Object.keys(rows[0] || {}).filter((key) => key !== "id");
   return (
     <section
@@ -352,6 +383,26 @@ export function ActionTable({
           <ExportButton rows={rows} />
         </span>
       </div>
+      {pageCount > 1 && (
+        <div className="actions" aria-label={`${label} pages`}>
+          <Button
+            disabled={currentPage === 0}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            Previous page
+          </Button>
+          <span>
+            Page {currentPage + 1} of {pageCount}. Showing {offset + 1}–
+            {Math.min(offset + 100, rows.length)} of {rows.length}.
+          </span>
+          <Button
+            disabled={currentPage + 1 >= pageCount}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            Next page
+          </Button>
+        </div>
+      )}
       {!!rows.length && (
         <TableScroll label={label}>
           <table className="card-table" role="table">
@@ -366,30 +417,33 @@ export function ActionTable({
               </tr>
             </thead>
             <tbody role="rowgroup">
-              {rows.map((row, index) => (
-                <tr key={String(row.id ?? index)} role="row">
-                  {keys.map((key) => (
-                    <td key={key} role="cell" data-label={columnLabel(key)}>
-                      {["Status", "State"].includes(columnLabel(key)) &&
-                      typeof row[key] === "string" &&
-                      row[key] ? (
-                        <StatusPill text={String(row[key])} />
-                      ) : (
-                        displayValue(row[key])
-                      )}
-                    </td>
-                  ))}
-                  {actions && (
-                    <td
-                      className="row-actions"
-                      role="cell"
-                      data-label="Actions"
-                    >
-                      {actions(index)}
-                    </td>
-                  )}
-                </tr>
-              ))}
+              {rows.slice(offset, offset + 100).map((row, localIndex) => {
+                const index = offset + localIndex;
+                return (
+                  <tr key={String(row.id ?? index)} role="row">
+                    {keys.map((key) => (
+                      <td key={key} role="cell" data-label={columnLabel(key)}>
+                        {["Status", "State"].includes(columnLabel(key)) &&
+                        typeof row[key] === "string" &&
+                        row[key] ? (
+                          <StatusPill text={String(row[key])} />
+                        ) : (
+                          displayValue(row[key])
+                        )}
+                      </td>
+                    ))}
+                    {actions && (
+                      <td
+                        className="row-actions"
+                        role="cell"
+                        data-label="Actions"
+                      >
+                        {actions(index)}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </TableScroll>
