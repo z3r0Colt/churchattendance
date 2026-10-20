@@ -39,7 +39,7 @@ Build from the reviewed repair branch, including its fixes. Do not silently star
 
 | Phase | Deliverable | Depends on | Status |
 |---|---|---|---|
-| 13 | Church configuration and branding | Repaired application baseline | Implementation under validation; see [Phase 13](PHASE_13.md) |
+| 13 | Church configuration and branding | Repaired application baseline | Implemented; automated acceptance passed, see [Phase 13](PHASE_13.md) |
 | 14 | PWA packaging and online-only workflows | 13 | Planned |
 | 15 | Repeatable Firebase church provisioning | 13 and 14 | Planned |
 | 16 | Backups and verified recovery | 15 | Planned |

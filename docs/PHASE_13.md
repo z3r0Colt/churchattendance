@@ -1,6 +1,6 @@
 # Phase 13: church configuration and branding
 
-Status: implemented for review, acceptance pending. Built from `plan/pwa-managed-churches`, which includes the reviewed repairs. Phases 14–18 are not marked complete. No cloud resources, DNS, billing or real delivery have been changed.
+Status: implemented; automated acceptance passed on October 20, 2026. Built from `plan/pwa-managed-churches`, which includes the reviewed repairs. Phases 14–18 are not marked complete. No cloud resources, DNS, billing or real delivery have been changed.
 
 ## Public and protected configuration
 
@@ -41,11 +41,19 @@ An absent public document reports a setup error. Staff sign-in remains available
 
 Added shared schema/projection, unsafe-logo, contrast and production-binding tests; callable boundary/revision/missing-config tests; rule tests for raw branding/protected-setting denial; and browser fixtures for two identities on portal/staff phone layouts. Existing calendar expectations now use the fictional seed identity and project namespace.
 
-Local lint, type, unit, rules and build commands must be rerun with installed dependencies. This workspace's proxy is unavailable, so package installation and executable checks are currently blocked. `git diff --check` passes; this is not a substitute for application checks. CI and supported-browser visual/report checks remain acceptance requirements.
+The workspace proxy prevented local dependency installation, so verification ran on GitHub Actions for application commit `cfb83882cd66759bc620f78e644f05851230db35`: [successful verification run](https://github.com/z3r0Colt/churchattendance/actions/runs/39513208897).
 
-- [ ] Both fictional configurations pass browser checks without source edits.
-- [ ] Anonymous projection and protected role/rule boundaries pass.
-- [ ] Invalid deployment and explicit legacy migration tests pass.
-- [ ] Both themes, phone layouts and generated report headers pass review.
+- Lint, TypeScript, the dependency audit gate and all builds passed.
+- 245 unit tests, 64 Firestore/Storage rule tests and 151 browser tests passed.
+- Browser coverage includes both fictional identities, phone/booth layouts, keyboard use, accessibility, themes, role boundaries and existing church workflows. Workbook and standalone print-header tests verify both church identities.
+- Startup JavaScript gzip sizes were about 482 KB desktop, 450 KB staff web and 248 KB portal, all within the existing limits. The budget gate includes required configuration bootstrap chunks.
+- The initial validation found and corrected a plain-text lint error, an ExcelJS test-buffer type mismatch, emulator parameter materialization and the logo input's accessible label. No test was disabled.
 
-Do not mark the phase complete or proceed to the Phase 14 product transition solely on these source changes.
+These are automated development checks, not live deployment or Phase 18 pilot acceptance. Production requires the explicit configuration/migration steps above. The existing time-limited dependency exception in `REVIEW_FIXES.md` remains; passing its audit gate is not a clean dependency audit.
+
+- [x] Both fictional configurations pass browser checks without source edits.
+- [x] Anonymous projection and protected role/rule boundaries pass.
+- [x] Invalid deployment and explicit legacy migration tests pass.
+- [x] Both themes, phone layouts and generated report headers pass review.
+
+Phase 14 is the next implementation milestone. PWA packaging, online-only workflows, provisioning, recovery, operator tooling and pilot acceptance remain separate phases.

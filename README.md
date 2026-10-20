@@ -93,4 +93,4 @@ The Session-only Shepherding page plans household visits with invited deacons, t
 
 ## Managed PWA implementation
 
-The approved next work is on the PWA service plan in `docs/PWA_SERVICE_PLAN.md`. Phase 13 branding implementation is under validation; see `docs/PHASE_13.md` for the public/protected split, required deployment binding, explicit legacy migration and unresolved checks. Phases 14–18 remain planned. Existing native/offline behavior is not yet replaced.
+The approved next work is on the PWA service plan in `docs/PWA_SERVICE_PLAN.md`. Phase 13 branding implementation passed automated acceptance; see `docs/PHASE_13.md` for the public/protected split, required deployment binding, explicit legacy migration and verification evidence. Phases 14–18 remain planned. Existing native/offline behavior is not yet replaced.
