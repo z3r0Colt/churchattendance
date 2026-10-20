@@ -28,6 +28,7 @@ import {
   eventReminderAllowed,
   type EventReminderRef,
 } from "../events/reminders.js";
+import { deaconDigestVersion } from "../mercy/digest-access.js";
 import { db } from "../admin.js";
 import { providerConfig } from "./environment.js";
 import { DeliveryError, providers, type Attachment } from "./providers.js";
@@ -62,6 +63,7 @@ export type StoredMessage = {
   } | null;
   // Session-only log entries addressed to deacons are rechecked against a live deacon role.
   recipientRole?: "deacon" | null;
+  deaconDigestVersion?: string | null;
   importantDate?: {
     collection: "importantDates" | "bereavementDates";
     id: string;
@@ -192,6 +194,7 @@ export async function queueMessage(
     servingAssignment?: { id: string; revision: number };
     pastoralVisit?: StoredMessage["pastoralVisit"];
     recipientRole?: "deacon";
+    deaconDigestVersion?: string;
     importantDate?: StoredMessage["importantDate"];
     workflowRun?: StoredMessage["workflowRun"];
     eventReminder?: EventReminderRef;
@@ -301,6 +304,7 @@ export async function queueMessage(
       servingAssignment: options.servingAssignment ?? null,
       pastoralVisit: options.pastoralVisit ?? null,
       recipientRole: options.recipientRole ?? null,
+      deaconDigestVersion: options.deaconDigestVersion ?? null,
       importantDate: options.importantDate ?? null,
       workflowRun: options.workflowRun ?? null,
       eventReminder: options.eventReminder ?? null,
@@ -614,6 +618,12 @@ export async function dispatchQueue(now = new Date()) {
       let outcome: { status: string; providerId: string; error: string };
       try {
         const authorize = async () => {
+          if (
+            message.source === "deacon-digest" &&
+            (!message.deaconDigestVersion ||
+              (await deaconDigestVersion()) !== message.deaconDigestVersion)
+          )
+            return false;
           if (message.servingAssignment) {
             const assignment = await db
               .doc(`serving/${message.servingAssignment.id}`)

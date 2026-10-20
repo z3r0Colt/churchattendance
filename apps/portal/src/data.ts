@@ -93,6 +93,7 @@ export type MemberProfile = {
     canEdit: boolean;
   };
   hasPhoto: boolean;
+  photoVersion: number;
   preferences: DirectoryPreferences;
   rsvps: { eventId: string; date: string; status: string }[];
 };
@@ -214,11 +215,15 @@ export const saveHousehold = (value: unknown) =>
 export const getPhoto = async (personId: string) =>
   (await callPortal<{ photo: string | null }>("portalPhoto", { personId }))
     .photo;
-export const removePhoto = () =>
-  callPortal("removeMyPhoto", { expectedPhoto: true });
+export const removePhoto = (expectedPhotoVersion: number) =>
+  callPortal("removeMyPhoto", { expectedPhoto: true, expectedPhotoVersion });
 // Photos are scaled down in the browser so uploads stay small and drop
 // any location or camera details the original file carried.
-export async function uploadPhoto(file: File, expectedPhoto: boolean) {
+export async function uploadPhoto(
+  file: File,
+  expectedPhoto: boolean,
+  expectedPhotoVersion: number,
+) {
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))
     throw new Error("Choose a JPEG, PNG or WebP photo.");
   const image = await createImageBitmap(file).catch(() => {
@@ -233,7 +238,12 @@ export async function uploadPhoto(file: File, expectedPhoto: boolean) {
   const data = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
   return callPortal(
     "saveMyPhoto",
-    memberPhotoSchema.parse({ contentType: "image/jpeg", data, expectedPhoto }),
+    memberPhotoSchema.parse({
+      contentType: "image/jpeg",
+      data,
+      expectedPhoto,
+      expectedPhotoVersion,
+    }),
   );
 }
 export const submitRequest = (value: unknown) =>

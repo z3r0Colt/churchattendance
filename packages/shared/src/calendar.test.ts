@@ -229,3 +229,41 @@ describe("event reminders", () => {
     ).toBe("Study FirstName is on the Lord's Day, March 14 at 6:00 PM, Hall.");
   });
 });
+
+it("selects moved meetings by their effective window and preserves their RSVP identity", () => {
+  const changed = {
+    ...series,
+    exceptions: {
+      "2027-03-07": {
+        start: "2027-04-15T14:30:00.000Z",
+        end: "2027-04-15T15:30:00.000Z",
+      },
+      "2027-03-28": {
+        start: "2027-02-15T15:30:00.000Z",
+        end: "2027-02-15T16:30:00.000Z",
+      },
+      "2027-03-08": {
+        start: "2027-04-15T14:30:00.000Z",
+        end: "2027-04-15T15:30:00.000Z",
+      },
+    },
+  };
+  expect(
+    eventOccurrences(changed, "2027-04-15", "2027-04-15", zone).map(
+      (row) => row.id,
+    ),
+  ).toEqual(["study_2027-03-07"]);
+  expect(
+    eventOccurrences(changed, "2027-02-15", "2027-02-15", zone).map(
+      (row) => row.id,
+    ),
+  ).toEqual(["study_2027-03-28"]);
+  expect(eventOccurrences(changed, "2027-03-07", "2027-03-07", zone)).toEqual(
+    [],
+  );
+  expect(
+    eventOccurrences(changed, "2027-03-07", "2027-03-07", zone, {
+      selectByOriginalDate: true,
+    })[0].id,
+  ).toBe("study_2027-03-07");
+});

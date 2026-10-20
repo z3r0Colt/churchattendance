@@ -2,7 +2,7 @@
 
 A Windows desktop program with member and staff web access for Sycamore Reformed Presbyterian Church (sycamorerpc.org). It tracks attendance for members, non-residents, adherents and visitors, exports to CSV and Excel, and supports church administration and shepherding. Giving and tithing are left out on purpose.
 
-Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records coverage and acceptance criteria. Phase 7 security/account and Phase 8 shepherding implementations are now included; their live setup and staging checks are separate. Phases 9 through 12 remain planned. Earlier milestone notes describe their implemented baseline, subject to the Phase 7 security changes.
+Scope extension approved on October 18, 2026. All ten feature areas from the TendFlock comparison are included in Phases 7 through 12. [Expanded feature requirements](docs/FEATURE_EXPANSION.md) records coverage and acceptance criteria. Phase 7 security/account and Phase 8 shepherding implementations are now included; their live setup and staging checks are separate. Phases 9 through 11 and Phase 12 parts 1 and 2 are implemented. Phase 12 part 3 remains pending. See the [implementation status](docs/FEATURE_EXPANSION.md#implementation-status). Earlier milestone notes describe their implemented baseline, subject to the Phase 7 security changes.
 
 ## 1. Goals
 
@@ -46,7 +46,7 @@ Status changes are logged with date and reason so the Clerk has a full membershi
 * Person record with photo, contact info, birthday, anniversary, custom fields
 * Households with head, spouse, children, shared address
 * Search, filter, saved lists ("All adherents who missed 4 weeks")
-* Merge duplicates
+* Merge duplicates is pending a reviewed, resumable reference-reconciliation design. Existing-record merging is not implemented; import matching is a separate workflow.
 * Fast entry form for adding a whole household at once
 * CSV/XLSX import with column mapping, preview, duplicate review and validation before committing a batch (Phase 11)
 * Family relationship links beyond shared households, with privacy controls (Phase 11)
@@ -195,7 +195,7 @@ Firestore stores documents in collections. Locking happens per document, not per
 ```
 people/{personId}
   firstName, lastName, preferredName, gender, birthDate, email, mobilePhone, homePhone,
-  photoPath, householdId, membershipStatus, elderDistrictId, smsOptIn, emailOptIn,
+  photoPath, photoVersion (monotonic integer; legacy = 0), householdId, membershipStatus, elderDistrictId, smsOptIn, emailOptIn,
   isDeceased, customFields{}, updatedAt, updatedBy, firstVisitDate (optional, visitor quick add), importBatchId (when imported)
   membershipEvents/{id}   date, fromStatus, toStatus, method, otherChurch, reason
   sacraments/{id}         type (baptism | profession), date, category (infant | adult for baptism), place, officiant, revision
@@ -266,7 +266,7 @@ households/{householdId}     name, address, homePhone, revision, updatedAt, upda
 relationships/{id}           personId, relatedPersonId, kind (spouse | parent | guardian | sibling | other), label,
                              startDate (wedding date for a spouse), endDate, revision, updatedAt, updatedBy
                              (staff readers; editors write through the API; parent/guardian read personId → relatedPersonId)
-importBatches/{batchId}      fileName, createdBy, createdAt, consentReviewed, consentSource, total, pending, created,
+importBatches/{batchId}      payloadHash, state (initializing | ready), fileName, createdBy, createdAt, consentReviewed, consentSource, total, pending, created,
                              updated, skipped, conflict, failed   (editors read; Functions write)
   rows/{row}                 row, value{}, decision (skip | create | update with expected values), outcome, personId, message
 elderDistricts/{id}          name, elderPersonId, archived, revision, updatedAt, updatedBy
@@ -298,7 +298,8 @@ kioskSearches/{token}        uid, serviceId, personIds[], expiresAt (server only
 messages/{messageId}         channel (email | sms | both), subject, body, audience, scheduledFor,
                              status, createdAt, createdByUid, selectedPersonIds[], sessionOnly,
                              attachments[], activeCount, totals{}, source, dateLabel, serviceTime, expiresAt, servingAssignment { id, revision },
-                             eventReminder { eventId, date, reminderId, version }
+                             eventReminder { eventId, date, reminderId, version }, deaconDigestVersion
+                             (private messages and recipients are served only through audited message APIs)
   recipients/{personId_channel} personId, channel, address, status, providerId, error,
                                attemptKey, startedAt, updatedAt
 messageTemplates/{id}       name, channel, subject, body, updatedBy, updatedAt
@@ -316,7 +317,8 @@ consentEvents/{id}           personId, channel, optedIn, source, actor, at
 bulletins/{lordsDayDate}     week, file { path, name, generation, size, source, sourceModifiedAt, sourceKey },
                              status, messageId, previewMessageId, publicUrl, preparingAt, updatedAt
 bulletinLinks/{token}        path, generation, week, createdAt (server only)
-automationStatus/church     bulletinError, absenceError, servingError, queueError, checkedAt
+automationStatus/church     bulletinError, absenceError, servingError, visitError, deaconError, datesError,
+                             workflowError, eventsError, queueError, checkedAt
 
 portalAccess/{uid}           personId, enabled, revision, updatedAt, updatedBy (Admin/Pastor read)
 directoryPreferences/{personId} listed, shareEmail, sharePhone, shareAddress, sharePhoto, revision, updatedAt, updatedBy
@@ -325,6 +327,8 @@ eventPublications/{eventId}  portalVisible, publicRegistration, publicCalendar, 
 onlineSubmissions/{requestId} kind, firstName, lastName, email, mobilePhone, message, eventId, date,
                              status (pending | approved | declined), approvedPersonId, createdAt, reviewedAt, reviewedBy
 portalBudgets/{hashedIp_hour} count, expiresAt (server only; also member_{personId}_{date} request counters)
+photoCleanup/{sha256(path)}  personId, path, createdAt (server-only retry queue for superseded photos)
+
 calendarFeeds/{sha256(token)} uid, scope (member | staff), personId, label, createdAt, expiresAt, lastUsedAt (server only)
 
 users/{uid}                  personId, displayName, roles[]
@@ -586,3 +590,13 @@ See `docs/PHASE_5.md` for workflows and archive semantics. Setup forms use docum
 ### Phase 6 implementation details
 
 See `docs/PHASE_6.md` for exact report definitions. Attendance reports use membership status at each service date, preserve unclassified marks, and never use current status to fill missing history. Matrix eligibility follows recorded roll entry/removal. Percentages and averages use recorded meetings only. Absence streaks use distinct recorded Lord's Day dates. The prior average covers 28 preceding days and the year comparison preserves weekday at 52 weeks. Districts and contact details are current. Only Session receives current follow-up counts and dated visit information, with private exports labelled. The dashboard uses the same report math and links its attendance tiles to filtered reports. This phase adds no document collections and no new client writes.
+
+### Review correction contracts
+
+Household portal writes increment the shared household revision. Form drafts retain their base revision until save or explicit reload. Completed visits snapshot covered person IDs; legacy visits without recorded participants do not infer contact from today's household membership.
+
+Imports claim an immutable payload hash before row creation, create missing rows transactionally without resetting outcomes, and expose processing only after the ready barrier. Retrying the same batch ID with different content is rejected.
+
+Private message bodies and recipients use audited APIs and memory-only UI state. Desktop cache version 8 purges previously persisted private messages. Deacon digests carry a metadata fingerprint of their source and access records; changed or missing fingerprints suppress stale queued delivery. Old fingerprints are not regenerated after a change, so that day's summary may be skipped. Consent remains checked at dispatch.
+
+Roll-call startup listens to a six-week window around the selected date. People/history and report workspaces load historical records when opened. Pending-write tracking spans date navigation. Message and workflow lists load all actionable work independently from cursor-paged completed history.

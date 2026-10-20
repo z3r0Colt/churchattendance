@@ -325,3 +325,87 @@ test("refuses unreviewed matches and leaves concurrent edits alone", async ({
     "1970-02-02",
   );
 });
+
+test("concurrent starts and finished retries preserve import outcomes and counts", async ({
+  request,
+}) => {
+  const input = {
+    batchId: "review-concurrent-start",
+    fileName: "fictional.csv",
+    consentReviewed: false,
+    rows: Array.from({ length: 401 }, (_, index) => ({
+      row: index + 1,
+      value: null,
+      decision: { action: "skip" },
+    })),
+  };
+  await Promise.all([
+    call(request, "startPeopleImport", input),
+    call(request, "startPeopleImport", input),
+  ]);
+  while (
+    (await call(request, "processPeopleImport", { batchId: input.batchId }))
+      .remaining > 0
+  ) {
+    /* bounded by the recorded pending rows */
+  }
+  await Promise.all([
+    call(request, "startPeopleImport", input),
+    call(request, "startPeopleImport", input),
+  ]);
+  expect(
+    (await call(request, "processPeopleImport", { batchId: input.batchId }))
+      .remaining,
+  ).toBe(0);
+  const batch = await db.doc(`importBatches/${input.batchId}`).get();
+  expect([
+    batch.get("state"),
+    batch.get("pending"),
+    batch.get("skipped"),
+  ]).toEqual(["ready", 0, 401]);
+  expect(
+    (await batch.ref.collection("rows").where("outcome", "==", "pending").get())
+      .size,
+  ).toBe(0);
+  await call(
+    request,
+    "startPeopleImport",
+    { ...input, fileName: "different.csv" },
+    409,
+  );
+});
+
+test("household creation cannot establish messaging consent", async ({
+  request,
+}) => {
+  await call(
+    request,
+    "createHousehold",
+    {
+      household: {
+        name: "Fictional consent household",
+        address: "",
+        homePhone: "",
+      },
+      date: "2026-10-20",
+      people: [
+        {
+          firstName: "Fictional",
+          lastName: "Consent",
+          membershipStatus: "visitor",
+          email: "fictional-consent@example.test",
+          emailOptIn: true,
+        },
+      ],
+    },
+    400,
+  );
+  expect(
+    (
+      await db
+        .collection("people")
+        .where("email", "==", "fictional-consent@example.test")
+        .get()
+    ).size,
+  ).toBe(0);
+});

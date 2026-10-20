@@ -166,6 +166,18 @@ export const completeVisit = onCall(privateOptions, async (request) => {
       );
     const visitDate = DateTime.fromJSDate(start, { zone }).toISODate()!;
     const householdId = before.get("householdId") as string;
+    const householdPeople = await transaction.get(
+      db.collection("people").where("householdId", "==", householdId),
+    );
+    const personIds = (before.get("personIds") || []).length
+      ? (before.get("personIds") as string[])
+      : householdPeople.docs
+          .filter(
+            (person) =>
+              !person.get("isDeceased") &&
+              person.get("membershipStatus") !== "former",
+          )
+          .map((person) => person.id);
     let careNoteId = "";
     if (input.record.kind === "link") {
       const note = await transaction.get(
@@ -229,6 +241,7 @@ export const completeVisit = onCall(privateOptions, async (request) => {
       protectRecord("pastoralVisits", ref.path, {
         ...openRecord(ref.path, before.data()!),
         status: "completed",
+        personIds,
         completedAt: Timestamp.now(),
         completedBy: actor.uid,
         careNoteId,

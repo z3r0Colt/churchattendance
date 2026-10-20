@@ -85,7 +85,9 @@ async function currentReminder(ref: EventReminderRef, zone: string) {
   if (!event.exists) return null;
   const series = eventFromRecord(event.id, event.data()!);
   const reminder = series.reminders?.find((row) => row.id === ref.reminderId);
-  const occurrence = eventOccurrences(series, ref.date, ref.date, zone)[0];
+  const occurrence = eventOccurrences(series, ref.date, ref.date, zone, {
+    selectByOriginalDate: true,
+  })[0];
   if (
     !reminder ||
     !occurrence ||

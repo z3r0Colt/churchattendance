@@ -198,6 +198,7 @@ export const recordRsvp = onCall(async (request) => {
         input.date,
         input.date,
         zone,
+        { selectByOriginalDate: true },
       ).length
     )
       throw new HttpsError(

@@ -100,3 +100,5 @@ Check on staging that a reminder arrives once by email and text, that a cancelle
 ## Not included
 
 Household proxy RSVPs, guardian delegation, attachments on member requests, member self-service consent changes and push notifications are not included. Calendar feeds are not real-time; calendar apps refresh on their own schedule.
+
+Photo writes compare the original presence and monotonic photo version. A committed replacement is never rolled back because old-object deletion failed. Superseded objects whose immediate cleanup fails remain on the server-only `photoCleanup` retry queue for the hourly worker; the current photo remains intact. The profile reloads previews when that version changes.

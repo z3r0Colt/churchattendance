@@ -41,6 +41,7 @@ export function MyDetails({
       <Contact profile={profile} busy={busy} perform={perform} />
       <Photo
         hasPhoto={profile.hasPhoto}
+        photoVersion={profile.photoVersion}
         personId={personId}
         busy={busy}
         perform={perform}
@@ -131,28 +132,39 @@ function Contact({
 
 function Photo({
   hasPhoto,
+  photoVersion,
   personId,
   busy,
   perform,
 }: {
   hasPhoto: boolean;
+  photoVersion: number;
   personId: string;
   busy: boolean;
   perform: Perform;
 }) {
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState("");
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
+    setPhoto(null);
+    setPhotoError("");
     if (hasPhoto)
       void getPhoto(personId)
         .then((value) => {
-          if (active) setPhoto(value);
+          if (active) {
+            setPhoto(value);
+            if (!value) setPhotoError("Your photo could not be loaded.");
+          }
         })
-        .catch(() => undefined);
+        .catch(() => {
+          if (active) setPhotoError("Your photo could not be loaded.");
+        });
     return () => {
       active = false;
     };
-  }, [hasPhoto, personId]);
+  }, [hasPhoto, personId, photoVersion, retry]);
   return (
     <section className="card">
       <h2>My photo</h2>
@@ -163,7 +175,12 @@ function Photo({
       {hasPhoto && photo ? (
         <img className="member-photo" src={photo} alt="My current photo" />
       ) : (
-        <p>{hasPhoto ? "Loading your photo" : "No photo yet."}</p>
+        <p>{hasPhoto ? photoError || "Loading your photo" : "No photo yet."}</p>
+      )}
+      {photoError && (
+        <Button onClick={() => setRetry((value) => value + 1)}>
+          Retry photo
+        </Button>
       )}
       <label className="file-field">
         {hasPhoto ? "Replace my photo" : "Add a photo"}
@@ -176,7 +193,7 @@ function Photo({
             event.target.value = "";
             if (file)
               void perform(
-                () => uploadPhoto(file, hasPhoto),
+                () => uploadPhoto(file, hasPhoto, photoVersion),
                 "Your photo was saved.",
               );
           }}
@@ -186,7 +203,10 @@ function Photo({
         <Button
           disabled={busy}
           onClick={() =>
-            void perform(() => removePhoto(), "Your photo was removed.")
+            void perform(
+              () => removePhoto(photoVersion),
+              "Your photo was removed.",
+            )
           }
         >
           Remove my photo

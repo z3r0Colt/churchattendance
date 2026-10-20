@@ -102,3 +102,7 @@ export function statusTone(text: string): StatusTone {
     tones.find(([, pattern]) => pattern.test(text.trim()))?.[0] ?? "neutral"
   );
 }
+
+export function churchDayLabel(day: DateTime, format = "cccc, LLLL d") {
+  return day.toFormat(format).replace(/Sunday/g, "Lord's Day");
+}

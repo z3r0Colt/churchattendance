@@ -42,10 +42,10 @@ export const db = initializeFirestore(app, {
 });
 // One-time upgrade from the old direct private-record subscriptions. Fail closed if another tab holds the cache open.
 export const privateCacheReady =
-  staffWeb || localStorage.getItem("private-cache-version") === "7"
+  staffWeb || localStorage.getItem("private-cache-version") === "8"
     ? Promise.resolve()
     : clearIndexedDbPersistence(db).then(() =>
-        localStorage.setItem("private-cache-version", "7"),
+        localStorage.setItem("private-cache-version", "8"),
       );
 export const functions = getFunctions(app, "us-central1");
 export const storage = getStorage(app);

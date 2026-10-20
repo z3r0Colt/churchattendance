@@ -79,10 +79,9 @@ export async function contactEvents(countPersonalMessages: boolean) {
   const zone = await getChurchZone();
   const local = (value: Timestamp) =>
     DateTime.fromJSDate(value.toDate(), { zone }).toISODate()!;
-  const [notes, visits, people, inbox, history] = await Promise.all([
+  const [notes, visits, inbox, history] = await Promise.all([
     db.collection("careNotes").get(),
     db.collection("pastoralVisits").where("status", "==", "completed").get(),
-    db.collection("people").get(),
     db.collection("smsInbox").get(),
     db.collectionGroup("membershipEvents").get(),
   ]);
@@ -99,13 +98,8 @@ export async function contactEvents(countPersonalMessages: boolean) {
   }
   for (const row of visits.docs) {
     const listed = (row.get("personIds") || []) as string[];
-    const visited = listed.length
-      ? listed
-      : people.docs
-          .filter(
-            (person) => person.get("householdId") === row.get("householdId"),
-          )
-          .map((person) => person.id);
+    // Legacy household visits without participants have unknown coverage.
+    const visited = listed;
     for (const personId of visited)
       events.push({
         personId,

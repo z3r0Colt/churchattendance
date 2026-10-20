@@ -80,7 +80,25 @@ export function useAuth() {
           });
           return;
         }
-        const token = await user.getIdTokenResult();
+        let token;
+        try {
+          token = await user.getIdTokenResult();
+        } catch {
+          if (
+            attempt === generation.current &&
+            auth.currentUser?.uid === user.uid
+          )
+            setState({
+              loading: false,
+              user,
+              roles: [],
+              kiosk: false,
+              assured: false,
+              error:
+                "Your sign-in could not be verified. Check your connection, then sign out and sign in again.",
+            });
+          return;
+        }
         if (
           auth.currentUser?.uid !== user.uid ||
           attempt !== generation.current

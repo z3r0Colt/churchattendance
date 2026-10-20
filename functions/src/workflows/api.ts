@@ -1,5 +1,10 @@
+import { z } from "zod";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Timestamp, type DocumentData } from "firebase-admin/firestore";
+import {
+  FieldPath,
+  Timestamp,
+  type DocumentData,
+} from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { DateTime } from "luxon";
 import {
@@ -7,7 +12,6 @@ import {
   approvalDecisionSchema,
   approvalRefusal,
   describeStep,
-  emptySecuritySchema,
   migrationIndex,
   occurrenceForYear,
   runControlSchema,
@@ -312,6 +316,14 @@ export const controlWorkflowRun = onCall(async (request) => {
     let update: Record<string, unknown> | null = null;
     if (input.action === "pause" && open)
       update = { status: "paused", pausedFrom: status };
+    if (
+      !["pause", "cancel"].includes(input.action) &&
+      Number(before.get("lease")?.until?.toMillis() || 0) > Date.now()
+    )
+      throw new HttpsError(
+        "failed-precondition",
+        "A step is still finishing. Try again shortly.",
+      );
     if (input.action === "resume" && status === "paused")
       update = {
         status: before.get("pausedFrom") || "active",
@@ -334,7 +346,7 @@ export const controlWorkflowRun = onCall(async (request) => {
       );
     transaction.update(ref, {
       ...update,
-      lease: null,
+      lease: before.get("lease") ?? null,
       history: [
         ...(before.get("history") || []),
         control(
@@ -439,12 +451,39 @@ export const decideWorkflowApproval = onCall(async (request) => {
 });
 
 export const getWorkflowData = onCall(async (request) => {
-  parse(emptySecuritySchema, request.data ?? {});
   const actor = await requireRoles(request, SESSION_ROLES);
-  const [workflows, versions, runs] = await Promise.all([
+  const input = parse(
+    z
+      .object({
+        before: z
+          .string()
+          .regex(/^[A-Za-z0-9_-]{1,250}$/)
+          .optional(),
+      })
+      .strict(),
+    request.data ?? {},
+  );
+  let history = db
+    .collection("workflowRuns")
+    .orderBy("startedAt", "desc")
+    .orderBy(FieldPath.documentId(), "desc");
+  if (input.before) {
+    const cursor = await db.doc(`workflowRuns/${input.before}`).get();
+    if (!cursor.exists)
+      throw new HttpsError(
+        "not-found",
+        "The history cursor is unavailable. Reload workflows.",
+      );
+    history = history.startAfter(cursor);
+  }
+  const [workflows, versions, runs, open] = await Promise.all([
     db.collection("workflows").get(),
     db.collection("workflowVersions").get(),
-    db.collection("workflowRuns").orderBy("startedAt", "desc").limit(300).get(),
+    history.limit(301).get(),
+    db
+      .collection("workflowRuns")
+      .where("status", "in", ["active", "waiting", "paused", "blocked"])
+      .get(),
   ]);
   await securityEvent(actor.uid, "workflow.read", "success", "session");
   const rows = (snapshot: typeof workflows) =>
@@ -456,6 +495,18 @@ export const getWorkflowData = onCall(async (request) => {
   return {
     workflows: rows(workflows),
     versions: rows(versions),
-    runs: rows(runs),
+    runs: rows({
+      ...runs,
+      docs: [
+        ...new Map(
+          [...open.docs, ...runs.docs.slice(0, 300)].map((row) => [
+            row.id,
+            row,
+          ]),
+        ).values(),
+      ],
+    } as typeof runs),
+    before: runs.docs[299]?.id || "",
+    hasMore: runs.size > 300,
   };
 });

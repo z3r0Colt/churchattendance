@@ -139,13 +139,25 @@ export function eventOccurrences(
   from: string,
   to: string,
   zone: string,
-  options: { includeCancelled?: boolean } = {},
+  options: { includeCancelled?: boolean; selectByOriginalDate?: boolean } = {},
 ): Occurrence[] {
   if (event.cancelled && !options.includeCancelled) return [];
   const start = DateTime.fromISO(event.start).setZone(zone);
   const duration = Date.parse(event.end) - Date.parse(event.start);
   const result: Occurrence[] = [];
   if (!start.isValid) throw new Error("Set a valid church time zone");
+  // An exception may move a valid series date into this window from either direction.
+  const lastOriginal = Object.entries(event.exceptions ?? {}).reduce(
+    (last, [day, change]) => {
+      const effective = change.start
+        ? DateTime.fromISO(change.start).setZone(zone).toISODate()
+        : day;
+      return effective && effective >= from && effective <= to && day > last
+        ? day
+        : last;
+    },
+    to,
+  );
   for (let n = 0; n < 1500; n++) {
     const date: DateTime =
       event.recurrence === "weekly"
@@ -154,13 +166,22 @@ export function eventOccurrences(
           ? start.plus({ months: n * event.interval })
           : start;
     const day = date.toISODate()!;
-    if (day > to || (event.recurrence !== "none" && day > event.until)) break;
+    if (
+      day > lastOriginal ||
+      (event.recurrence !== "none" && day > event.until)
+    )
+      break;
     const change = event.exceptions?.[day];
     const cancelled = event.cancelled || change?.cancelled === true;
+    const effectiveDay =
+      !options.selectByOriginalDate && change?.start
+        ? DateTime.fromISO(change.start).setZone(zone).toISODate()!
+        : day;
     // A meeting on the 31st does not silently move to the end of a shorter month.
     if (
       (event.recurrence !== "monthly" || date.day === start.day) &&
-      day >= from &&
+      effectiveDay >= from &&
+      effectiveDay <= to &&
       (!cancelled || options.includeCancelled)
     )
       result.push({

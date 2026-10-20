@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   approvalDecisionSchema,
   runControlSchema,
@@ -16,6 +16,8 @@ export type WorkflowData = {
   workflows: Workflow[];
   versions: WorkflowVersion[];
   runs: WorkflowRun[];
+  before: string;
+  hasMore: boolean;
 };
 export type WorkflowPreview = {
   revision: number;
@@ -42,12 +44,41 @@ export function useWorkflowData(enabled: boolean) {
     data: WorkflowData | null;
     error: string;
   }>({ data: null, error: "" });
+  const older = useRef<WorkflowRun[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const generation = useRef(0);
   useEffect(() => {
+    const attempt = ++generation.current;
+    older.current = [];
     let active = true;
     const load = () =>
       enabled &&
       void chmsCall<WorkflowData>("getWorkflowData", {})
-        .then((data) => active && setState({ data, error: "" }))
+        .then(
+          (data) =>
+            active &&
+            attempt === generation.current &&
+            setState((previous) => ({
+              data: {
+                ...data,
+                runs: [
+                  ...new Map(
+                    [...older.current, ...data.runs].map((row) => [
+                      row.id,
+                      row,
+                    ]),
+                  ).values(),
+                ],
+                ...(older.current.length && previous.data
+                  ? {
+                      before: previous.data.before,
+                      hasMore: previous.data.hasMore,
+                    }
+                  : {}),
+              },
+              error: "",
+            })),
+        )
         .catch(
           () =>
             active &&
@@ -66,7 +97,44 @@ export function useWorkflowData(enabled: boolean) {
       window.removeEventListener("private-records-changed", load);
     };
   }, [enabled]);
-  return state;
+  const loadMore = async () => {
+    if (!state.data?.hasMore || loadingMore) return;
+    setLoadingMore(true);
+    const attempt = generation.current;
+    try {
+      const page = await chmsCall<WorkflowData>("getWorkflowData", {
+        before: state.data.before,
+      });
+      if (attempt !== generation.current) return;
+      older.current = [...older.current, ...page.runs].filter(
+        (row) =>
+          !["active", "waiting", "paused", "blocked"].includes(row.status),
+      );
+      setState((previous) => ({
+        data: {
+          ...page,
+          runs: [
+            ...new Map(
+              [
+                ...older.current,
+                ...(previous.data?.runs || []),
+                ...page.runs,
+              ].map((row) => [row.id, row]),
+            ).values(),
+          ],
+        },
+        error: "",
+      }));
+    } catch {
+      setState((previous) => ({
+        ...previous,
+        error: "Older workflow runs could not be loaded. Try again.",
+      }));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+  return { ...state, loadMore, loadingMore };
 }
 export const saveWorkflowDraft = (value: unknown) =>
   chmsCall("saveWorkflowDraft", workflowDraftSchema.parse(value));

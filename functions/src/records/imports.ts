@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
@@ -76,9 +77,22 @@ export const startPeopleImport = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(importStartSchema, request.data);
   const batch = db.doc(`importBatches/${input.batchId}`);
-  if ((await batch.get()).exists) return { batchId: input.batchId };
+  const payloadHash = createHash("sha256")
+    .update(JSON.stringify(input))
+    .digest("hex");
   // Matches are checked again here, so a new record is never created past an unreviewed match.
   const people = await roll();
+  // Read after the roll so a concurrent completed start is recognized before
+  // its newly created people can be mistaken for unreviewed duplicate matches.
+  const existing = await batch.get();
+  if (existing.exists) {
+    if (existing.get("payloadHash") !== payloadHash)
+      throw new HttpsError(
+        "already-exists",
+        "This import ID belongs to a different reviewed file. Start a new import.",
+      );
+    if (existing.get("state") === "ready") return { batchId: input.batchId };
+  }
   for (const row of input.rows) {
     const candidates = row.value ? importCandidates(row.value, people) : [];
     if (
@@ -104,36 +118,73 @@ export const startPeopleImport = onCall(async (request) => {
         `Row ${row.row} points to a person who is not on the roll.`,
       );
   }
+  const ready = await db.runTransaction(async (transaction) => {
+    const existing = await transaction.get(batch);
+    if (existing.exists) {
+      if (existing.get("payloadHash") !== payloadHash)
+        throw new HttpsError(
+          "already-exists",
+          "This import ID belongs to a different reviewed file. Start a new import.",
+        );
+      return existing.get("state") === "ready";
+    }
+    transaction.create(batch, {
+      payloadHash,
+      state: "initializing",
+      fileName: input.fileName,
+      createdBy: actor.uid,
+      createdAt: Timestamp.now(),
+      consentReviewed: input.consentReviewed,
+      consentSource: input.consentSource,
+      total: input.rows.length,
+      pending: input.rows.length,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      conflict: 0,
+      failed: 0,
+    });
+    return false;
+  });
+  if (ready) return { batchId: input.batchId };
   for (let start = 0; start < input.rows.length; start += 400) {
-    const writes = db.batch();
-    for (const row of input.rows.slice(start, start + 400))
-      writes.set(
+    const chunk = input.rows.slice(start, start + 400);
+    await db.runTransaction(async (transaction) => {
+      const claim = await transaction.get(batch);
+      if (claim.get("payloadHash") !== payloadHash)
+        throw new HttpsError("aborted", "The reviewed import changed.");
+      if (claim.get("state") === "ready") return;
+      const refs = chunk.map((row) =>
         batch.collection("rows").doc(String(row.row).padStart(4, "0")),
-        {
-          row: row.row,
-          value: row.value,
-          decision: row.decision,
-          outcome: "pending",
-          personId: "",
-          message: row.problems.join("; "),
-        },
       );
-    await writes.commit();
+      const existing = await transaction.getAll(...refs);
+      chunk.forEach((row, index) => {
+        if (!existing[index].exists)
+          transaction.create(refs[index], {
+            row: row.row,
+            value: row.value,
+            decision: row.decision,
+            outcome: "pending",
+            personId: "",
+            message: row.problems.join("; "),
+          });
+      });
+    });
   }
-  // The batch record comes last, so a retry after a partial start rewrites the same pending rows.
-  await batch.create({
-    fileName: input.fileName,
-    createdBy: actor.uid,
-    createdAt: Timestamp.now(),
-    consentReviewed: input.consentReviewed,
-    consentSource: input.consentSource,
-    total: input.rows.length,
-    pending: input.rows.length,
-    created: 0,
-    updated: 0,
-    skipped: 0,
-    conflict: 0,
-    failed: 0,
+  await db.runTransaction(async (transaction) => {
+    const [claim, rows] = await Promise.all([
+      transaction.get(batch),
+      transaction.get(batch.collection("rows")),
+    ]);
+    if (
+      claim.get("payloadHash") !== payloadHash ||
+      rows.size !== input.rows.length
+    )
+      throw new HttpsError(
+        "aborted",
+        "This import is still being prepared. Retry starting it.",
+      );
+    transaction.update(batch, { state: "ready" });
   });
   return { batchId: input.batchId };
 });
@@ -152,6 +203,11 @@ export const processPeopleImport = onCall(async (request) => {
   const meta = await batch.get();
   if (!meta.exists)
     throw new HttpsError("not-found", "This import was not found.");
+  if (meta.get("state") === "initializing")
+    throw new HttpsError(
+      "failed-precondition",
+      "This import is still being prepared. Retry starting it.",
+    );
   const pending = await batch
     .collection("rows")
     .where("outcome", "==", "pending")

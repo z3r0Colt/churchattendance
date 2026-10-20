@@ -1,9 +1,11 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldPath, Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 import {
   EDITOR_ROLES,
+  automationJobs,
+  type AutomationJob,
   SESSION_ROLES,
   actionIdSchema,
   bulletinActionSchema,
@@ -25,6 +27,7 @@ import { processDeaconDigests } from "../mercy/digest.js";
 import { processDateReminders } from "../care/dates.js";
 import { processEventReminders } from "../events/reminders.js";
 import { processWorkflows } from "../workflows/engine.js";
+import { securityEvent } from "../security/audit.js";
 import { privateKeys } from "../security/encryption.js";
 import { processShepherdingDigests } from "../shepherding/digests.js";
 import { parse, requireRoles } from "../access.js";
@@ -75,6 +78,94 @@ async function allowedMessage(id: string, roles: Role[]) {
     throw new HttpsError("permission-denied", "That message is not available.");
   return ref;
 }
+// Private summaries and recipients are returned to component memory through audited APIs.
+const messageReadSchema = z
+  .object({
+    personId: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,128}$/)
+      .optional(),
+    before: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,200}$/)
+      .optional(),
+  })
+  .strict();
+export const listMessages = onCall(async (request) => {
+  const actor = await requireRoles(request, EDITOR_ROLES);
+  const input = parse(messageReadSchema, request.data ?? {});
+  let source: FirebaseFirestore.Query = db.collection("messages");
+  if (!hasRole(actor.roles, SESSION_ROLES))
+    source = source.where("sessionOnly", "==", false);
+  if (input.personId)
+    source = source.where(
+      "selectedPersonIds",
+      "array-contains",
+      input.personId,
+    );
+  let history = source
+    .orderBy("createdAt", "desc")
+    .orderBy(FieldPath.documentId(), "desc");
+  if (input.before) {
+    const cursor = await (
+      await allowedMessage(input.before, actor.roles)
+    ).get();
+    history = history.startAfter(cursor);
+  }
+  const [page, open] = await Promise.all([
+    history.limit(201).get(),
+    source.where("status", "in", ["queued", "sending", "failed"]).get(),
+  ]);
+  const rows = new Map(
+    [...open.docs, ...page.docs.slice(0, 200)].map((row) => [row.id, row]),
+  );
+  await securityEvent(
+    actor.uid,
+    "messages.read",
+    "success",
+    hasRole(actor.roles, SESSION_ROLES) ? "session" : "security",
+  );
+  return {
+    messages: [...rows.values()].map((row) => ({
+      id: row.id,
+      subject: row.get("subject") || "",
+      body: row.get("body") || "",
+      channel: row.get("channel"),
+      status: row.get("status"),
+      source: row.get("source") || "",
+      scheduledFor: (row.get("scheduledFor") as Timestamp)
+        .toDate()
+        .toISOString(),
+      totals: row.get("totals") || {},
+      selectedPersonIds: row.get("selectedPersonIds") || [],
+      sessionOnly: row.get("sessionOnly") === true,
+    })),
+    before: page.docs[199]?.id || "",
+    hasMore: page.size > 200,
+  };
+});
+export const getMessageRecipients = onCall(async (request) => {
+  const actor = await requireRoles(request, EDITOR_ROLES);
+  const { id } = parse(actionIdSchema, request.data);
+  const ref = await allowedMessage(id, actor.roles);
+  const rows = await ref.collection("recipients").get();
+  await securityEvent(
+    actor.uid,
+    "messages.recipients",
+    "success",
+    "session",
+    ref.path,
+  );
+  return rows.docs.map((row) => ({
+    id: row.id,
+    personId: row.get("personId"),
+    channel: row.get("channel"),
+    address: row.get("address"),
+    status: row.get("status"),
+    error: row.get("error") || "",
+    providerId: row.get("providerId") || "",
+  }));
+});
 export const previewMessage = onCall(async (request) => {
   await requireRoles(request, EDITOR_ROLES);
   const input = parse(messageInputSchema, request.data);
@@ -383,16 +474,22 @@ export const bulletinAction = onCall(secretOptions, async (request) => {
   return { updated: true };
 });
 export async function communicationTick(now = new Date()) {
-  for (const [name, task] of [
-    ["bulletin", processBulletins],
-    ["absence", processShepherdingDigests],
-    ["serving", processServingReminders],
-    ["visit", processVisitReminders],
-    ["deacon", processDeaconDigests],
-    ["dates", processDateReminders],
-    ["workflow", processWorkflows],
-    ["events", processEventReminders],
-  ] as const) {
+  const tasks: Record<
+    Exclude<AutomationJob, "queue">,
+    (now: Date) => Promise<void>
+  > = {
+    bulletin: processBulletins,
+    absence: processShepherdingDigests,
+    serving: processServingReminders,
+    visit: processVisitReminders,
+    deacon: processDeaconDigests,
+    dates: processDateReminders,
+    workflow: processWorkflows,
+    events: processEventReminders,
+  };
+  for (const name of automationJobs) {
+    if (name === "queue") continue;
+    const task = tasks[name];
     try {
       await task(now);
       await db

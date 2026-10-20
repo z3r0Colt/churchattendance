@@ -78,10 +78,14 @@ export const memberPhotoSchema = z
       .max(Math.ceil(MEMBER_PHOTO_BYTES / 3) * 4)
       .regex(/^[A-Za-z0-9+/]+={0,2}$/),
     expectedPhoto: z.boolean(),
+    expectedPhotoVersion: z.number().int().nonnegative(),
   })
   .strict();
 export const memberPhotoRemovalSchema = z
-  .object({ expectedPhoto: z.literal(true) })
+  .object({
+    expectedPhoto: z.literal(true),
+    expectedPhotoVersion: z.number().int().nonnegative(),
+  })
   .strict();
 export const portalPhotoSchema = z
   .object({ personId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/) })

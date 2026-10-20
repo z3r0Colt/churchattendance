@@ -684,7 +684,7 @@ describe("communication access", () => {
       "messages/private",
       "messages/private/recipients/elder",
     ]) {
-      await assertSucceeds(getDoc(doc(auth("elder").firestore(), path)));
+      await assertFails(getDoc(doc(auth("elder").firestore(), path)));
       await assertFails(getDoc(doc(auth("admin").firestore(), path)));
       await assertFails(getDoc(doc(auth("deacon").firestore(), path)));
     }
@@ -986,5 +986,34 @@ describe("online portal boundaries", () => {
     await assertFails(
       getBytes(ref(context.storage(), "photos/alex/avatar.png")),
     );
+  });
+});
+
+describe("photo cleanup queue", () => {
+  it("denies every client access to server cleanup jobs", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "photoCleanup/old"), {
+        path: "photos/alex/old.png",
+        personId: "alex",
+      });
+    });
+    for (const role of [
+      "admin",
+      "pastor",
+      "clerk",
+      "elder",
+      "deacon",
+      "attendanceVolunteer",
+      "readOnly",
+    ]) {
+      await assertFails(
+        getDoc(doc(auth(role).firestore(), "photoCleanup/old")),
+      );
+      await assertFails(
+        setDoc(doc(auth(role).firestore(), "photoCleanup/old"), {
+          path: "photos/alex/current.png",
+        }),
+      );
+    }
   });
 });

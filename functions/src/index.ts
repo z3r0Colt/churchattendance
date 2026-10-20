@@ -59,6 +59,11 @@ export * from "./records/imports.js";
 export const createHousehold = onCall(async (request) => {
   const actor = await requireRoles(request, EDITOR_ROLES);
   const input = parse(createHouseholdSchema, request.data);
+  if (input.people.some((person) => person.emailOptIn || person.smsOptIn))
+    throw new HttpsError(
+      "invalid-argument",
+      "Record contact consent after creating the household.",
+    );
   const household = db.collection("households").doc();
   const batch = db.batch();
   batch.create(household, input.household);
@@ -179,6 +184,9 @@ export const savePerson = onCall(async (request) => {
       );
     }
     const metadata = {
+      ...("photoPath" in input.changes
+        ? { photoVersion: Number(before.get("photoVersion") || 0) + 1 }
+        : {}),
       updatedBy: actor.uid,
       updatedAt: FieldValue.serverTimestamp(),
     };

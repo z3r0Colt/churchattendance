@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { DateTime } from "luxon";
 import {
   MEMBER_PHOTO_BYTES,
@@ -167,6 +168,7 @@ export const saveMyHousehold = onCall(portalOptions, async (request) => {
     // A changed address marks any confirmed map location for Session review.
     transaction.update(ref, {
       ...update,
+      revision: Number(household.get("revision") || 0) + 1,
       updatedBy: current.uid,
       updatedAt: Timestamp.now(),
     });
@@ -186,28 +188,55 @@ async function replacePhoto(
   uid: string,
   personId: string,
   expectedPhoto: boolean,
+  expectedPhotoVersion: number,
   next: string | null,
 ) {
   let previous: unknown = null;
   await db.runTransaction(async (transaction) => {
     const person = await linkedPerson(transaction, uid, personId);
-    if (!!person.get("photoPath") !== expectedPhoto)
+    if (
+      !!person.get("photoPath") !== expectedPhoto ||
+      Number(person.get("photoVersion") || 0) !== expectedPhotoVersion
+    )
       throw new HttpsError(
         "aborted",
         "Your photo changed since you opened this page. Refresh before saving.",
       );
     previous = person.get("photoPath");
+    if (ownPhoto(personId, previous))
+      transaction.set(
+        db.doc(
+          `photoCleanup/${createHash("sha256")
+            .update(previous as string)
+            .digest("hex")}`,
+        ),
+        {
+          personId,
+          path: previous,
+          createdAt: Timestamp.now(),
+        },
+      );
     transaction.update(db.doc(`people/${personId}`), {
       photoPath: next ?? FieldValue.delete(),
+      photoVersion: expectedPhotoVersion + 1,
       updatedBy: uid,
       updatedAt: Timestamp.now(),
     });
   });
-  if (ownPhoto(personId, previous))
-    await getStorage()
-      .bucket()
-      .file(previous as string)
-      .delete({ ignoreNotFound: true });
+  return ownPhoto(personId, previous) ? (previous as string) : null;
+}
+// Cleanup is best-effort after commit. It can never roll back or remove the committed photo.
+async function cleanupPhoto(path: string | null) {
+  if (!path) return;
+  try {
+    await getStorage().bucket().file(path).delete({ ignoreNotFound: true });
+    await db
+      .doc(`photoCleanup/${createHash("sha256").update(path).digest("hex")}`)
+      .delete();
+  } catch {
+    // The server-only queue is retained for the next cleanup tick.
+    console.warn("A superseded member photo is waiting for cleanup.");
+  }
 }
 
 export const saveMyPhoto = onCall(portalOptions, async (request) => {
@@ -228,24 +257,34 @@ export const saveMyPhoto = onCall(portalOptions, async (request) => {
     contentType: input.contentType,
     resumable: false,
   });
+  let previous: string | null;
   try {
-    await replacePhoto(
+    previous = await replacePhoto(
       current.uid,
       current.person.id,
       input.expectedPhoto,
+      input.expectedPhotoVersion,
       path,
     );
   } catch (error) {
     await file.delete({ ignoreNotFound: true });
     throw error;
   }
+  await cleanupPhoto(previous);
   return { saved: true };
 });
 
 export const removeMyPhoto = onCall(portalOptions, async (request) => {
   const current = await member(request);
-  parse(memberPhotoRemovalSchema, request.data);
-  await replacePhoto(current.uid, current.person.id, true, null);
+  const input = parse(memberPhotoRemovalSchema, request.data);
+  const previous = await replacePhoto(
+    current.uid,
+    current.person.id,
+    true,
+    input.expectedPhotoVersion,
+    null,
+  );
+  await cleanupPhoto(previous);
   return { removed: true };
 });
 
@@ -283,3 +322,21 @@ export const portalPhoto = onCall(portalOptions, async (request) => {
     photo: `data:${type};base64,${bytes.toString("base64")}`,
   };
 });
+
+export const cleanupMemberPhotos = onSchedule(
+  { schedule: "every 60 minutes", maxInstances: 1 },
+  async () => {
+    const rows = await db
+      .collection("photoCleanup")
+      .orderBy("createdAt")
+      .limit(100)
+      .get();
+    for (const row of rows.docs) {
+      const path = row.get("path"),
+        personId = row.get("personId");
+      if (!ownPhoto(personId, path)) continue;
+      const person = await db.doc(`people/${personId}`).get();
+      if (person.get("photoPath") !== path) await cleanupPhoto(path);
+    }
+  },
+);

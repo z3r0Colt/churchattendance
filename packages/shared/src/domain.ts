@@ -60,7 +60,7 @@ const personFieldsSchema = z
   .strict();
 export const personInputSchema = personFieldsSchema;
 export type PersonInput = z.infer<typeof personInputSchema>;
-export type Person = PersonInput & { id: string };
+export type Person = PersonInput & { id: string; photoVersion?: number };
 export const householdInputSchema = z
   .object({
     name,

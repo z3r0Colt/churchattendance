@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   collection,
   doc,
@@ -8,12 +8,13 @@ import {
   query,
   where,
   type Query,
-  type Timestamp,
+  Timestamp,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { ref, uploadBytes, getBlob } from "firebase/storage";
 import {
   actionIdSchema,
+  automationJobs,
   bulletinActionSchema,
   bulletinFileSchema,
   communicationSettingsSchema,
@@ -92,9 +93,109 @@ export type PreviewView = {
     error: string;
   }[];
 };
+type MessagePage = {
+  messages: (Omit<MessageView, "scheduledFor"> & { scheduledFor: string })[];
+  before: string;
+  hasMore: boolean;
+};
+function useMessages(session: boolean, personId?: string, enabled = true) {
+  const [rows, setRows] = useState<MessageView[]>([]);
+  const [cursor, setCursor] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const generation = useRef(0);
+  const older = useRef<MessageView[]>([]);
+  const decode = (page: MessagePage) =>
+    page.messages.map((row) => ({
+      ...row,
+      scheduledFor: Timestamp.fromDate(new Date(row.scheduledFor)),
+    }));
+  useEffect(() => {
+    const attempt = ++generation.current;
+    older.current = [];
+    setRows([]);
+    setCursor("");
+    setHasMore(false);
+    if (!enabled) return;
+    let busy = false;
+    const load = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const page = await call<MessagePage>(
+          "listMessages",
+          personId ? { personId } : {},
+        );
+        if (generation.current !== attempt) return;
+        const recent = decode(page);
+        setRows([
+          ...new Map(
+            [...older.current, ...recent].map((row) => [row.id, row]),
+          ).values(),
+        ]);
+        if (!older.current.length) {
+          setCursor(page.before);
+          setHasMore(page.hasMore);
+        }
+        setError("");
+      } catch {
+        if (generation.current === attempt) {
+          setRows([]);
+          older.current = [];
+          setError(
+            "Messages could not be loaded. Check your connection and staff access.",
+          );
+        }
+      } finally {
+        busy = false;
+      }
+    };
+    void load();
+    const refresh = () => void load();
+    const timer = window.setInterval(refresh, 15_000);
+    window.addEventListener("communication-records-changed", refresh);
+    return () => {
+      generation.current++;
+      window.clearInterval(timer);
+      window.removeEventListener("communication-records-changed", refresh);
+    };
+  }, [session, personId, enabled]);
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    const attempt = generation.current;
+    try {
+      const page = await call<MessagePage>("listMessages", {
+        ...(personId ? { personId } : {}),
+        before: cursor,
+      });
+      if (attempt !== generation.current) return;
+      older.current = [...older.current, ...decode(page)].filter(
+        (row) => !["queued", "sending", "failed"].includes(row.status),
+      );
+      setRows((current) => [
+        ...new Map(
+          [...older.current, ...current, ...decode(page)].map((row) => [
+            row.id,
+            row,
+          ]),
+        ).values(),
+      ]);
+      setCursor(page.before);
+      setHasMore(page.hasMore);
+      setError("");
+    } catch {
+      if (attempt === generation.current)
+        setError("Older messages could not be loaded. Try again.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+  return { rows, hasMore, loadMore, loadingMore, error };
+}
 export function useCommunicationData(roles: Role[]) {
   const [people, setPeople] = useState<Person[]>([]);
-  const [messages, setMessages] = useState<MessageView[]>([]);
   const [inbox, setInbox] = useState<InboxView[]>([]);
   const [templates, setTemplates] = useState<TemplateView[]>([]);
   const [households, setHouseholds] = useState<NamedList[]>([]);
@@ -109,6 +210,7 @@ export function useCommunicationData(roles: Role[]) {
   const [error, setError] = useState("");
   const [automationError, setAutomationError] = useState("");
   const session = hasRole(roles, SESSION_ROLES);
+  const messageData = useMessages(session);
   useEffect(() => {
     const stops: (() => void)[] = [];
     const failed = () =>
@@ -127,21 +229,6 @@ export function useCommunicationData(roles: Role[]) {
         ),
       );
     listen<Person>(collection(db, "people"), setPeople);
-    listen<MessageView>(
-      session
-        ? query(
-            collection(db, "messages"),
-            orderBy("createdAt", "desc"),
-            limit(200),
-          )
-        : query(
-            collection(db, "messages"),
-            where("sessionOnly", "==", false),
-            orderBy("createdAt", "desc"),
-            limit(200),
-          ),
-      setMessages,
-    );
     listen<InboxView>(
       query(
         collection(db, "smsInbox"),
@@ -185,13 +272,8 @@ export function useCommunicationData(roles: Role[]) {
         doc(db, "automationStatus", "church"),
         (snapshot) =>
           setAutomationError(
-            [
-              snapshot.get("bulletinError"),
-              snapshot.get("absenceError"),
-              snapshot.get("servingError"),
-              snapshot.get("visitError"),
-              snapshot.get("queueError"),
-            ]
+            automationJobs
+              .map((job) => snapshot.get(`${job}Error`))
               .filter(Boolean)
               .join(" "),
           ),
@@ -202,7 +284,10 @@ export function useCommunicationData(roles: Role[]) {
   }, [session]);
   return {
     people,
-    messages,
+    messages: messageData.rows,
+    loadMoreMessages: messageData.loadMore,
+    hasMoreMessages: messageData.hasMore,
+    loadingMoreMessages: messageData.loadingMore,
     inbox,
     templates,
     households,
@@ -212,7 +297,7 @@ export function useCommunicationData(roles: Role[]) {
     bulletins,
     settings,
     zone,
-    error,
+    error: error || messageData.error,
     setError,
     automationError,
   };
@@ -220,48 +305,37 @@ export function useCommunicationData(roles: Role[]) {
 export function useRecipients(messageId: string) {
   const [rows, setRows] = useState<RecipientView[]>([]);
   useEffect(() => {
+    let active = true;
     setRows([]);
     if (!messageId) return;
-    return onSnapshot(
-      collection(db, "messages", messageId, "recipients"),
-      (snapshot) =>
-        setRows(
-          snapshot.docs.map(
-            (row) => ({ ...row.data(), id: row.id }) as RecipientView,
-          ),
-        ),
-    );
+    const load = () =>
+      void call<RecipientView[]>("getMessageRecipients", { id: messageId })
+        .then((value) => {
+          if (active) setRows(value);
+        })
+        .catch(() => {
+          if (active) setRows([]);
+        });
+    load();
+    const timer = window.setInterval(load, 15_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, [messageId]);
   return rows;
 }
 export function usePersonHistory(personId: string, roles: Role[]) {
-  const [messages, setMessages] = useState<MessageView[]>([]);
   const [inbox, setInbox] = useState<InboxView[]>([]);
-  const session = hasRole(roles, SESSION_ROLES);
+  const messageData = useMessages(
+    hasRole(roles, SESSION_ROLES),
+    personId,
+    !!personId,
+  );
   useEffect(() => {
-    setMessages([]);
     setInbox([]);
     if (!personId) return;
-    const messagesQuery = session
-      ? query(
-          collection(db, "messages"),
-          where("selectedPersonIds", "array-contains", personId),
-          orderBy("createdAt", "desc"),
-        )
-      : query(
-          collection(db, "messages"),
-          where("selectedPersonIds", "array-contains", personId),
-          where("sessionOnly", "==", false),
-          orderBy("createdAt", "desc"),
-        );
-    const stopMessages = onSnapshot(messagesQuery, (snapshot) =>
-      setMessages(
-        snapshot.docs.map(
-          (row) => ({ ...row.data(), id: row.id }) as MessageView,
-        ),
-      ),
-    );
-    const stopInbox = onSnapshot(
+    return onSnapshot(
       query(
         collection(db, "smsInbox"),
         where("personIds", "array-contains", personId),
@@ -274,12 +348,8 @@ export function usePersonHistory(personId: string, roles: Role[]) {
           ),
         ),
     );
-    return () => {
-      stopMessages();
-      stopInbox();
-    };
-  }, [personId, session]);
-  return { messages, inbox };
+  }, [personId]);
+  return { messages: messageData.rows, inbox, ...messageData };
 }
 export function useUnreadSms(enabled: boolean) {
   const [count, setCount] = useState(0);
@@ -294,7 +364,18 @@ export function useUnreadSms(enabled: boolean) {
   return count;
 }
 async function call<T = unknown>(name: string, value: unknown): Promise<T> {
-  return (await httpsCallable<unknown, T>(functions, name)(value)).data;
+  const result = (await httpsCallable<unknown, T>(functions, name)(value)).data;
+  if (
+    [
+      "createMessage",
+      "cancelMessage",
+      "retryFailedMessage",
+      "runLocalCommunicationTick",
+      "sendTestMessage",
+    ].includes(name)
+  )
+    window.dispatchEvent(new Event("communication-records-changed"));
+  return result;
 }
 export const previewMessage = (input: MessageInput) =>
   call<PreviewView>("previewMessage", messageInputSchema.parse(input));

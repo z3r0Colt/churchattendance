@@ -232,6 +232,7 @@ export const portalMe = onCall(portalOptions, async (request) => {
       ),
     },
     hasPhoto: !!current.person.photoPath,
+    photoVersion: Number(current.person.photoVersion || 0),
     // Active Lord's Day service times for the portal home.
     worship: types.docs
       .filter((row) => row.get("dayOfWeek") === 0)
@@ -343,7 +344,9 @@ export const portalRsvp = onCall(portalOptions, async (request) => {
       transaction.get(db.doc(`people/${current.person.id}`)),
     ]);
     const occurrence = event.exists
-      ? eventOccurrences(eventView(event), input.date, input.date, zone)[0]
+      ? eventOccurrences(eventView(event), input.date, input.date, zone, {
+          selectByOriginalDate: true,
+        })[0]
       : null;
     if (
       !access.get("enabled") ||
@@ -414,7 +417,9 @@ export const submitOnlineForm = onCall(
         getChurchZone(),
       ]);
       const occurrence = event.exists
-        ? eventOccurrences(eventView(event), input.date, input.date, zone)[0]
+        ? eventOccurrences(eventView(event), input.date, input.date, zone, {
+            selectByOriginalDate: true,
+          })[0]
         : null;
       if (
         !publication.get("publicRegistration") ||
@@ -515,6 +520,7 @@ export const reviewOnlineSubmission = onCall(async (request) => {
             submission.get("date"),
             submission.get("date"),
             zone,
+            { selectByOriginalDate: true },
           )[0]
         : null;
       if (

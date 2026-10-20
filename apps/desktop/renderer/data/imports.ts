@@ -82,7 +82,11 @@ export async function runPeopleImport(
       importProcessSchema.parse({ batchId }),
     );
     progress(remaining);
-    if (!remaining) return batchId;
+    if (remaining < 0 || !Number.isInteger(remaining))
+      throw new Error(
+        "This import needs a count review before it can continue.",
+      );
+    if (remaining === 0) return batchId;
   }
 }
 type Moment = { toDate?: () => Date } | undefined;

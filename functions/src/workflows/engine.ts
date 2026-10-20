@@ -289,7 +289,7 @@ async function conditionPassed(
 
 // Claims one due run with a short lease, then performs exactly its current step.
 // Returns whether the run is still active and due, so immediate steps continue in the same tick.
-async function processRun(id: string, now: Date, zone: string) {
+export async function processRun(id: string, now: Date, zone: string) {
   const ref = db.doc(`workflowRuns/${id}`);
   const key = randomUUID();
   const claimed = await db.runTransaction(async (transaction) => {
@@ -427,6 +427,8 @@ async function processRun(id: string, now: Date, zone: string) {
     transaction.update(ref, {
       ...update,
       status,
+      ...(status === "paused" ? { pausedFrom: update.status ?? "active" } : {}),
+      ...(status === "cancelled" ? { waitingFor: null } : {}),
       history: [...(row.get("history") || []), entry],
       lease: null,
       revision: Number(row.get("revision") || 0) + 1,

@@ -14,6 +14,7 @@ import {
   type MercyCategory,
   type MercyStatus,
 } from "@sycamore/shared";
+import { deaconDigestVersion } from "./digest-access.js";
 import { db } from "../admin.js";
 import {
   getChurchZone,
@@ -44,6 +45,7 @@ export async function processDeaconDigests(now: Date) {
   if (!clock.deacon || !channels.length) return;
   const local = DateTime.fromJSDate(now, { zone });
   const dateLabel = local.toFormat("LLL d, yyyy");
+  const digestVersion = await deaconDigestVersion();
   const [
     deacons,
     chairs,
@@ -126,6 +128,11 @@ export async function processDeaconDigests(now: Date) {
           .filter(
             (row) =>
               uids.includes(row.get("assignedToUid")) &&
+              (serves(row) ||
+                requests.docs.some(
+                  (request) =>
+                    request.id === row.get("requestId") && serves(request),
+                )) &&
               String(row.get("dueDate")) <= clock.date,
           )
           .map(
@@ -153,6 +160,7 @@ export async function processDeaconDigests(now: Date) {
           .map((visit) => household(visit.householdId)),
       },
     ];
+    if ((await deaconDigestVersion()) !== digestVersion) return;
     for (const channel of channels) {
       const body = digestText(
         sections,
@@ -178,6 +186,7 @@ export async function processDeaconDigests(now: Date) {
           sessionOnly: true,
           recipientRole: "deacon",
           source: "deacon-digest",
+          deaconDigestVersion: digestVersion,
         },
       );
     }

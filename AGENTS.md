@@ -119,3 +119,5 @@ Use these words in code, UI text and docs.
 * Small focused commits with clear messages in the imperative mood.
 * Do not commit `.env` files, service account keys, `firebase-debug.log` or build output.
 * Do not create pull requests unless asked.
+
+Photo cleanup jobs in `photoCleanup` are server-only. Photo replacement/removal records a cleanup job atomically with the versioned person update. Only superseded `photos/{personId}/` objects may be deleted; failed cleanup retains the job for the hourly worker. Never delete a newly committed photo as compensation for failed old-object cleanup.

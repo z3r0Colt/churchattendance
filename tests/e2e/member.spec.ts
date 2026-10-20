@@ -387,10 +387,25 @@ test.describe("member details", () => {
       },
       403,
     );
+    const staffDraft = (await db.doc("households/calder").get()).data()!;
     await call(request, adult, "saveMyHousehold", {
       changes: { address: "22 New Street" },
       expected: { address: "1 Fictional Way" },
     });
+    const staff = await passwordToken(request, "pastor@example.test");
+    await call(
+      request,
+      staff,
+      "saveHousehold",
+      {
+        id: "calder",
+        expectedRevision: Number(staffDraft.revision || 0),
+        name: "Renamed household",
+        address: staffDraft.address,
+        homePhone: staffDraft.homePhone || "",
+      },
+      409,
+    );
     expect((await db.doc("households/calder").get()).data()).toMatchObject({
       address: "22 New Street",
       updatedBy: "link-member",
@@ -429,7 +444,12 @@ test.describe("member details", () => {
         request,
         james,
         "saveMyPhoto",
-        { contentType, data: data.toString("base64"), expectedPhoto: false },
+        {
+          contentType,
+          data: data.toString("base64"),
+          expectedPhotoVersion: 0,
+          expectedPhoto: false,
+        },
         400,
       );
     await upload(Buffer.from("<html>not an image</html>"));
@@ -438,6 +458,7 @@ test.describe("member details", () => {
     await call(request, james, "saveMyPhoto", {
       contentType: "image/jpeg",
       data: jpeg.toString("base64"),
+      expectedPhotoVersion: 0,
       expectedPhoto: false,
     });
     const first = (await db.doc("people/james").get()).get("photoPath");
@@ -462,8 +483,21 @@ test.describe("member details", () => {
     await call(request, james, "saveMyPhoto", {
       contentType: "image/png",
       data: png.toString("base64"),
+      expectedPhotoVersion: 1,
       expectedPhoto: true,
     });
+    await call(
+      request,
+      james,
+      "saveMyPhoto",
+      {
+        contentType: "image/png",
+        data: png.toString("base64"),
+        expectedPhoto: true,
+        expectedPhotoVersion: 1,
+      },
+      409,
+    );
     const [exists] = await getStorage()
       .bucket("demo-sycamore.appspot.com")
       .file(first)
@@ -476,11 +510,15 @@ test.describe("member details", () => {
       {
         contentType: "image/png",
         data: png.toString("base64"),
+        expectedPhotoVersion: 0,
         expectedPhoto: false,
       },
       409,
     );
-    await call(request, james, "removeMyPhoto", { expectedPhoto: true });
+    await call(request, james, "removeMyPhoto", {
+      expectedPhotoVersion: 2,
+      expectedPhoto: true,
+    });
     expect((await db.doc("people/james").get()).get("photoPath")).toBe(
       undefined,
     );

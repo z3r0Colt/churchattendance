@@ -398,8 +398,9 @@ export function absencePeople(
 ) {
   const local = DateTime.fromJSDate(now, { zone });
   const last = local.minus({ days: local.weekday === 7 ? 0 : local.weekday });
-  const dates = Array.from({ length: weeks }, (_, index) =>
-    last.minus({ weeks: index }).toISODate()!,
+  const dates = Array.from(
+    { length: weeks },
+    (_, index) => last.minus({ weeks: index }).toISODate()!,
   );
   const meetings = dates.map((date) =>
     services.filter(
@@ -480,3 +481,16 @@ export function digestText(
     .join("\n\n");
   return `Dear {FirstName},\n\n${heading} for ${dateLabel}.\n\n${body}\n\nPlease review the records in the church app before following up.`;
 }
+
+export const automationJobs = [
+  "bulletin",
+  "absence",
+  "serving",
+  "visit",
+  "deacon",
+  "dates",
+  "workflow",
+  "events",
+  "queue",
+] as const;
+export type AutomationJob = (typeof automationJobs)[number];
