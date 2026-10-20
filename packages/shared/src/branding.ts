@@ -19,7 +19,7 @@ export function contrastRatio(a: string, b: string) {
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
 const publicText = (max: number) => z.string().trim().max(max)
-  .refine((value) => !/[\u0000-\u001f<>]/.test(value), "Use plain text");
+  .refine((value) => ![...value].some((char) => char.charCodeAt(0) < 32) && !/[<>]/.test(value), "Use plain text");
 const httpsUrl = z.union([z.literal(""), z.url().max(500).refine((value) => {
   const url = new URL(value);
   return url.protocol === "https:" && !url.username && !url.password;
