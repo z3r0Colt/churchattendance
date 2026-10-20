@@ -16,6 +16,8 @@ import {
 import { db } from "./firebase";
 import { chmsCall } from "./chms";
 import { native } from "../platform";
+import { currentBranding } from "../branding";
+import { brandingFilename } from "@sycamore/shared";
 export function useChurchSettings() {
   const [value, setValue] = useState<ChurchSettings | null>(null),
     [error, setError] = useState("");
@@ -25,9 +27,9 @@ export function useChurchSettings() {
         doc(db, "settings/church"),
         (row) =>
           setValue({
-            name: row.get("name") || "Sycamore RPC",
+            name: row.get("name") || "",
             address: row.get("address") || "",
-            timeZone: row.get("timeZone") || "America/Indiana/Indianapolis",
+            timeZone: row.get("timeZone") || "UTC",
             revision: row.get("revision") || 0,
           }),
         () => setError("Church settings could not be loaded."),
@@ -42,13 +44,15 @@ export async function exportAdministration(
   roles: Role[],
   progress: (value: string) => void,
 ) {
+  const branding = currentBranding();
+  const filename = `${brandingFilename(branding.appName)}-archive-${new Date().toISOString().slice(0, 10)}.xlsx`;
   const { default: ExcelJS } = await import("exceljs");
   const book = new ExcelJS.Workbook(),
     started = new Date().toISOString();
   const summary = book.addWorksheet("Summary");
   const session = hasRole(roles, SESSION_ROLES);
   summary.addRows([
-    ["Sycamore RPC administrative archive", "Format 1"],
+    [`${branding.churchName} administrative archive`, "Format 1"],
     ["Started UTC", started],
     [
       "Scope",
@@ -136,7 +140,7 @@ export async function exportAdministration(
   );
   const link = document.createElement("a");
   link.href = url;
-  link.download = `sycamore-archive-${started.slice(0, 10)}.xlsx`;
+  link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return true;

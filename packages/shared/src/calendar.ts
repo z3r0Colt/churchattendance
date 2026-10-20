@@ -106,7 +106,7 @@ export function buildCalendar(input: {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Sycamore RPC//Church Calendar//EN",
+    "PRODID:-//Church Management//Church Calendar//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${icsText(input.name)}`,

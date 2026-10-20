@@ -1,0 +1,6 @@
+{
+  "churchId": "demo-church", "projectId": "demo-sycamore",
+  "churchName": "Harbor Presbyterian Church", "appName": "Harbor", "subtitle": "Church community",
+  "palette": "navy", "website": "https://harbor.example.test", "contactEmail": "office@harbor.example.test",
+  "contactPhone": "", "logo": ""
+}

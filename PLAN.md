@@ -353,6 +353,10 @@ securityChallenges/{id}      uid, kind, challenge, used, expiresAt
 desktopHandoffs/{id}         uid, challenge, authTime, validAfter, used, expiresAt
 securityBudgets/{id}         count, expiresAt
 securityEvents/{id}          actorUid, action, outcome, scope (security | session), target, at
+publicBranding/church        churchId, projectId (operator-bound), churchName, appName, subtitle,
+                             palette (forest | navy | plum), website (HTTPS or empty), contactEmail,
+                             contactPhone, logo (inline PNG or empty), revision, updatedAt, updatedBy
+                             (server-only document; anonymous getPublicBranding returns only reviewed identity fields)
 settings/church              name, address, timeZone, revision, updatedAt, updatedBy
 ```
 
@@ -614,3 +618,16 @@ Imports claim an immutable payload hash before row creation, create missing rows
 Private message bodies and recipients use audited APIs and memory-only UI state. Desktop cache version 8 purges previously persisted private messages. Deacon digests carry a metadata fingerprint of their source and access records; changed or missing fingerprints suppress stale queued delivery. Old fingerprints are not regenerated after a change, so that day's summary may be skipped. Consent remains checked at dispatch.
 
 Roll-call startup listens to a six-week window around the selected date. People/history and report workspaces load historical records when opened. Pending-write tracking spans date navigation. Message and workflow lists load all actionable work independently from cursor-paged completed history.
+
+
+### Phase 13 implementation and verification
+
+The implementation branch adds a separately published `publicBranding/church` document. Anonymous users receive an explicit field projection through `getPublicBranding`; direct database reads and all client writes remain denied. `getBrandingSettings` and revision-checked `savePublicBranding` require assured Admin or Pastor access through the existing live-role guard. The existing protected `settings/church` and `communicationSettings/church` are not made public.
+
+Public identity fields are listed in section 4.3. There are no administrator identifiers, provider states, households, schedules or secrets in the anonymous payload. Logos are inline PNG only, at most 64 KB and 512 pixels; the editor re-encodes an uploaded PNG at up to 256 pixels. Approved palettes are checked for contrast. The Functions `CHURCH_ID` parameter and runtime project ID bind the document to the deployment; identity fields cannot be changed in the branding form.
+
+Production clients require complete Firebase web configuration, a matching `VITE_DEPLOYMENT_PROJECT_ID`, `VITE_CHURCH_ID` and exact HTTPS `VITE_CHURCH_ORIGIN`. Missing/mismatched configuration shows a configuration-required page before authentication or data workspaces mount. Emulator defaults are selected only in development/emulator mode. Editable names and URL parameters never select Firebase resources.
+
+Legacy migration is explicit: publish branding from Settings after reviewing the protected church name. No reads backfill or overwrite records. An absent public document shows a setup error and leaves staff sign-in/Settings available for an authorized administrator; reports refuse export until identity is available. Existing email footers and custom bulletin templates are preserved for explicit review. Sender merge fields and opt-out identification use the published church name. Existing calendar deployments must retain their prior UID namespace via `CALENDAR_UID_DOMAIN`; new installations use their project hostname so editable names never change UIDs.
+
+See `docs/PHASE_13.md` for the inventory, migration and verification status. Phase 13 is awaiting validation; Phases 14–18 remain planned. No PWA installation, online-only mutation behavior, provisioning, recovery or live rollout is claimed by this implementation.

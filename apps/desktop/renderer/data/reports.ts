@@ -1,3 +1,5 @@
+import { currentBranding } from "../branding";
+import { brandPalettes, brandingFilename } from "@sycamore/shared";
 import type { ReportRow } from "@sycamore/shared";
 import {
   Chart,
@@ -48,8 +50,8 @@ export function reportChart(
         {
           label,
           data: values,
-          backgroundColor: "#2F6B4F",
-          borderColor: "#2F6B4F",
+          backgroundColor: brandPalettes[currentBranding().palette].light,
+          borderColor: brandPalettes[currentBranding().palette].light,
           borderWidth: 2,
         },
       ],
@@ -73,7 +75,7 @@ export function reportTable(rows: ReportRow[]) {
   return `<table><thead><tr>${columns.map((key) => `<th>${escapeHtml(key)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${columns.map((key) => `<td>${escapeHtml(row[key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 export function reportHtml(title: string, period: string, content: string) {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${escapeHtml(title)}</title><style>@page{size:letter;margin:0.45in}body{font:11px 'Segoe UI',sans-serif;color:#1f2321}h1{font-size:20px}h2{font-size:14px}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:5px;border-bottom:1px solid #dadfdc;vertical-align:top}th{background:#eef3ef}thead{display:table-header-group}tr,.directory-family{break-inside:avoid}.chart{width:100%;height:170px;object-fit:contain}.directory{display:grid;grid-template-columns:1fr 1fr;gap:16px}.directory-family{border:1px solid #dadfdc;padding:12px}.portrait{width:60px;height:75px;object-fit:cover;float:right;margin:0 0 6px 8px}footer{font-size:10px;color:#5b625e}.page-break{break-before:page}</style></head><body><strong>SYCAMORE REFORMED PRESBYTERIAN CHURCH</strong><h1>${escapeHtml(title)}</h1><p>${escapeHtml(period)}</p>${content}<footer>Church records · Review the source data before distribution.</footer></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${escapeHtml(title)}</title><style>@page{size:letter;margin:0.45in}body{font:11px 'Segoe UI',sans-serif;color:#1f2321}h1{font-size:20px}h2{font-size:14px}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:5px;border-bottom:1px solid #dadfdc;vertical-align:top}th{background:#eef3ef}thead{display:table-header-group}tr,.directory-family{break-inside:avoid}.chart{width:100%;height:170px;object-fit:contain}.directory{display:grid;grid-template-columns:1fr 1fr;gap:16px}.directory-family{border:1px solid #dadfdc;padding:12px}.portrait{width:60px;height:75px;object-fit:cover;float:right;margin:0 0 6px 8px}footer{font-size:10px;color:#5b625e}.page-break{break-before:page}</style></head><body>${currentBranding().logo ? `<img src="${escapeHtml(currentBranding().logo)}" alt="" width="48" height="48" style="object-fit:contain" />` : ""}<strong>${escapeHtml(currentBranding().churchName)}</strong><h1>${escapeHtml(title)}</h1><p>${escapeHtml(period)}</p>${content}<footer>Church records · Review the source data before distribution.</footer></body></html>`;
 }
 export async function savePdf(title: string, html: string) {
   if (native) return native.saveReportPdf(title, html);
@@ -95,7 +97,7 @@ export async function exportReportWorkbook(
 ) {
   const { default: ExcelJS } = await import("exceljs");
   const book = new ExcelJS.Workbook();
-  book.creator = "Sycamore RPC";
+  book.creator = currentBranding().churchName;
   for (const [name, rows] of [
     ["Summary", summary],
     ["Detail", detail],
@@ -104,7 +106,7 @@ export async function exportReportWorkbook(
     const sheet = book.addWorksheet(name, {
       views: [{ state: "frozen", ySplit: 3 }],
     });
-    sheet.addRow(["Sycamore RPC", title]);
+    sheet.addRow([currentBranding().churchName, title]);
     sheet.addRow([]);
     const keys = Object.keys(rows[0] || {});
     sheet.addRow(keys);
@@ -135,7 +137,7 @@ export async function exportReportWorkbook(
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${title.replace(/[^A-Za-z0-9-]/g, "-")}.xlsx`;
+    link.download = `${brandingFilename(currentBranding().appName)}-${brandingFilename(title)}.xlsx`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }

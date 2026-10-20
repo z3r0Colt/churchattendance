@@ -131,3 +131,6 @@ Use these words in code, UI text and docs.
 * Do not create pull requests unless asked.
 
 Photo cleanup jobs in `photoCleanup` are server-only. Photo replacement/removal records a cleanup job atomically with the versioned person update. Only superseded `photos/{personId}/` objects may be deleted; failed cleanup retains the job for the hourly worker. Never delete a newly committed photo as compensation for failed old-object cleanup.
+
+
+Phase 13 public branding uses `publicBranding/church`, served anonymously only through `getPublicBranding`'s allowlisted projection. Raw client reads/writes remain denied. Only assured Admin/Pastor callables may publish with a revision check. Never expose protected settings or use branding to select a Firebase project. Production clients require operator-bound project/church/origin values. PNG logos are inline and bounded; no SVG, HTML or remote image resources. Preserve existing message templates during explicit branding migration. See `docs/PHASE_13.md`; acceptance is pending until checks pass.

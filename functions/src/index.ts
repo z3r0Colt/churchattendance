@@ -35,6 +35,7 @@ export * from "./kiosk.js";
 export * from "./chms-audit.js";
 export * from "./portal.js";
 export * from "./administration.js";
+export * from "./branding.js";
 export * from "./security/api.js";
 export * from "./security/passkeys.js";
 export * from "./shepherding/visits.js";
@@ -340,6 +341,7 @@ export const auditChanges = onDocumentWrittenWithAuthContext(
         "people",
         "households",
         "settings",
+        "publicBranding",
         "serviceTypes",
         "elderDistricts",
         "sessionPrivate",

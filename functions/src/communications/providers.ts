@@ -151,7 +151,7 @@ export class GraphEmailProvider implements EmailProvider {
       body: { contentType: "Text", content: input.body },
       toRecipients: [{ emailAddress: { address: input.to } }],
       internetMessageHeaders: [
-        { name: "X-Sycamore-Delivery", value: input.key },
+        { name: "X-Church-Delivery", value: input.key },
       ],
       attachments: small.map((file) => ({
         "@odata.type": "#microsoft.graph.fileAttachment",

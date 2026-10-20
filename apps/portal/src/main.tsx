@@ -15,7 +15,8 @@ import {
   Title3,
 } from "@fluentui/react-components";
 import { DateTime } from "luxon";
-import { lightTheme } from "../../desktop/renderer/theme/brand";
+import { churchTheme } from "../../desktop/renderer/theme/brand";
+import { BrandingProvider, ChurchWordmark, useBranding } from "../../desktop/renderer/branding";
 import {
   memberReturnTab,
   type DirectoryEntry,
@@ -23,6 +24,7 @@ import {
 } from "@sycamore/shared";
 import {
   auth,
+  callPortal,
   getDirectory,
   getMe,
   getMemberEvents,
@@ -82,6 +84,7 @@ const initialLink =
 const initialTab =
   memberReturnTab(initialLink?.target ?? `/${location.search}`) || "home";
 function App() {
+  const { value: branding } = useBranding();
   const session = usePortalAuth();
   const [link, setLink] = useState(initialLink);
   const [tab, setTab] = useState(link ? "signin" : "events");
@@ -89,11 +92,9 @@ function App() {
     if (session.user) setLink(null);
   }, [session.user]);
   return (
-    <FluentProvider theme={lightTheme} className="portal">
+    <FluentProvider theme={churchTheme(branding?.palette)} className="portal">
       <header>
-        <a className="wordmark" href="/">
-          Sycamore
-        </a>
+        <a href="/" aria-label="Church home"><ChurchWordmark /></a>
         <span>Church portal</span>
         {session.user && (
           <Button onClick={() => void signOutPortal()}>Sign out</Button>
@@ -127,7 +128,7 @@ function App() {
         ) : (
           <>
             <div className="intro">
-              <span className="eyebrow">WELCOME TO SYCAMORE</span>
+              <span className="eyebrow">Welcome to {branding?.churchName || "the church portal"}</span>
               <Title3 as="h1">Life together, throughout the week</Title3>
               <p>
                 Find a church gathering, let us know you are visiting, or sign
@@ -156,8 +157,10 @@ function App() {
         )}
       </main>
       <footer>
-        Sycamore Reformed Presbyterian Church · Keep member contact details
-        within the congregation.
+        {branding?.churchName} · Keep member contact details within the congregation.
+        {branding?.website && <p><a href={branding.website} rel="noreferrer" target="_blank">Church website</a></p>}
+        {branding?.contactEmail && <p>{branding.contactEmail}</p>}
+        {branding?.contactPhone && <p>{branding.contactPhone}</p>}
       </footer>
     </FluentProvider>
   );
@@ -700,7 +703,10 @@ function Sharing({
   );
 }
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+  <StrictMode><BrandingProvider load={loadBranding}>
     {location.pathname === "/staff-security" ? <StaffSecurity /> : <App />}
-  </StrictMode>,
+  </BrandingProvider></StrictMode>,
 );
+
+
+async function loadBranding() { return callPortal("getPublicBranding"); }

@@ -24,6 +24,7 @@ import {
   ReCaptchaEnterpriseProvider,
 } from "firebase/app-check";
 import {
+  firebaseDeployment,
   directoryPreferencesSchema,
   memberContactSchema,
   memberHouseholdSchema,
@@ -40,17 +41,7 @@ import {
 } from "@sycamore/shared";
 export const local =
   import.meta.env.VITE_USE_EMULATORS === "true" || import.meta.env.DEV;
-const app = initializeApp(
-  {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-key",
-    authDomain:
-      import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ||
-      "demo-sycamore.firebaseapp.com",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "demo-sycamore",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "demo-app",
-  },
-  "member-portal",
-);
+const app = initializeApp(firebaseDeployment(import.meta.env, local, location.origin), "member-portal");
 export const auth = getAuth(app);
 const functions = getFunctions(app, "us-central1");
 if (local) {

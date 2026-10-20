@@ -29,7 +29,7 @@ header .fui-Button {
   letter-spacing: 0.12em;
   font-size: 16px;
   font-weight: 700;
-  color: #2f6b4f;
+  color: var(--church-brand, #2f6b4f);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -226,7 +226,7 @@ form > * {
   min-height: 44px;
   padding: 0 16px;
   border-radius: 4px;
-  background: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
   color: white;
   font-weight: 600;
   text-decoration: none;
@@ -289,7 +289,7 @@ footer {
   gap: 4px;
   padding: 20px;
   border-radius: 12px;
-  background: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
   color: #ffffff;
 }
 .lords-day .eyebrow {
@@ -442,3 +442,11 @@ footer {
     overflow: visible;
   }
 }
+
+
+/* Public identity assets are inline PNGs, never external resources. */
+.church-wordmark { display: flex; align-items: center; gap: 10px; white-space: normal; overflow-wrap: anywhere; min-width: 0; color: var(--church-brand); }
+.church-wordmark img { object-fit: contain; flex-shrink: 0; }
+.church-wordmark span { display: block; font-size: 11px; letter-spacing: 0.06em; }
+[data-theme="dark"] .church-wordmark { color: var(--church-brand-dark); }
+.branding-error { padding: 16px; background: #fff4ce; color: #242424; }

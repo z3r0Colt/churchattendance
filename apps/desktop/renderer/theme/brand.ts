@@ -1,3 +1,4 @@
+import { brandPalettes, type PublicBranding } from "@sycamore/shared";
 import {
   createDarkTheme,
   createLightTheme,
@@ -51,3 +52,26 @@ export const darkTheme = {
   colorNeutralStroke2: "#2E3331",
   fontFamilyBase: lightTheme.fontFamilyBase,
 };
+
+
+export function churchTheme(palette: PublicBranding["palette"] = "forest", dark = false) {
+  const colors = brandPalettes[palette];
+  const accent = dark ? colors.dark : colors.light;
+  return {
+    ...(dark ? darkTheme : lightTheme),
+    colorBrandBackground: colors.light,
+    colorBrandBackgroundHover: colors.light,
+    colorBrandBackgroundPressed: colors.light,
+    colorBrandForeground1: accent,
+    colorBrandForeground2: accent,
+    colorBrandForegroundLink: accent,
+    colorBrandForegroundLinkHover: accent,
+    colorBrandStroke1: accent,
+    colorCompoundBrandBackground: accent,
+    colorCompoundBrandBackgroundHover: accent,
+    colorCompoundBrandBackgroundPressed: accent,
+    colorCompoundBrandStroke: accent,
+    colorCompoundBrandStrokeHover: accent,
+    colorCompoundBrandStrokePressed: accent,
+  };
+}

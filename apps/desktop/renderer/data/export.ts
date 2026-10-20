@@ -1,3 +1,5 @@
+import { currentBranding } from "../branding";
+import { brandPalettes, brandingFilename } from "@sycamore/shared";
 import Papa from "papaparse";
 import { native } from "../platform";
 export type ExportRow = Record<string, string | number>;
@@ -12,14 +14,14 @@ function download(data: BlobPart, type: string, filename: string) {
 export async function exportCsv(rows: ExportRow[]) {
   const csv = Papa.unparse(rows, { escapeFormulae: true });
   if (native) await native.saveCsv(csv);
-  else download("\uFEFF" + csv, "text/csv;charset=utf-8", "attendance.csv");
+  else download("\uFEFF" + csv, "text/csv;charset=utf-8", `${brandingFilename(currentBranding().appName)}-export.csv`);
 }
 export async function exportXlsx(rows: ExportRow[]) {
   const { default: ExcelJS } = await import("exceljs");
   const book = new ExcelJS.Workbook();
-  book.creator = "Sycamore RPC";
+  book.creator = currentBranding().churchName;
   const summary = book.addWorksheet("Summary");
-  summary.addRow(["Sycamore RPC"]);
+  summary.addRow([currentBranding().churchName]);
   summary.addRow(["Filtered congregational data export"]);
   summary.addRow(["Rows exported", rows.length]);
   if (rows[0] && "Total" in rows[0])
@@ -44,7 +46,7 @@ export async function exportXlsx(rows: ExportRow[]) {
     sheet.getRow(1).fill = {
       type: "pattern",
       pattern: "solid",
-      fgColor: { argb: "FF2F6B4F" },
+      fgColor: { argb: "FF" + brandPalettes[currentBranding().palette].light.slice(1) },
     };
     if (headers.length)
       sheet.autoFilter = {
@@ -58,6 +60,6 @@ export async function exportXlsx(rows: ExportRow[]) {
     download(
       bytes,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "attendance.xlsx",
+      `${brandingFilename(currentBranding().appName)}-export.xlsx`,
     );
 }

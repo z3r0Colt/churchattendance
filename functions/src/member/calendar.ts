@@ -1,3 +1,4 @@
+import { readPublicBranding } from "../branding.js";
 import {
   onCall,
   onRequest,
@@ -33,7 +34,9 @@ import { member, portalOptions, portalRequest } from "../portal.js";
 const portalOrigin = defineString("PORTAL_ORIGIN", {
   default: "https://not-configured.invalid",
 });
-const UID_DOMAIN = "sycamorerpc.org";
+// Set CALENDAR_UID_DOMAIN to the previous value when upgrading an existing feed deployment.
+const calendarUidDomain = defineString("CALENDAR_UID_DOMAIN", { default: "" });
+const uidDomain = () => calendarUidDomain.value() || `${process.env.GCLOUD_PROJECT}.firebaseapp.com`;
 const MAX_FEEDS = 5;
 const eligible = ["communicant", "baptized", "nonResident", "adherent"];
 const organizers = [...EDITOR_ROLES, "deacon"] as const;
@@ -124,7 +127,7 @@ async function eventEntries(audience: Audience, zone: string) {
         includeCancelled: true,
       },
     ).map((occurrence): CalendarEntry => ({
-      uid: `${occurrence.id}@${UID_DOMAIN}`,
+      uid: `${occurrence.id}@${uidDomain()}`,
       title: occurrence.title,
       start: occurrence.start,
       end: occurrence.end,
@@ -149,7 +152,7 @@ async function servingEntries(personId: string, zone: string) {
         zone,
       });
       return {
-        uid: `serving_${row.id}@${UID_DOMAIN}`,
+        uid: `serving_${row.id}@${uidDomain()}`,
         title: `Serving: ${row.get("role")}`,
         start: start.toUTC().toISO()!,
         end: start.plus({ hours: 1 }).toUTC().toISO()!,
@@ -160,10 +163,7 @@ async function servingEntries(personId: string, zone: string) {
       };
     });
 }
-async function churchName() {
-  const settings = await db.doc("communicationSettings/church").get();
-  return String(settings.get("churchName") || "Sycamore RPC");
-}
+async function churchName() { return (await readPublicBranding()).churchName; }
 
 export const portalPublicCalendar = onCall(portalOptions, async (request) => {
   portalRequest(request);

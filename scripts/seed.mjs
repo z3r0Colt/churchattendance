@@ -14,6 +14,13 @@ initializeApp({
 });
 const db = getFirestore();
 const auth = getAuth();
+if (!(await db.doc("publicBranding/church").get()).exists) {
+  const { readFile } = await import("node:fs/promises");
+  const { publicBrandingSchema } = await import("@sycamore/shared");
+  const fixture = JSON.parse(await readFile(new URL("../config/examples/cedar-branding.json", import.meta.url), "utf8"));
+  await db.doc("publicBranding/church").set({ ...publicBrandingSchema.parse(fixture), revision: 1 });
+}
+
 for (const [uid, email, roles] of [
   ["demo-pastor", "pastor@example.test", ["pastor", "admin"]],
   ["demo-volunteer", "volunteer@example.test", ["attendanceVolunteer"]],
@@ -44,7 +51,7 @@ for (const [uid, email, roles] of [
 if (!(await db.doc("settings/church").get()).exists) {
   await db
     .doc("settings/church")
-    .set({ name: "Sycamore RPC", timeZone: "America/Indiana/Indianapolis" });
+    .set({ name: "Cedar Reformed Church", timeZone: "America/Indiana/Indianapolis" });
   for (const [id, name, defaultTime] of [
     ["am", "Lord's Day Morning", "10:30"],
     ["pm", "Lord's Day Evening", "17:30"],

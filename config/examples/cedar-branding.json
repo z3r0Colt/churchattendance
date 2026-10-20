@@ -1,0 +1,6 @@
+{
+  "churchId": "demo-church", "projectId": "demo-sycamore",
+  "churchName": "Cedar Reformed Church", "appName": "Cedar", "subtitle": "Life together",
+  "palette": "forest", "website": "https://cedar.example.test", "contactEmail": "office@cedar.example.test",
+  "contactPhone": "", "logo": ""
+}

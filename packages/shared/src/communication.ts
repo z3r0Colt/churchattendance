@@ -136,13 +136,13 @@ export const contactConsentSchema = contactFieldsSchema
   .strict();
 export const communicationSettingsSchema = z
   .object({
-    churchName: z.string().trim().min(1).max(150).default("Sycamore RPC"),
+    churchName: z.string().trim().min(1).max(150).default("Church"),
     footer: z
       .string()
       .trim()
       .min(1)
       .max(1000)
-      .default("Sycamore Reformed Presbyterian Church"),
+      .default("Church office"),
     emailEnabled: z.boolean().default(false),
     smsEnabled: z.boolean().default(false),
     bulletinEnabled: z.boolean().default(false),
@@ -163,7 +163,7 @@ export const communicationSettingsSchema = z
     driveId: z.string().max(200).default(""),
     folderId: z.string().max(200).default(""),
     bulletinSubject: mergeText.default(
-      "Sycamore RPC Bulletin, Lord's Day {Date}",
+      "{ChurchName} Bulletin, Lord's Day {Date}",
     ),
     bulletinBody: mergeText.default(
       "Dear {FirstName},\n\nThe bulletin for the coming Lord's Day is attached.",

@@ -19,6 +19,7 @@ import {
 import { lightTheme } from "../theme/brand";
 import { friendlyError } from "./Common";
 import { native } from "../platform";
+import { ChurchWordmark } from "../branding";
 export function Kiosk() {
   const [search, setSearch] = useState("");
   const [result, setResult] = useState<KioskResult | null>(null);
@@ -73,7 +74,7 @@ export function Kiosk() {
   return (
     <FluentProvider theme={lightTheme} className="kiosk">
       <div className="kiosk-heading">
-        <span className="wordmark">Sycamore</span>
+        <ChurchWordmark />
         <Button onClick={() => setExit(!exit)}>Exit kiosk</Button>
       </div>
       <main>

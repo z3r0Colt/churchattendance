@@ -89,3 +89,8 @@ Staff access now requires verified email and completed MFA or a server-verified 
 ## Phase 8 shepherding workspace
 
 The Session-only Shepherding page plans household visits with invited deacons, tracks officer workload and visit rounds, and shows explainable contact gaps. Communication settings configure the weekly district digest and the daily officer summary. Locations and routes keep confirmed household coordinates and preview directions before anything leaves the app, and Flock health shows recorded-fact indicators beside dated Session assessments. Read [Phase 8 workflows and limits](docs/PHASE_8.md). Address lookups are off until the Session turns them on, and live delivery checks still apply.
+
+
+## Managed PWA implementation
+
+The approved next work is on the PWA service plan in `docs/PWA_SERVICE_PLAN.md`. Phase 13 branding implementation is under validation; see `docs/PHASE_13.md` for the public/protected split, required deployment binding, explicit legacy migration and unresolved checks. Phases 14–18 remain planned. Existing native/offline behavior is not yet replaced.

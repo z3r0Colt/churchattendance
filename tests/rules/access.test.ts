@@ -1017,3 +1017,19 @@ describe("photo cleanup queue", () => {
     }
   });
 });
+
+
+describe("public branding is exposed only through the reviewed callable projection", () => {
+  it("denies raw documents and protected settings to anonymous visitors", async () => {
+    const db = env.unauthenticatedContext().firestore();
+    for (const path of ["publicBranding/church", "settings/church", "communicationSettings/church"])
+      await assertFails(getDoc(doc(db, path)));
+  });
+  it("denies direct branding writes and reads to all client roles", async () => {
+    for (const role of ["admin", "pastor", "clerk", "elder", "deacon", "attendanceVolunteer", "readOnly"]) {
+      const db = auth(role).firestore();
+      await assertFails(setDoc(doc(db, "publicBranding/church"), { churchName: "Client bypass" }));
+      await assertFails(getDoc(doc(db, "publicBranding/church")));
+    }
+  });
+});

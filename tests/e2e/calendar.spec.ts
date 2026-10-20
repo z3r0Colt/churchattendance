@@ -261,14 +261,14 @@ test("publishes only explicitly listed events in the public calendar and feed", 
   const listing = await call(request, "cal-member", "portalPublicCalendar");
   expect(listing.occurrences.map((row: { id: string }) => row.id)).toEqual(
     [dates[0], dates[2], dates[3]].map(
-      (date) => `study_${date}@sycamorerpc.org`,
+      (date) => `study_${date}@demo-sycamore.firebaseapp.com`,
     ),
   );
   const response = await request.get(`${base}/calendarFeed/public.ics`);
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toContain("text/calendar");
   const text = await response.text();
-  expect(text).toContain(`UID:study_${dates[0]}@sycamorerpc.org`);
+  expect(text).toContain(`UID:study_${dates[0]}@demo-sycamore.firebaseapp.com`);
   expect(text).toContain("DESCRIPTION:Open to all\\; bring a Bible");
   // The cancelled date stays in the feed as cancelled so subscribers drop it.
   const cancelled = text
@@ -295,8 +295,8 @@ test("serves a member's private feed until it or their access is revoked", async
   expect(stored.docs[0].id).not.toBe(token);
 
   const text = await (await feed(request, url)).text();
-  expect(text).toContain("X-WR-CALNAME:Sycamore RPC member calendar");
-  expect(text).toContain(`UID:study_${dates[0]}@sycamorerpc.org`);
+  expect(text).toContain("X-WR-CALNAME:Cedar Reformed Church member calendar");
+  expect(text).toContain(`UID:study_${dates[0]}@demo-sycamore.firebaseapp.com`);
   expect(text).toContain("SUMMARY:Serving: Usher");
   expect(text).not.toMatch(/Greeter|Elders planning|"yes"|RSVP/);
 
@@ -352,7 +352,7 @@ test("gives staff a scoped feed of all events and stops it with staff access", a
     label: "Outlook",
   });
   const text = await (await feed(request, url)).text();
-  expect(text).toContain("X-WR-CALNAME:Sycamore RPC staff calendar");
+  expect(text).toContain("X-WR-CALNAME:Cedar Reformed Church staff calendar");
   expect(text).toContain("SUMMARY:Elders planning meeting");
   expect(text).toContain("SUMMARY:Serving: Greeter");
   expect(text).not.toContain("Usher");

@@ -22,9 +22,11 @@ import {
   StaffEnrollment,
 } from "../../desktop/renderer/security/Factors";
 import { PasskeySignIn } from "../../desktop/renderer/security/PasskeySignIn";
-import { lightTheme } from "../../desktop/renderer/theme/brand";
+import { churchTheme } from "../../desktop/renderer/theme/brand";
+import { ChurchWordmark, useBranding } from "../../desktop/renderer/branding";
 import { auth, callPortal } from "./data";
 export function StaffSecurity() {
+  const { value: branding } = useBranding();
   const [user, setUser] = useState(auth.currentUser),
     [ready, setReady] = useState(false),
     [eligible, setEligible] = useState(false),
@@ -111,9 +113,9 @@ export function StaffSecurity() {
     };
   }, [user, refresh]);
   return (
-    <FluentProvider theme={lightTheme} className="portal">
+    <FluentProvider theme={churchTheme(branding?.palette)} className="portal">
       <main>
-        <div className="wordmark">Sycamore</div>
+        <ChurchWordmark />
         <Title3 as="h1">Staff account security</Title3>
         {error && <MessageBar intent="error">{error}</MessageBar>}
         {notice && <MessageBar intent="info">{notice}</MessageBar>}

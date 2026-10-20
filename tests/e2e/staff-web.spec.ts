@@ -297,7 +297,7 @@ test("a lock whose reload is held back shows no records", async ({
   );
   await page.getByRole("button", { name: "Lock now" }).click();
   await expect.poll(() => dialogs).toEqual(["beforeunload"]);
-  await expect(page.getByText("Opening Sycamore RPC")).toBeVisible();
+  await expect(page.getByText("Opening church workspace")).toBeVisible();
   await expect(page.getByText(/Baker|Calder|Moss/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Lock now" })).toHaveCount(0);
   await context.close();

@@ -73,7 +73,8 @@ import {
   createHousehold,
   useAttendanceData,
 } from "./data/attendance";
-import { darkTheme, lightTheme } from "./theme/brand";
+import { churchTheme } from "./theme/brand";
+import { ChurchWordmark, useBranding } from "./branding";
 import { NavGroup, NavItem } from "./components/Nav";
 const Messages = lazy(() =>
   import("./communications/Messages").then((module) => ({
@@ -216,6 +217,7 @@ const roleNames: Record<Role, string> = {
 };
 
 export function App() {
+  const branding = useBranding();
   const authSession = useAuth();
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "system");
   const [systemDark, setSystemDark] = useState(
@@ -234,7 +236,7 @@ export function App() {
   };
   return (
     <FluentProvider
-      theme={dark ? darkTheme : lightTheme}
+      theme={churchTheme(branding.value?.palette, dark)}
       className="app"
       data-theme={dark ? "dark" : "light"}
     >
@@ -243,7 +245,7 @@ export function App() {
       )}
       {authSession.loading ? (
         <main className="center">
-          <Spinner label="Opening Sycamore RPC" />
+          <Spinner label="Opening church workspace" />
         </main>
       ) : authSession.kiosk && staffWeb ? (
         <KioskElsewhere />
@@ -281,7 +283,7 @@ function SignIn() {
   return (
     <main className="center">
       <section className="signin surface">
-        <div className="wordmark">SYCAMORE RPC</div>
+        <ChurchWordmark />
         <Title3>Welcome back</Title3>
         <p>Sign in to care for the congregation.</p>
         {!configured && (
@@ -314,7 +316,7 @@ function SignIn() {
         )}
         {notice && <MessageBar intent="info">{notice}</MessageBar>}
         {error && <MessageBar intent="error">{error}</MessageBar>}
-        <small>Sycamore Reformed Presbyterian Church</small>
+        <ChurchIdentity />
       </section>
     </main>
   );
@@ -504,10 +506,7 @@ function Workspace({
           aria-controls="main-nav"
           onClick={() => setNavOpen(!navOpen)}
         />
-        <div className="wordmark">
-          Sycamore
-          <span>REFORMED PRESBYTERIAN</span>
-        </div>
+        <ChurchWordmark />
         <div className="topbar-right">
           <Badge
             appearance="outline"
@@ -1710,4 +1709,10 @@ function dateLine(date: string) {
 }
 function shiftWeeks(date: string, weeks: number) {
   return DateTime.fromISO(date).plus({ weeks }).toISODate() || date;
+}
+
+
+function ChurchIdentity() {
+  const { value } = useBranding();
+  return <small>{value?.churchName || "Church configuration required"}</small>;
 }

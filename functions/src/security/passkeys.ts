@@ -1,3 +1,4 @@
+import { readPublicBranding } from "../branding.js";
 import { createHash, randomBytes } from "node:crypto";
 import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
@@ -102,7 +103,7 @@ export const beginPasskeyRegistration = onCall(async (request) => {
       "Remove an unused passkey before adding another.",
     );
   const options = await generateRegistrationOptions({
-    rpName: "Sycamore RPC",
+    rpName: (await readPublicBranding()).churchName,
     rpID: rp,
     userName: user.email!,
     userID: Buffer.from(actor.uid),

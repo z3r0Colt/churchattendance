@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BrandingSettings } from "../communications/BrandingSettings";
 import {
   Badge,
   Button,
@@ -135,6 +136,7 @@ export function Administration({ roles }: { roles: Role[] }) {
           Existing event times remain fixed.
         </p>
       </section>
+      {church.value && <BrandingSettings legacyName={church.value.name} />}
       <section className="surface communication-panel">
         <div className="section-heading">
           <Subtitle2>Service types</Subtitle2>

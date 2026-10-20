@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { firebaseDeployment } from "@sycamore/shared";
 import {
   browserSessionPersistence,
   connectAuthEmulator,
@@ -18,16 +19,7 @@ import { connectStorageEmulator, getStorage } from "firebase/storage";
 import { emulators, staffWeb } from "../platform";
 export const configured =
   emulators || !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
-const app = initializeApp({
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-key",
-  authDomain:
-    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ||
-    "demo-sycamore.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "demo-sycamore",
-  storageBucket:
-    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "demo-sycamore.appspot.com",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "demo-app",
-});
+const app = initializeApp(firebaseDeployment(import.meta.env, emulators, staffWeb ? location.origin : undefined));
 // The staff web keeps its sign-in to this tab and its records in memory, so a shared or
 // borrowed browser holds nothing after the tab closes. The desktop keeps the persistent roll-call cache.
 export const auth = staffWeb

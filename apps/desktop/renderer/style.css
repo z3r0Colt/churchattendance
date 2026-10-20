@@ -236,9 +236,9 @@ input {
   flex-shrink: 0;
 }
 .present .check-box {
-  background: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
   color: white;
-  border-color: #2f6b4f;
+  border-color: var(--church-brand, #2f6b4f);
 }
 .muted {
   color: var(--colorNeutralForeground2);
@@ -443,7 +443,7 @@ th {
 .kiosk .fui-Input,.kiosk .fui-Button { min-height:64px;font-size:20px; }
 .kiosk .fui-Checkbox { min-height:64px;font-size:24px;display:flex; }
 .kiosk-household { margin:24px 0;padding:24px; }
-.kiosk-welcome { font-size:32px;padding:64px 0;text-align:center;color:#2F6B4F; }
+.kiosk-welcome { font-size:32px;padding:64px 0;text-align:center;color:var(--church-brand, #2F6B4F); }
 .sidebar { overflow-y:auto; }
 @media print { .report-filters,.actions,.fui-TabList { display:none!important; } }
 
@@ -657,8 +657,8 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   color: var(--colorNeutralForeground2);
 }
 .tile.lead {
-  border-color: #2f6b4f;
-  background: #2f6b4f;
+  border-color: var(--church-brand, #2f6b4f);
+  background: var(--church-brand, #2f6b4f);
   color: #ffffff;
 }
 .tile.lead > span,
@@ -731,7 +731,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   font-weight: 400;
 }
 .app .person-chip.present {
-  border: 2px solid #2f6b4f;
+  border: 2px solid var(--church-brand, #2f6b4f);
   padding: 5px 13px 5px 9px;
   background: var(--present-bg);
   color: var(--present-fg);
@@ -746,8 +746,8 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   border: 1.5px solid var(--colorNeutralForeground3);
 }
 .present .check-dot {
-  background: #2f6b4f;
-  border-color: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
+  border-color: var(--church-brand, #2f6b4f);
   color: #ffffff;
 }
 /* An online worshipper keeps the present colours with a dashed edge and the word Online. */
@@ -836,13 +836,13 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   background: #b9d6c5;
 }
 .week-bar .bar.latest {
-  background: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
 }
 [data-theme="dark"] .week-bar .bar {
   background: #3d6b54;
 }
 [data-theme="dark"] .week-bar .bar.latest {
-  background: #6fb592;
+  background: var(--church-brand-dark, #6fb592);
 }
 .week-axis {
   display: flex;
@@ -975,8 +975,8 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   font-size: 13px;
 }
 .tag.strong {
-  border-color: #2f6b4f;
-  background: #2f6b4f;
+  border-color: var(--church-brand, #2f6b4f);
+  background: var(--church-brand, #2f6b4f);
   color: #ffffff;
 }
 .app .profile-tabs {
@@ -1017,7 +1017,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   box-sizing: border-box;
 }
 .week.present {
-  background: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
 }
 .week.absent {
   background: var(--colorNeutralBackground3);
@@ -1032,7 +1032,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   border: 1px dashed var(--colorNeutralStroke1);
 }
 [data-theme="dark"] .week.present {
-  background: #6fb592;
+  background: var(--church-brand-dark, #6fb592);
 }
 .strip-axis {
   display: flex;
@@ -1168,7 +1168,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   align-self: flex-start;
   padding: 0 7px;
   border-radius: 10px;
-  background: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
   color: #ffffff;
 }
 .month-event {
@@ -1194,7 +1194,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   text-decoration: line-through;
 }
 .month-event.selected {
-  outline: 2px solid #2f6b4f;
+  outline: 2px solid var(--church-brand, #2f6b4f);
   outline-offset: -2px;
 }
 .month-time {
@@ -1229,7 +1229,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   background: var(--colorNeutralBackground3);
 }
 .delivery-sent {
-  background: #2f6b4f;
+  background: var(--church-brand, #2f6b4f);
 }
 .delivery-waiting {
   background: #c99a3a;
@@ -1273,7 +1273,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   border-top-color: #c99a3a;
 }
 .steps li.done {
-  border-top-color: #2f6b4f;
+  border-top-color: var(--church-brand, #2f6b4f);
 }
 .steps li.done strong::before {
   content: "✓ ";
@@ -1353,7 +1353,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .kiosk .wordmark {
   font-family: var(--font-display);
   font-size: 26px;
-  color: #2f6b4f;
+  color: var(--church-brand, #2f6b4f);
 }
 .kiosk main h1,
 .kiosk-household h2 {
@@ -1394,7 +1394,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   background: #ffffff;
 }
 .kiosk .kiosk-chip:has(input:checked) {
-  border: 2px solid #2f6b4f;
+  border: 2px solid var(--church-brand, #2f6b4f);
   background: #eef6f1;
 }
 .kiosk .kiosk-chip .fui-Checkbox__indicator {
@@ -1473,7 +1473,7 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
   background: var(--colorNeutralBackground1);
 }
 .tree-chip.self {
-  border: 2px solid #2f6b4f;
+  border: 2px solid var(--church-brand, #2f6b4f);
   font-weight: 600;
 }
 /* Import column matching in a responsive grid. */
@@ -1763,3 +1763,11 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
     flex: 1;
   }
 }
+
+
+/* Public identity assets are inline PNGs, never external resources. */
+.church-wordmark { display: flex; align-items: center; gap: 10px; white-space: normal; overflow-wrap: anywhere; min-width: 0; color: var(--church-brand); }
+.church-wordmark img { object-fit: contain; flex-shrink: 0; }
+.church-wordmark span { display: block; font-size: 11px; letter-spacing: 0.06em; }
+[data-theme="dark"] .church-wordmark { color: var(--church-brand-dark); }
+.branding-error { padding: 16px; background: #fff4ce; color: #242424; }

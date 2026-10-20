@@ -1,3 +1,4 @@
+import { readPublicBranding } from "../branding.js";
 import {
   FieldValue,
   Timestamp,
@@ -76,9 +77,9 @@ export type StoredMessage = {
 export const identityHash = (channel: Channel, address: string) =>
   createHash("sha256").update(`${channel}:${address}`).digest("hex");
 export async function getSettings(): Promise<CommunicationSettings> {
-  return communicationSettingsSchema.parse(
-    (await db.doc("communicationSettings/church").get()).data() ?? {},
-  );
+  const stored = (await db.doc("communicationSettings/church").get()).data() ?? {};
+  const branding = await readPublicBranding();
+  return communicationSettingsSchema.parse({ ...stored, churchName: branding.churchName, footer: stored.footer ?? branding.churchName });
 }
 export async function getChurchZone() {
   return (
