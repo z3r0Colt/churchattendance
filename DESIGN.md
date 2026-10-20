@@ -130,7 +130,7 @@ An Admin who is not on Session never sees Pastoral, even though Admin can do eve
 ## 5. Screens
 
 ### 5.1 Sign in
-Centered card with the church name, email, password, and a "Keep this PC signed in" checkbox (meant for the booth PC). Errors read plainly, such as "That email and password do not match."
+Centered card with the church name, email, password, and a "Keep this PC signed in" checkbox (meant for the booth PC). The checkbox starts unticked and applies to both the password sign-in and Sign in with browser or passkey. Errors read plainly, such as "That email and password do not match."
 
 ### 5.2 Take Attendance (most important screen)
 

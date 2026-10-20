@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auth: { currentUser: null as { uid: string } | null },
+  steps: [] as string[],
+  local: { type: "LOCAL" },
+  session: { type: "SESSION" },
   calls: [] as { name: string; input: unknown }[],
   answer: (() => ({ pending: true })) as (
     name: string,
@@ -21,11 +24,19 @@ vi.mock("firebase/functions", () => ({
     },
 }));
 vi.mock("firebase/auth", () => ({
-  signInWithCustomToken: vi.fn(async () => ({})),
+  browserLocalPersistence: mocks.local,
+  browserSessionPersistence: mocks.session,
+  setPersistence: vi.fn(async () => {
+    mocks.steps.push("setPersistence");
+  }),
+  signInWithCustomToken: vi.fn(async () => {
+    mocks.steps.push("signInWithCustomToken");
+    return {};
+  }),
 }));
 vi.mock("@simplewebauthn/browser", () => ({ startAuthentication: vi.fn() }));
 
-import { signInWithCustomToken } from "firebase/auth";
+import { setPersistence, signInWithCustomToken } from "firebase/auth";
 import { browserStaffSignIn } from "./security";
 
 const part = (value: object) =>
@@ -37,6 +48,7 @@ const tokenFor = (uid: string) =>
 describe("browserStaffSignIn", () => {
   beforeEach(() => {
     mocks.calls.length = 0;
+    mocks.steps.length = 0;
     mocks.auth.currentUser = null;
     mocks.answer = () => ({ pending: true });
     vi.clearAllMocks();
@@ -61,6 +73,44 @@ describe("browserStaffSignIn", () => {
       mocks.auth,
       tokenFor("fictional-other"),
     );
+  });
+
+  it("lasts until the app closes when Keep this PC signed in is off", async () => {
+    mocks.answer = () => ({ token: tokenFor("fictional-elder") });
+    await browserStaffSignIn(() => {}, { keep: false });
+    expect(mocks.steps).toEqual(["setPersistence", "signInWithCustomToken"]);
+    expect(setPersistence).toHaveBeenCalledWith(mocks.auth, mocks.session);
+  });
+
+  it("keeps the PC signed in when Keep this PC signed in is on", async () => {
+    mocks.answer = () => ({ token: tokenFor("fictional-elder") });
+    await browserStaffSignIn(() => {}, { keep: true });
+    expect(mocks.steps).toEqual(["setPersistence", "signInWithCustomToken"]);
+    expect(setPersistence).toHaveBeenCalledWith(mocks.auth, mocks.local);
+  });
+
+  it("leaves the current choice alone when confirming or opening security", async () => {
+    mocks.auth.currentUser = { uid: "fictional-elder" };
+    mocks.answer = () => ({ token: tokenFor("fictional-elder") });
+    // Confirm in browser.
+    await browserStaffSignIn(() => {}, { sameAccount: true });
+    // Open browser sign-in and passkeys on the Account security page.
+    await browserStaffSignIn(() => {});
+    expect(signInWithCustomToken).toHaveBeenCalledTimes(2);
+    expect(setPersistence).not.toHaveBeenCalled();
+  });
+
+  it("changes nothing when cancelled as the browser answers", async () => {
+    const controller = new AbortController();
+    mocks.answer = () => {
+      controller.abort();
+      return { token: tokenFor("fictional-elder") };
+    };
+    await expect(
+      browserStaffSignIn(() => {}, { keep: true, signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(setPersistence).not.toHaveBeenCalled();
+    expect(signInWithCustomToken).not.toHaveBeenCalled();
   });
 
   it("asks the server for the same account and signs in when it matches", async () => {

@@ -36,8 +36,9 @@ export function tokenUid(token: string) {
 // When confirming the person already signed in, pass their uid: a passkey for any other
 // account stops here before signing in. That is only a guard in the page; the server
 // already binds the passkey to the account for the email.
-// Never use this for the desktop's browser handoff, which keeps the desktop's own
-// "Keep this PC signed in" choice.
+// Never use this for the desktop's browser handoff. On the desktop sign-in screen that
+// handoff uses the screen's "Keep this PC signed in" choice; Confirm in browser and
+// Open browser sign-in and passkeys keep the current sign-in's choice.
 export async function passkeySignIn(
   auth: Auth,
   call: SecurityCall,

@@ -25,18 +25,26 @@ import {
 } from "firebase/auth";
 
 // tabOnly keeps the sign-in to this browser tab, as the staff web requires.
+// The desktop sign-in screen passes keep and onKeepChange so its browser sign-in uses
+// the same "Keep this PC signed in" choice. Without them the form keeps its own.
 export function StaffPasswordForm({
   auth,
   tabOnly = false,
+  keep: sharedKeep,
+  onKeepChange,
 }: {
   auth: Auth;
   tabOnly?: boolean;
+  keep?: boolean;
+  onKeepChange?: (keep: boolean) => void;
 }) {
   const [resolver, setResolver] = useState<MultiFactorResolver | null>(null),
     [factor, setFactor] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [keep, setKeep] = useState(false);
+    [ownKeep, setOwnKeep] = useState(false);
+  const keep = sharedKeep ?? ownKeep,
+    setKeep = onKeepChange ?? setOwnKeep;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);

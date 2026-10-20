@@ -195,7 +195,9 @@ export function App() {
 function SignIn() {
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    // Keep this PC signed in applies to both ways of signing in here.
+    [keep, setKeep] = useState(false);
   return (
     <main className="center">
       <section className="signin surface">
@@ -207,7 +209,12 @@ function SignIn() {
             Firebase setup is needed before this app can connect.
           </MessageBar>
         )}
-        <StaffPasswordForm auth={auth} tabOnly={staffWeb} />
+        <StaffPasswordForm
+          auth={auth}
+          tabOnly={staffWeb}
+          keep={keep}
+          onKeepChange={setKeep}
+        />
         {staffWeb ? (
           <>
             <PasskeySignIn auth={auth} call={securityCall} />
@@ -218,6 +225,7 @@ function SignIn() {
           </>
         ) : (
           <SignInWithBrowser
+            keep={keep}
             busy={busy}
             setBusy={setBusy}
             setError={setError}
@@ -233,11 +241,13 @@ function SignIn() {
 }
 // The desktop opens the church security page in the system browser and waits for its approval.
 function SignInWithBrowser({
+  keep,
   busy,
   setBusy,
   setError,
   setNotice,
 }: {
+  keep: boolean;
   busy: boolean;
   setBusy: (value: boolean) => void;
   setError: (value: string) => void;
@@ -249,7 +259,7 @@ function SignInWithBrowser({
       onClick={() => {
         setBusy(true);
         setError("");
-        void browserStaffSignIn(setNotice)
+        void browserStaffSignIn(setNotice, { keep })
           .catch((cause) =>
             setError(
               cause instanceof Error

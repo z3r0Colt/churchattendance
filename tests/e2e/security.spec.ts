@@ -1,4 +1,10 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Browser,
+  type Page,
+} from "@playwright/test";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
@@ -50,6 +56,47 @@ async function call(
     JSON.stringify(body),
   ).toContain(response.status());
   return body.result;
+}
+// The Firebase Auth accounts a page keeps in IndexedDB, localStorage and sessionStorage.
+async function storedAccounts(page: Page) {
+  const stored = await page.evaluate(async () => {
+    const indexed = (await indexedDB.databases()).some(
+      (row) => row.name === "firebaseLocalStorageDb",
+    )
+      ? await new Promise<string[]>((resolve, reject) => {
+          const open = indexedDB.open("firebaseLocalStorageDb");
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const database = open.result;
+            if (!database.objectStoreNames.contains("firebaseLocalStorage")) {
+              database.close();
+              return resolve([]);
+            }
+            const keys = database
+              .transaction("firebaseLocalStorage", "readonly")
+              .objectStore("firebaseLocalStorage")
+              .getAllKeys();
+            keys.onerror = () => reject(keys.error);
+            keys.onsuccess = () => {
+              database.close();
+              resolve(keys.result.map(String));
+            };
+          };
+        })
+      : [];
+    return {
+      indexed,
+      local: Object.keys(localStorage),
+      session: Object.keys(sessionStorage),
+    };
+  });
+  const users = (keys: string[]) =>
+    keys.filter((key) => key.startsWith("firebase:authUser:"));
+  return {
+    indexed: users(stored.indexed),
+    local: users(stored.local),
+    session: users(stored.session),
+  };
 }
 test.beforeAll(async ({ request }) => {
   for (const [uid, roles] of [
@@ -484,42 +531,10 @@ test("a passkey sign-in on the church security page lasts only for this tab", as
     .getByRole("button", { name: "Sign in with passkey", exact: true })
     .click();
   await expect(page.getByText(signedIn)).toBeVisible();
-  const stored = await page.evaluate(async () => {
-    const indexed = (await indexedDB.databases()).some(
-      (row) => row.name === "firebaseLocalStorageDb",
-    )
-      ? await new Promise<string[]>((resolve, reject) => {
-          const open = indexedDB.open("firebaseLocalStorageDb");
-          open.onerror = () => reject(open.error);
-          open.onsuccess = () => {
-            const database = open.result;
-            if (!database.objectStoreNames.contains("firebaseLocalStorage")) {
-              database.close();
-              return resolve([]);
-            }
-            const keys = database
-              .transaction("firebaseLocalStorage", "readonly")
-              .objectStore("firebaseLocalStorage")
-              .getAllKeys();
-            keys.onerror = () => reject(keys.error);
-            keys.onsuccess = () => {
-              database.close();
-              resolve(keys.result.map(String));
-            };
-          };
-        })
-      : [];
-    return {
-      indexed,
-      local: Object.keys(localStorage),
-      session: Object.keys(sessionStorage),
-    };
-  });
-  const users = (keys: string[]) =>
-    keys.filter((key) => key.startsWith("firebase:authUser:"));
-  expect(users(stored.indexed)).toEqual([]);
-  expect(users(stored.local)).toEqual([]);
-  expect(users(stored.session)).toHaveLength(1);
+  const stored = await storedAccounts(page);
+  expect(stored.indexed).toEqual([]);
+  expect(stored.local).toEqual([]);
+  expect(stored.session).toHaveLength(1);
   // Another tab in the same browser does not share the sign-in.
   const other = await context.newPage();
   await other.goto("http://localhost:5174/staff-security");
@@ -534,6 +549,118 @@ test("a passkey sign-in on the church security page lasts only for this tab", as
   await page.reload();
   await expect(page.getByText(signedIn)).toBeVisible();
   await context.close();
+});
+// Signs in on the desktop sign-in screen through the church security page, as a
+// person at the booth PC would, with Keep this PC signed in ticked or not.
+async function desktopBrowserSignIn(browser: Browser, keep: boolean) {
+  const uid = `phase7-handoff-${keep ? "kept" : "closed"}`,
+    email = `${uid}@example.test`;
+  await auth.getUser(uid).catch(() =>
+    auth.createUser({
+      uid,
+      email,
+      password: "LocalDemo123!",
+      emailVerified: true,
+    }),
+  );
+  await grantTestStaff(uid, ["elder"]);
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    const keepBox = page.getByRole("checkbox", {
+      name: "Keep this PC signed in",
+    });
+    await expect(keepBox).not.toBeChecked();
+    if (keep) await keepBox.check();
+    const opened = context.waitForEvent("page");
+    await page
+      .getByRole("button", {
+        name: "Sign in with browser or passkey",
+        exact: true,
+      })
+      .click();
+    const security = await opened;
+    const notice = page.getByText(/^Finish sign-in in your browser/);
+    await expect(notice).toBeVisible();
+    const code = /code: ([a-f0-9]{8})\./.exec(
+      (await notice.textContent()) || "",
+    )?.[1];
+    expect(code).toBeTruthy();
+    await security
+      .getByRole("textbox", { name: "Email", exact: true })
+      .fill(email);
+    await security.getByLabel(/^Password/).fill("LocalDemo123!");
+    await security
+      .getByRole("button", { name: "Sign in", exact: true })
+      .click();
+    await expect(security.getByText(code!, { exact: true })).toBeVisible();
+    await security
+      .getByRole("checkbox", { name: "This code matches the app on my own PC" })
+      .check();
+    await security
+      .getByRole("button", { name: "Approve desktop sign-in", exact: true })
+      .click();
+    await expect(
+      security.getByText("Approved. Return to the desktop app."),
+    ).toBeVisible();
+    await security.close();
+    await expect(
+      page.getByRole("heading", { name: "Take attendance" }),
+    ).toBeVisible();
+    const stored = await storedAccounts(page);
+    // A new page starts with empty sessionStorage, as reopening the app does.
+    const reopened = await context.newPage();
+    await reopened.goto("/");
+    if (keep) {
+      expect(stored.session).toEqual([]);
+      expect([...stored.indexed, ...stored.local]).toHaveLength(1);
+      await expect(
+        reopened.getByRole("heading", { name: "Take attendance" }),
+      ).toBeVisible();
+    } else {
+      expect(stored.indexed).toEqual([]);
+      expect(stored.local).toEqual([]);
+      expect(stored.session).toHaveLength(1);
+      // The sign-in screen shows while Firebase restores any stored account, so give it time.
+      await reopened.waitForTimeout(2000);
+      await expect(
+        reopened.getByRole("button", {
+          name: "Sign in with browser or passkey",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        reopened.getByRole("heading", { name: "Take attendance" }),
+      ).toHaveCount(0);
+    }
+  } finally {
+    await context.close();
+    await auth.deleteUser(uid).catch(() => undefined);
+    const rows = [
+      db.doc(`staffAccess/${uid}`),
+      ...(
+        await db.collection("staffSessions").where("uid", "==", uid).get()
+      ).docs.map((row) => row.ref),
+      ...(
+        await db.collection("desktopHandoffs").where("uid", "==", uid).get()
+      ).docs.map((row) => row.ref),
+      ...(
+        await db.collection("securityEvents").where("actorUid", "==", uid).get()
+      ).docs.map((row) => row.ref),
+    ];
+    await Promise.all(rows.map((ref) => ref.delete()));
+  }
+}
+test("the desktop browser sign-in lasts until the app closes when Keep this PC signed in is off", async ({
+  browser,
+}) => {
+  await desktopBrowserSignIn(browser, false);
+});
+test("the desktop browser sign-in keeps the PC signed in when Keep this PC signed in is on", async ({
+  browser,
+}) => {
+  await desktopBrowserSignIn(browser, true);
 });
 
 test("creates staff accounts, serializes security updates and recovers lost factors", async ({

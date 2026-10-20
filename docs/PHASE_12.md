@@ -24,7 +24,8 @@ The staff web is the desktop renderer built a second time for browsers (`apps/de
 * Staff assurance is unchanged: `staffSecurityStatus` and `activateStaffAccess` gate the workspace, the one-minute recheck signs out on revocation, and the 30-minute idle lock applies.
 * Auth uses session persistence, so closing the tab signs out and a second tab is not signed in. The "Keep this PC signed in" choice is hidden on the web.
 * Passkeys and authenticators are added on the church security page (**Account security, Manage passkeys and authenticators**). It uses the portal's own Firebase app, so it asks for its own sign-in.
-* Every in-page passkey sign-in, on the staff web and on the church security page, goes through one helper (`security/passkey.ts`) that sets session persistence before it signs in. A passkey sign-in on the church security page on a borrowed browser therefore also ends when the tab closes. The desktop's browser handoff does not use it and keeps the desktop's own "Keep this PC signed in" choice.
+* Every in-page passkey sign-in, on the staff web and on the church security page, goes through one helper (`security/passkey.ts`) that sets session persistence before it signs in. A passkey sign-in on the church security page on a borrowed browser therefore also ends when the tab closes. The desktop's browser handoff does not use it.
+* On the desktop sign-in screen, "Keep this PC signed in" applies to both **Sign in** and **Sign in with browser or passkey**. It starts unticked, and while it is unticked either sign-in ends when the app closes. **Confirm in browser** and **Open browser sign-in and passkeys** keep the current sign-in's choice.
 
 ## Records in the browser
 
@@ -62,6 +63,8 @@ The staff web is the desktop renderer built a second time for browsers (`apps/de
 `tests/e2e/security.spec.ts` checks that a passkey sign-in on the church security page stores no account in IndexedDB or localStorage, is not shared with a second tab and survives a reload of the same tab. `apps/desktop/renderer/security/passkey.test.ts` checks that the helper sets session persistence before signing in and that a passkey for another account signs nobody in.
 
 `tests/e2e/security.spec.ts` also checks that a desktop confirmation in the browser refuses another account's approval (no token and no sign-in made), refuses it with no one signed in, accepts the same account, and that the sign-in screen's handoff still accepts any account. `apps/desktop/renderer/data/security.test.ts` checks that the desktop asks the server for the same account and stops before signing in when the returned sign-in is for another account, and that cancelling stops the checks at once, clears the wait between them and signs nobody in.
+
+`tests/e2e/security.spec.ts` also signs in on the desktop sign-in screen through the church security page. With "Keep this PC signed in" unticked, the account is kept only in sessionStorage (none in IndexedDB or localStorage) and a newly opened app page shows the sign-in screen; ticked, the account is kept and a newly opened page is signed in. `apps/desktop/renderer/data/security.test.ts` checks that the sign-in screen's choice sets the matching persistence before signing in, that a cancelled sign-in changes nothing, and that Confirm in browser and Open browser sign-in and passkeys never change persistence.
 
 ## Every screen on a phone (part 2)
 

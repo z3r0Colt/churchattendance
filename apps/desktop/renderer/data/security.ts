@@ -1,5 +1,10 @@
 import { httpsCallable } from "firebase/functions";
-import { signInWithCustomToken } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  setPersistence,
+  signInWithCustomToken,
+} from "firebase/auth";
 import { handoffSchema } from "@sycamore/shared";
 import { auth, functions } from "./firebase";
 import { native, staffSecurityUrl } from "../platform";
@@ -32,12 +37,23 @@ function pause(ms: number, signal?: AbortSignal) {
   });
 }
 export type BrowserSignInOptions = {
-  // Confirm the account already signed in on this PC instead of signing in anew.
-  sameAccount?: boolean;
   // Stops waiting for the browser, for example when the person cancels. Nobody is
   // signed in after it fires, even if the browser approves later.
   signal?: AbortSignal;
-};
+} & (
+  | {
+      // Confirm the account already signed in on this PC instead of signing in anew.
+      // That sign-in keeps lasting as it already does.
+      sameAccount: true;
+      keep?: never;
+    }
+  | {
+      sameAccount?: false;
+      // The sign-in screen's "Keep this PC signed in" choice: kept after the app
+      // closes, or only until then. Left out, the sign-in lasts as the current one does.
+      keep?: boolean;
+    }
+);
 // Signs in on this PC once the person approves on the church security page in their
 // browser. The sign-in screen accepts whichever account approves; confirming it is you
 // accepts only the account already signed in.
@@ -86,6 +102,13 @@ export async function browserStaffSignIn(
         (!current || tokenUid(result.token) !== current)
       )
         throw new Error("Approve with the account signed in on this PC.");
+      if (options.keep !== undefined) {
+        await setPersistence(
+          auth,
+          options.keep ? browserLocalPersistence : browserSessionPersistence,
+        );
+        signal?.throwIfAborted();
+      }
       await signInWithCustomToken(auth, result.token);
       return;
     }
