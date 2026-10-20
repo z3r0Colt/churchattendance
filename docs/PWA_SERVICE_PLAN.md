@@ -182,7 +182,7 @@ Provide brief staff guidance for installation, sign-in, attendance save status, 
 
 ## First implementation slice
 
-Start Phase 13 with the branding inventory and validated public/protected configuration split. Make two fictional churches render correctly using the same commit. Then complete Phase 14 and Phase 15 until both run as independently configured PWAs in isolated test environments.
+Phase 13 completed the branding inventory and validated public/protected configuration split; two fictional churches render from the same commit, with passing automated acceptance documented in `PHASE_13.md`. Next complete Phase 14 and Phase 15 until both run as independently configured PWAs in isolated test environments.
 
 This first slice does not include subscriptions, a large operator dashboard, giving/accounting, denomination configuration, kiosk features or offline record persistence. Do not expand it into a wholesale rewrite of the working church screens.
 

@@ -11,7 +11,7 @@ Windows desktop church management app for **Sycamore Reformed Presbyterian Churc
 
 ## Approved product direction
 
-The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phases 13 through 18 are planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.
+The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phase 13 is implemented with passing automated acceptance; Phases 14 through 18 remain planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.
 
 The target is staff/member PWAs on Firebase Hosting, with one maintained codebase and a separate Firebase project, credentials and encryption keys for each church. Preserve the existing Presbyterian model and security/privacy rules. Giving/accounting and denomination configuration remain deferred. Separate operator subscription/scholarship administration is not congregation financial tracking and must not be added to church collections.
 

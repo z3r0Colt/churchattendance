@@ -6,7 +6,7 @@ Scope extension approved on October 18, 2026. All ten feature areas from the Ten
 
 ## 0. Approved PWA service direction
 
-Approved October 20, 2026. [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) defines Phases 13 through 18 and their acceptance checks. All six phases are planned, not implemented by this documentation change.
+Approved October 20, 2026. [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) defines Phases 13 through 18 and their acceptance checks. Phase 13 is implemented with passing automated acceptance; Phases 14 through 18 remain planned.
 
 - Deliver staff and member access through an online PWA on Firebase Hosting. Retain the existing Firebase backend and privacy boundaries.
 - Maintain one codebase with separate Firebase projects, identities, records, secrets and encryption keys for each church. Colt manages setup and releases. Start with a service-owned subdomain, with a church-owned subdomain optional.
@@ -462,7 +462,7 @@ Production portal callables enforce App Check and the configured PORTAL_ORIGIN. 
 
 ## 6. Phased Roadmap
 
-Phases 1 through 12 describe the earlier implementation. Their native Windows, kiosk and offline launch requirements are superseded by section 0. The next work is [Phases 13 through 18](docs/PWA_SERVICE_PLAN.md), beginning with church configuration and branding.
+Phases 1 through 12 describe the earlier implementation. Their native Windows, kiosk and offline launch requirements are superseded by section 0. Phase 13 church configuration and branding is implemented. The next work is [Phases 14 through 18](docs/PWA_SERVICE_PLAN.md), beginning with PWA packaging and online-only workflows.
 
 **Phase 1, Attendance core (MVP, about 5 to 7 weeks)**
 * Firebase project, Electron app setup, logins and roles, security rules with tests
@@ -577,7 +577,7 @@ These four make up the Session group, so they are the only ones who can see past
 
 ## 9. Next Step
 
-Implement Phase 13 in [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md). Begin with a public/protected configuration split and remove customer-facing Sycamore assumptions. Prove two fictional church identities from the same source before PWA packaging and repeatable Firebase provisioning. Do not deploy live projects or send real messages as part of local implementation.
+Phase 13 passed automated acceptance; see `docs/PHASE_13.md`. Implement Phase 14 in [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md): PWA packaging and online-only, server-confirmed workflows. Then implement repeatable Firebase provisioning in Phase 15. Do not deploy live projects or send real messages as part of local implementation.
 
 Existing security/provider acceptance, managed backups and recovery remain release gates. Windows signing, native handoff and offline restart acceptance are retired from the PWA service. The implementation notes below describe existing behavior until the relevant phase changes it.
 
