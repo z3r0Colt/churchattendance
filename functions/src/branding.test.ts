@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const state = vi.hoisted(() => ({ data: {} as Record<string, unknown>, role: "admin", writes: 0 }));
+const state = vi.hoisted(() => ({ data: {} as Record<string, unknown>, role: "admin", writes: 0, emulator: true }));
 vi.mock("firebase-functions/v2/https", async (original) => ({
   ...(await original<object>()), onCall: (handler: unknown) => handler,
 }));
-vi.mock("./communications/environment.js", () => ({ emulatorMode: () => true }));
+vi.mock("./communications/environment.js", () => ({ emulatorMode: () => state.emulator }));
 vi.mock("./access.js", () => ({
   parse: (schema: { parse: (value: unknown) => unknown }, value: unknown) => schema.parse(value),
   requireRoles: async (_request: unknown, roles: string[]) => {
@@ -21,7 +21,7 @@ vi.mock("./admin.js", () => ({ db: {
 import { getPublicBranding, getBrandingSettings, savePublicBranding } from "./branding.js";
 const call = (handler: unknown, data: unknown = {}) => (handler as (request: { data: unknown }) => Promise<unknown>)({ data });
 const fields = { churchName: "Cedar Reformed Church", appName: "Cedar" };
-beforeEach(() => { vi.stubEnv("GCLOUD_PROJECT", "demo-sycamore"); vi.stubEnv("CHURCH_ID", "demo-church"); state.data = {}; state.role = "admin"; state.writes = 0; });
+beforeEach(() => { vi.stubEnv("GCLOUD_PROJECT", "demo-sycamore"); vi.stubEnv("CHURCH_ID", "demo-church"); state.emulator = true; state.data = {}; state.role = "admin"; state.writes = 0; });
 describe("branding API boundary", () => {
   it("publishes only reviewed fields and never copies legacy protected settings", async () => {
     await call(savePublicBranding, { ...fields, expectedRevision: 0 });
@@ -56,4 +56,15 @@ describe("branding API boundary", () => {
     await expect(call(savePublicBranding, { ...fields, expectedRevision: 0, logo: "data:image/png;base64,iVBORw0KGgoAAAAA" })).rejects.toThrow("PNG logo");
     expect(state.writes).toBe(0);
   });
+});
+
+it("handles the emulator materialized parameter default only for a demo project", async () => {
+  vi.stubEnv("CHURCH_ID", "not-configured");
+  await call(savePublicBranding, { ...fields, expectedRevision: 0 });
+  expect((await call(getPublicBranding) as Record<string, unknown>).churchId).toBe("demo-church");
+  vi.stubEnv("GCLOUD_PROJECT", "cedar-production");
+  await expect(call(savePublicBranding, { ...fields, expectedRevision: 1 })).rejects.toThrow("configuration is required");
+  state.emulator = false;
+  vi.stubEnv("GCLOUD_PROJECT", "demo-sycamore");
+  await expect(call(savePublicBranding, { ...fields, expectedRevision: 1 })).rejects.toThrow("configuration is required");
 });

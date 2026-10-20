@@ -9,8 +9,12 @@ import { emulatorMode } from "./communications/environment.js";
 const churchId = defineString("CHURCH_ID", { default: "not-configured" });
 function identity() {
   const projectId = process.env.GCLOUD_PROJECT;
-  const id = emulatorMode() ? (process.env.CHURCH_ID || "demo-church") : churchId.value();
-  if (!projectId || id === "not-configured")
+  const configuredId = emulatorMode() ? process.env.CHURCH_ID : churchId.value();
+  // The Functions emulator materializes parameter defaults in its environment.
+  // Only a demo project may replace that unconfigured placeholder with the fictional fixture identity.
+  const id = emulatorMode() && projectId?.startsWith("demo-") && (!configuredId || configuredId === "not-configured")
+    ? "demo-church" : configuredId;
+  if (!projectId || !id || id === "not-configured")
     throw new HttpsError("failed-precondition", "Church deployment configuration is required.");
   return { projectId, churchId: id };
 }
