@@ -455,6 +455,9 @@ test("starts the kiosk through Settings, checks a household in, and exits to sta
     name: "Start roll call",
     exact: true,
   });
+  await expect(
+    start.or(page.getByRole("button", { name: /^James Calder,/ })),
+  ).toBeVisible();
   if (await start.isVisible()) await start.click();
   await expect(
     page.getByRole("button", { name: "James Calder,", exact: false }),
