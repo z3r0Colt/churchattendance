@@ -17,12 +17,7 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm ci
-      - run: npm run audit:dependencies
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run test:operations
-      - run: npm run test:rules
+      - run: node scripts/verify.mjs
   e2e:
     needs: verify
     runs-on: ubuntu-latest
