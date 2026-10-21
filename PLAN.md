@@ -1,4 +1,4 @@
-# Church Attendance & Management Plan
+# Foldkeeper — Church Attendance & Management Plan
 
 A church attendance, administration and shepherding application, originally built for Sycamore Reformed Presbyterian Church. The approved next product is an online PWA managed for separate churches on Firebase. Giving and accounting remain excluded.
 
@@ -10,6 +10,7 @@ Approved October 20, 2026. [Managed church PWA development plan](docs/PWA_SERVIC
 
 - Deliver staff and member access through an online PWA on Firebase Hosting. Retain the existing Firebase backend and privacy boundaries.
 - Maintain one codebase with separate Firebase projects, identities, records, secrets and encryption keys for each church. Colt manages setup and releases. Start with a service-owned subdomain, with a church-owned subdomain optional.
+- The service is named **Foldkeeper**. Preserve each church’s name, logo and colors, with a fixed **Powered by Foldkeeper** credit on staff/member screens and Foldkeeper in browser titles and full PWA installation names. The credit is product-owned and cannot be removed in church branding settings.
 - Replace customer-specific source edits with validated branding and deployment configuration. The existing Presbyterian membership/governance model remains unchanged for now.
 - Retire native Windows releases, code signing, kiosk support and offline record persistence as launch requirements. Existing source remains temporarily while web replacements are verified.
 - Require server-acknowledged saves, honest connection/error states, safe PWA updates and memory-only church records. No offline workspace is promised.

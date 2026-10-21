@@ -20,7 +20,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(caches.open(CACHE).then(async (cache) => (await cache.match(request)) || fetch(request)));
   } else if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => new Response(
-      '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width"><title>Connection required</title><main><h1>Connection required</h1><p>Connect to the internet to open the church app. Unconfirmed work in a closed tab may be lost.</p><a href="/launch">Try again</a></main></html>',
+      '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width"><title>Foldkeeper · Connection required</title><main><h1>Connection required</h1><p>Connect to the internet to open the church app. Unconfirmed work in a closed tab may be lost.</p><p>Powered by Foldkeeper</p><a href="/launch">Try again</a></main></html>',
       { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Content-Security-Policy": "default-src 'none'; base-uri 'none'; frame-ancestors 'none'" } },
     )));
   }

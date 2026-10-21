@@ -12,6 +12,7 @@ The service should cover its operating costs. Any surplus can support ministry s
 
 | Area | Decision |
 |---|---|
+| Product | Foldkeeper, with church branding and a fixed Powered by Foldkeeper credit |
 | Delivery | Online PWA for staff and members on Firebase Hosting |
 | Backend | Keep Firebase Auth, Firestore, Storage, Functions and Secret Manager |
 | Isolation | Separate Firebase project, accounts, records, secrets and keys for each church |

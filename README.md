@@ -1,6 +1,6 @@
-# Church attendance and management
+# Foldkeeper
 
-Attendance, communication and shepherding with staff and member web access. Product scope lives in `PLAN.md` and UI rules in `DESIGN.md`.
+Church attendance, communication and shepherding with staff and member web access. Each church keeps its own name, logo and colors, with a fixed **Powered by Foldkeeper** credit. Browser titles and the full PWA installation name also identify Foldkeeper; the compact installation label remains church-specific. Product scope lives in `PLAN.md` and UI rules in `DESIGN.md`.
 
 ## Next development milestone
 

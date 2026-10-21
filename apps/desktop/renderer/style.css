@@ -1771,3 +1771,14 @@ button.flow-node:focus-visible { outline: 2px solid var(--colorStrokeFocus2); ou
 .church-wordmark span { display: block; font-size: 11px; letter-spacing: 0.06em; }
 [data-theme="dark"] .church-wordmark { color: var(--church-brand-dark); }
 .branding-error { padding: 16px; background: #fff4ce; color: #242424; }
+
+/* Keep the product credit readable at phone widths and in either staff theme. */
+.church-wordmark .powered-by {
+  display: block;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: normal;
+  color: var(--colorNeutralForeground2, #5b625e);
+}

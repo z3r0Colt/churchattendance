@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// Product identity is fixed in source, independently of editable church branding.
+export const PRODUCT_NAME = "Foldkeeper";
+export const PRODUCT_CREDIT = `Powered by ${PRODUCT_NAME}`;
+export function applicationTitle(churchAppName?: string) {
+  return churchAppName && churchAppName !== PRODUCT_NAME ? `${churchAppName} · ${PRODUCT_NAME}` : PRODUCT_NAME;
+}
+
 // Presets keep both themes readable; arbitrary CSS, SVG and remote logos are not accepted.
 export const brandPalettes = {
   forest: { light: "#2F6B4F", dark: "#9BD0B4" },

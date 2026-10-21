@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Field, Input, MessageBar, Select } from "@fluentui/react-components";
-import { brandingFieldsSchema, saveBrandingSchema, type PublicBranding } from "@sycamore/shared";
+import { PRODUCT_NAME, brandingFieldsSchema, saveBrandingSchema, type PublicBranding } from "@sycamore/shared";
 import { chmsCall } from "../data/chms";
 import { refreshBranding } from "../branding";
 import { friendlyError } from "../chms/Common";
@@ -8,7 +8,7 @@ import { friendlyError } from "../chms/Common";
 type Settings = { branding: PublicBranding | null; revision: number };
 export function BrandingSettings({ legacyName }: { legacyName: string }) {
   const [loaded, setLoaded] = useState<Settings | null>(null);
-  const [draft, setDraft] = useState(brandingFieldsSchema.parse({ churchName: legacyName || "Church name", appName: legacyName || "Church app" }));
+  const [draft, setDraft] = useState(brandingFieldsSchema.parse({ churchName: legacyName || "Church name", appName: legacyName || PRODUCT_NAME }));
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -59,6 +59,7 @@ export function BrandingSettings({ legacyName }: { legacyName: string }) {
   }
   return <section className="surface communication-panel" aria-label="Public church branding">
     <h2>Public church branding</h2>
+    <p>Your church name, logo and colors stay primary. Powered by Foldkeeper remains visible in the app.</p>
     <p>These details are public on sign-in and member pages. Use public office contact details. Operational settings, staff contacts and provider status stay protected.</p>
     {loaded && !loaded.branding && loaded.revision === 0 && <p>No public branding is published. Review the legacy church name below, then publish explicitly. Existing records and communication templates are preserved.</p>}
     {error && <MessageBar intent="error">{error} <Button onClick={() => setAttempt((v) => v + 1)}>Reload branding</Button></MessageBar>}

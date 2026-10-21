@@ -255,10 +255,13 @@ export function App() {
       ) : !authSession.user ? (
         <SignIn />
       ) : !authSession.assured ? (
-        <StaffEnrollment
-          auth={auth}
-          refresh={() => void auth.currentUser?.getIdToken(true)}
-        />
+        <>
+          <ChurchWordmark />
+          <StaffEnrollment
+            auth={auth}
+            refresh={() => void auth.currentUser?.getIdToken(true)}
+          />
+        </>
       ) : (
         <Workspace
           key={`${authSession.user.uid}-${authSession.roles.join(",")}`}

@@ -1,6 +1,6 @@
 import { deflateSync } from "node:zlib";
 import { onRequest } from "firebase-functions/v2/https";
-import { brandPalettes } from "@sycamore/shared";
+import { applicationTitle, PRODUCT_CREDIT, brandPalettes } from "@sycamore/shared";
 import { readPublicBranding } from "./branding.js";
 function crc(bytes: Buffer) {
   let value = 0xffffffff;
@@ -36,8 +36,8 @@ export const pwaManifest = onRequest(async (_request, response) => {
   try {
     const branding = await readPublicBranding();
     response.type("application/manifest+json").send({
-      id: "/", scope: "/", start_url: "/launch", name: branding.appName, short_name: branding.appName.slice(0, 30),
-      description: branding.subtitle || branding.churchName, display: "standalone", background_color: "#ffffff",
+      id: "/", scope: "/", start_url: "/launch", name: applicationTitle(branding.appName), short_name: branding.appName.slice(0, 30),
+      description: `${branding.subtitle || branding.churchName} · ${PRODUCT_CREDIT}`, display: "standalone", background_color: "#ffffff",
       theme_color: brandPalettes[branding.palette].light,
       icons: [
         ...[192, 512].map((size) => ({ src: `/app-icon.png?size=${size}`, sizes: `${size}x${size}`, type: "image/png", purpose: branding.logo ? "maskable" : "any maskable" })),

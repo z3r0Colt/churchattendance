@@ -1,6 +1,6 @@
 import { ServiceRuntime } from "../../pwa/runtime";
 import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { brandPalettes, publicBrandingSchema, type PublicBranding } from "@sycamore/shared";
+import { applicationTitle, PRODUCT_NAME, PRODUCT_CREDIT, brandPalettes, publicBrandingSchema, type PublicBranding } from "@sycamore/shared";
 
 let activeBranding: PublicBranding | null = null;
 export function currentBranding() {
@@ -34,7 +34,7 @@ export function BrandingProvider({ load, children }: { load: () => Promise<unkno
     }).finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
   }, [load, revision]);
-  useEffect(() => { document.title = value?.appName || "Church configuration required"; }, [value]);
+  useEffect(() => { document.title = applicationTitle(value?.appName); }, [value]);
   const palette = brandPalettes[value?.palette || "forest"];
   return <Context.Provider value={{ value, reload: () => setRevision((v) => v + 1) }}>
     <div className="church-branding" style={{ "--church-brand": palette.light, "--church-brand-dark": palette.dark } as CSSProperties}>
@@ -48,6 +48,11 @@ export function ChurchWordmark() {
   const { value } = useBranding();
   return <div className="wordmark church-wordmark">
     {value?.logo && <img src={value.logo} alt="" width="40" height="40" />}
-    <div>{value?.appName || "Church setup required"}{value?.subtitle && <span>{value.subtitle}</span>}</div>
+    <div>{value?.appName || PRODUCT_NAME}{value?.subtitle && <span>{value.subtitle}</span>}<PoweredBy /></div>
   </div>;
+}
+
+// This credit is not part of the editable public-branding payload.
+export function PoweredBy() {
+  return <small className="powered-by">{PRODUCT_CREDIT}</small>;
 }

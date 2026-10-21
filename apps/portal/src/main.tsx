@@ -714,5 +714,5 @@ async function loadBranding() { return callPortal("getPublicBranding"); }
 
 function Launch() {
   const { value } = useBranding();
-  return <main><h1>{value?.appName || "Church app"}</h1><p>Choose your workspace. Your account determines access.</p><p><a href="/staff/">Staff workspace</a></p><p><a href="/">Member portal</a></p><p>A connection is required. Browser session restoration may retain sign-in; sign out on shared devices.</p></main>;
+  return <main><ChurchWordmark /><h1>{value?.appName || "Foldkeeper"}</h1><p>Choose your workspace. Your account determines access.</p><p><a href="/staff/">Staff workspace</a></p><p><a href="/">Member portal</a></p><p>A connection is required. Browser session restoration may retain sign-in; sign out on shared devices.</p></main>;
 }

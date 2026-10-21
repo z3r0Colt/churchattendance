@@ -9,6 +9,8 @@ Windows desktop church management app for **Sycamore Reformed Presbyterian Churc
 * `PLAN.md` is the product plan and the source of truth for scope and the data model.
 * `DESIGN.md` is the UI design system and screen specs.
 
+The product is **Foldkeeper**. Church names, logos and colors remain configurable; the fixed **Powered by Foldkeeper** credit is not editable church branding. Preserve it across staff/member screens, phone layouts and themes.
+
 ## Approved product direction
 
 The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phase 13 is implemented with passing automated acceptance; Phases 14 through 17 have implementation and passing automated workflow checks; live staging gates remain. Phase 18 remains planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.

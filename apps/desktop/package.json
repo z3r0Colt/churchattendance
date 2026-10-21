@@ -2,8 +2,8 @@
   "name": "@sycamore/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Church attendance for Sycamore RPC",
-  "author": "Sycamore RPC",
+  "description": "Foldkeeper church attendance, administration and shepherding",
+  "author": "Foldkeeper",
   "main": "dist/main.cjs",
   "scripts": {
     "build": "vite build --config vite.config.ts --configLoader runner && node build.mjs",
@@ -34,7 +34,7 @@
   },
   "build": {
     "appId": "org.sycamorerpc.attendance",
-    "productName": "Sycamore RPC",
+    "productName": "Foldkeeper",
     "directories": {
       "output": "../../release"
     },

@@ -9,6 +9,7 @@ The UI design system and screen specs for the church management app, originally 
 The October 20, 2026 direction in [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) governs the next implementation. This section describes planned behavior. Existing screenshots and native/offline specs below are historical where they conflict with it.
 
 - Staff and members use an online PWA on their church origin. Installation is optional and does not change authorization. Use one PWA installation identity per church origin initially, with a deliberate member/staff entry path.
+- Foldkeeper is the product name. Keep church identity primary and show a quiet, readable **Powered by Foldkeeper** credit in the shared wordmark on sign-in, staff/member screens and launch/account-security pages. Keep the credit visible on phones and in light/dark themes. Browser titles and full PWA installation names include Foldkeeper; compact installation names and icons retain church branding.
 - Use validated church branding in the sign-in screen, shell, installation name/icons and exports. Retain Fluent components, readable typography, theme support, WCAG AA contrast and fixed confidentiality labels. Public branding never includes protected settings or member records.
 - Replace Windows-specific wording with browser/device wording. Sign-in remains session-scoped by default. Do not add persistent staff sign-in or private record caching for installation convenience.
 - Kiosk screens and Windows installer/update prompts are excluded from supported PWA navigation.
