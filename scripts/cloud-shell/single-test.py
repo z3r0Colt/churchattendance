@@ -316,6 +316,95 @@ def discover_endpoints(root, discovery_env):
     return endpoints
 
 
+def prepare_function_agents(project, number, google):
+    """Prepare the identities/bindings Firebase requires before its IAM preflight.
+
+    See firebase-tools v15.34.0 deploy/functions/checkIam.ts. Creating an API service
+    does not guarantee its service-agent principal has been materialized yet.
+    """
+    number = str(number)
+    if not number.isdigit():
+        raise SetupError("A verified numeric project number is required for service-agent setup.")
+    runtime = f"{number}-compute@developer.gserviceaccount.com"
+    required = []
+    agents = [
+        ("cloudfunctions.googleapis.com", f"service-{number}@gcf-admin-robot.iam.gserviceaccount.com", "roles/cloudfunctions.serviceAgent"),
+        ("pubsub.googleapis.com", f"service-{number}@gcp-sa-pubsub.iam.gserviceaccount.com", "roles/pubsub.serviceAgent"),
+        ("eventarc.googleapis.com", f"service-{number}@gcp-sa-eventarc.iam.gserviceaccount.com", "roles/eventarc.serviceAgent"),
+        ("run.googleapis.com", f"service-{number}@serverless-robot-prod.iam.gserviceaccount.com", "roles/run.serviceAgent"),
+        ("cloudbuild.googleapis.com", f"service-{number}@gcp-sa-cloudbuild.iam.gserviceaccount.com", "roles/cloudbuild.serviceAgent"),
+        ("artifactregistry.googleapis.com", f"service-{number}@gcp-sa-artifactregistry.iam.gserviceaccount.com", "roles/artifactregistry.serviceAgent"),
+    ]
+    print("Preparing Google service agents and required event-delivery IAM...", flush=True)
+    # Materialize every principal before adding bindings; otherwise setIamPolicy
+    # can reject an otherwise valid binding because the agent does not exist.
+    for service, expected, role in agents:
+        email = command(["gcloud", "beta", "services", "identity", "create", "--service", service,
+                         "--project", project, "--format=value(email)", "--quiet"], capture=True)
+        if email != expected:
+            raise SetupError(f"Unexpected service identity for {service}; no roles were granted to that identity.")
+        required.append((f"serviceAccount:{email}", role))
+    required.extend([
+        (f"serviceAccount:service-{number}@gcp-sa-pubsub.iam.gserviceaccount.com", "roles/iam.serviceAccountTokenCreator"),
+        (f"serviceAccount:{runtime}", "roles/eventarc.eventReceiver"),
+        (f"serviceAccount:{runtime}", "roles/run.invoker"),
+    ])
+    # Firebase's generic error hides whether policy mutation or agent creation
+    # failed. gcloud prints its actual IAM error, without dumping policy contents.
+    for member, role in required:
+        command(["gcloud", "projects", "add-iam-policy-binding", project,
+                 "--member", member, "--role", role, "--condition=None", "--format=none", "--quiet"])
+    policy = google.api("cloudresourcemanager.googleapis.com", f"/v1/projects/{project}:getIamPolicy", "POST",
+                        {"options": {"requestedPolicyVersion": 3}})
+    actual = {(member, binding["role"]) for binding in policy.get("bindings", [])
+              if not binding.get("condition") for member in binding.get("members", [])}
+    if not set(required).issubset(actual):
+        raise SetupError("Required service-agent bindings did not verify; deployment was not attempted.")
+
+
+def prepare_artifact_cleanup(project, google):
+    """Avoid Firebase's next non-interactive prompt, preserving existing policy."""
+    host = "artifactregistry.googleapis.com"
+    name = f"projects/{project}/locations/us-central1/repositories/gcf-artifacts"
+    path = "/v1/" + name
+    repository = google.api(host, path, missing=True)
+    if not repository:
+        operation = google.api(host, f"/v1/projects/{project}/locations/us-central1/repositories?repositoryId=gcf-artifacts",
+                               "POST", {"format": "DOCKER", "description": "Cloud Functions test deployment artifacts"})
+        google.operation(host, operation)
+        repository = google.api(host, path)
+    if repository.get("cleanupPolicies") or repository.get("labels", {}).get("firebase-functions-cleanup-opted-out"):
+        return
+    print("Setting a seven-day test build-image cleanup policy...", flush=True)
+    google.api(host, path + "?updateMask=cleanupPolicies,cleanupPolicyDryRun", "PATCH",
+               {"name": name, "cleanupPolicyDryRun": False, "cleanupPolicies": {
+                   "firebase-functions-cleanup": {"id": "firebase-functions-cleanup", "action": "DELETE",
+                                                  "condition": {"tagState": "ANY", "olderThan": "604800s"}}}})
+
+
+def resume_config(args, google, root):
+    path = root / ".church-operator/single-test-config.json"
+    if not path.is_file():
+        raise SetupError("No previous setup configuration found; omit --resume-deployment for initial setup.")
+    config = json.loads(path.read_text())
+    expected = {"projectId": args.project, "churchId": "testing-rpc", "churchName": args.church_name,
+                "adminEmail": args.admin_email, "origin": f"https://{args.project}.web.app"}
+    if any(config.get(key) != value for key, value in expected.items()):
+        raise SetupError("Resume arguments do not match the existing test setup.")
+    project = google.api("cloudresourcemanager.googleapis.com", f"/v1/projects/{args.project}")
+    if project.get("projectId") != args.project or str(project.get("projectNumber")) != str(config.get("projectNumber")):
+        raise SetupError("Resume project identity does not match the saved configuration.")
+    marker = google.api("firestore.googleapis.com", f"/v1/projects/{args.project}/databases/(default)/documents/deploymentIdentity/church")
+    expected_marker = {"projectId": args.project, "churchId": "testing-rpc", "environment": "staging"}
+    if any(marker.get("fields", {}).get(key, {}).get("stringValue") != value for key, value in expected_marker.items()):
+        raise SetupError("Remote project reservation does not match the test setup.")
+    for file in ["node_modules/.bin/firebase", "functions/lib/index.js", "packages/shared/lib/index.js",
+                 "apps/portal/dist/index.html", "apps/portal/dist/staff/index.html"]:
+        if not (root / file).is_file():
+            raise SetupError("A required build output is missing; omit --resume-deployment to rebuild.")
+    return config
+
+
 def deploy(args, google, config, root):
     env = dict(os.environ)
     sdk = config["firebase"]
@@ -352,11 +441,16 @@ def deploy(args, google, config, root):
     parameter_file = root / "functions" / f".env.{args.project}"
     parameter_file.write_text("\n".join(f"{key}={value}" for key, value in params.items()) + "\n")
     parameter_file.chmod(0o600)
-    print("Installing and building the pinned app; this can take several minutes...", flush=True)
-    command(["npm", "ci"], cwd=root, env=env)
-    command(["npm", "run", "build"], cwd=root, env=env)
-    command(["npm", "run", "check:bundles"], cwd=root, env=env)
-    command(["node", str(private / "initialize.mjs")], cwd=root, env=env)
+    if not getattr(args, "resume_deployment", False):
+        print("Installing and building the pinned app; this can take several minutes...", flush=True)
+        command(["npm", "ci"], cwd=root, env=env)
+        command(["npm", "run", "build"], cwd=root, env=env)
+        command(["npm", "run", "check:bundles"], cwd=root, env=env)
+        command(["node", str(private / "initialize.mjs")], cwd=root, env=env)
+    else:
+        print("Resuming the existing build; preserving church defaults and the administrator setup link...", flush=True)
+    prepare_function_agents(args.project, config["projectNumber"], google)
+    prepare_artifact_cleanup(args.project, google)
     # Modern projects may not grant the default runtime identity broad Editor access.
     # Grant only application roles inside this isolated test project, plus source-bucket access.
     runtime = f"{config['projectNumber']}-compute@developer.gserviceaccount.com"
@@ -416,6 +510,8 @@ def main():
     parser.add_argument("--church-name", required=True)
     parser.add_argument("--admin-email", required=True)
     parser.add_argument("--release", required=True)
+    parser.add_argument("--resume-deployment", action="store_true",
+                        help="Reuse the verified existing checkout/configuration; do not reinstall or reinitialize records/accounts")
     args = parser.parse_args()
     validate(args)
     os.umask(0o077)
@@ -430,7 +526,7 @@ def main():
     # Explicit target everywhere; never change the user's default gcloud project.
     enable_services(args.project)
     root = source_checkout(args.release)
-    config = provision(args, google)
+    config = resume_config(args, google, root) if args.resume_deployment else provision(args, google)
     deploy(args, google, config, root)
 
 

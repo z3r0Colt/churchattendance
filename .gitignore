@@ -25,3 +25,6 @@ service-account*.json
 *.operator-registry.json
 recovery-artifacts/
 functions/recovery-config.json
+
+__pycache__/
+*.py[cod]
