@@ -327,13 +327,12 @@ def prepare_function_agents(project, number, google):
         raise SetupError("A verified numeric project number is required for service-agent setup.")
     runtime = f"{number}-compute@developer.gserviceaccount.com"
     required = []
+    # Firebase IAM preflight needs Pub/Sub and Eventarc identities. Do not infer
+    # Cloud Build/Run/Artifact Registry service-agent identities from this API.
+    # Their API-managed identities are distinct from build execution accounts.
     agents = [
-        ("cloudfunctions.googleapis.com", f"service-{number}@gcf-admin-robot.iam.gserviceaccount.com", "roles/cloudfunctions.serviceAgent"),
         ("pubsub.googleapis.com", f"service-{number}@gcp-sa-pubsub.iam.gserviceaccount.com", "roles/pubsub.serviceAgent"),
         ("eventarc.googleapis.com", f"service-{number}@gcp-sa-eventarc.iam.gserviceaccount.com", "roles/eventarc.serviceAgent"),
-        ("run.googleapis.com", f"service-{number}@serverless-robot-prod.iam.gserviceaccount.com", "roles/run.serviceAgent"),
-        ("cloudbuild.googleapis.com", f"service-{number}@gcp-sa-cloudbuild.iam.gserviceaccount.com", "roles/cloudbuild.serviceAgent"),
-        ("artifactregistry.googleapis.com", f"service-{number}@gcp-sa-artifactregistry.iam.gserviceaccount.com", "roles/artifactregistry.serviceAgent"),
     ]
     print("Preparing Google service agents and required event-delivery IAM...", flush=True)
     # Materialize every principal before adding bindings; otherwise setIamPolicy

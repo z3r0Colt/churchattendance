@@ -98,15 +98,18 @@ class AgentIamTests(unittest.TestCase):
         google = SimpleNamespace(api=lambda *a, **kw: {"bindings": [{"role": role, "members": [member]} for member, role in granted]})
         with patch.object(setup, "command", side_effect=run):
             setup.prepare_function_agents("fixture-project", "123456", google)
-        self.assertTrue(all("--service" in args for args in calls[:6]))
-        self.assertTrue(all("--service" not in args for args in calls[6:]))
+        self.assertTrue(all("--service" in args for args in calls[:2]))
+        self.assertTrue(all("--service" not in args for args in calls[2:]))
+        identity_services = [args[args.index("--service") + 1] for args in calls if "--service" in args]
+        self.assertEqual(identity_services, ["pubsub.googleapis.com", "eventarc.googleapis.com"])
+        self.assertFalse(any(role in ["roles/cloudbuild.serviceAgent", "roles/run.serviceAgent", "roles/cloudfunctions.serviceAgent", "roles/artifactregistry.serviceAgent"] for member, role in granted))
         self.assertIn(("serviceAccount:123456-compute@developer.gserviceaccount.com", "roles/run.invoker"), granted)
         self.assertIn(("serviceAccount:123456-compute@developer.gserviceaccount.com", "roles/eventarc.eventReceiver"), granted)
         self.assertIn(("serviceAccount:service-123456@gcp-sa-pubsub.iam.gserviceaccount.com", "roles/iam.serviceAccountTokenCreator"), granted)
         self.assertFalse(any(role in ["roles/editor", "roles/owner"] or member == "allUsers" for member, role in granted))
 
     def test_wrong_project_service_identity_does_not_receive_grants(self):
-        with patch.object(setup, "command", return_value="service-999@gcf-admin-robot.iam.gserviceaccount.com") as command:
+        with patch.object(setup, "command", return_value="service-999@gcp-sa-pubsub.iam.gserviceaccount.com") as command:
             with self.assertRaisesRegex(setup.SetupError, "Unexpected service identity"):
                 setup.prepare_function_agents("fixture-project", "123456", None)
         self.assertEqual(command.call_count, 1)
