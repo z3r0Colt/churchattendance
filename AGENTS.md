@@ -22,7 +22,7 @@ Public branding must be allowlisted separately from protected settings. Producti
 ## Stack
 
 * Desktop app built with Electron, React, TypeScript and Vite, with Fluent UI React v9
-* Firebase for Authentication (roles in custom claims), Cloud Firestore (with persistent offline cache), Cloud Storage, and Cloud Functions 2nd gen on Node 22
+* Firebase for Authentication (roles in custom claims), Cloud Firestore (memory-only records in the supported web apps), Cloud Storage, and Cloud Functions 2nd gen on Node 22
 * Email through Microsoft Graph from the shared mailbox office@sycamorerpc.org
 * SMS through Twilio, behind a provider interface
 * ExcelJS for XLSX, Papa Parse for CSV, Chart.js for charts, Electron printToPDF for PDF

@@ -126,4 +126,18 @@ try {
   };
   const report = await restore({ source, target, manifest, registry, driver, save });
   console.log(JSON.stringify({ drill: "fictional-emulator", status: report.status, measuredRtoSeconds: report.measuredRtoSeconds, measuredRpoSeconds: report.measuredRpoSeconds, restored: ["history", "photos", "disabled-accounts", "private-path-bound-encryption", "role-denials"], delivery: "disabled" }));
-} finally { await rules?.cleanup(); await Promise.all([original.db.terminate(), recovered.db.terminate()]); await Promise.all([deleteApp(original.app), deleteApp(recovered.app)]); }
+} finally {
+  await rules?.cleanup();
+  // The Storage emulator shares its rule engine across project fixtures. Restore the
+  // application project's policy while explicitly keeping the recovery bucket denied.
+  const policy = (await readFile("storage.rules", "utf8")).replace(/: if /g, `: if bucket != '${target.storageBucket}' && `);
+  const applicationRules = await initializeTestEnvironment({ projectId: "demo-sycamore", storage: { host: "127.0.0.1", port: 9199, rules: policy } });
+  try {
+    await assertFails(getBytes(ref(applicationRules.unauthenticatedContext().storage(target.storageBucket), "photos/fictional-recovery/current.png")));
+    const staff = applicationRules.authenticatedContext("demo-pastor", { roles: ["pastor", "admin"], email_verified: true, auth_time: Math.floor(Date.now() / 1000), firebase: { sign_in_second_factor: "totp" } });
+    await assertFails(getBytes(ref(staff.storage(target.storageBucket), "photos/fictional-recovery/current.png")));
+  }
+  finally { await applicationRules.cleanup(); }
+  await Promise.all([original.db.terminate(), recovered.db.terminate()]);
+  await Promise.all([deleteApp(original.app), deleteApp(recovered.app)]);
+}

@@ -40,10 +40,10 @@ Build from the reviewed repair branch, including its fixes. Do not silently star
 | Phase | Deliverable | Depends on | Status |
 |---|---|---|---|
 | 13 | Church configuration and branding | Repaired application baseline | Implemented; automated acceptance passed, see [Phase 13](PHASE_13.md) |
-| 14 | PWA packaging and online-only workflows | 13 | Planned |
-| 15 | Repeatable Firebase church provisioning | 13 and 14 | Planned |
-| 16 | Backups and verified recovery | 15 | Planned |
-| 17 | Operator tools and controlled releases | 15 and 16 | Planned |
+| 14 | PWA packaging and online-only workflows | 13 | Implemented; automated verification in progress, device/install staging pending |
+| 15 | Repeatable Firebase church provisioning | 13 and 14 | Operator tooling implemented; emulator/staging gates tracked in the runbook |
+| 16 | Backups and verified recovery | 15 | Backup job and fictional recovery drill implemented; cloud recovery staging pending |
+| 17 | Operator tools and controlled releases | 15 and 16 | Registry/release CLI implemented; live release/rollback staging pending |
 | 18 | Pilot and paid-service acceptance | 13 through 17 | Planned |
 
 Implement one phase at a time in focused commits. Mark a phase complete only after its acceptance checks have evidence. Do not create live projects, change DNS, send real messages or enable billing merely to implement local tooling. Live staging work is a separate explicitly authorized rollout step.

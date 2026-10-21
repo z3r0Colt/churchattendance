@@ -195,11 +195,10 @@ export function useAttendanceData(selectedDate = "") {
   };
 }
 export async function addVisitor(data: unknown) {
-  return connectedOperation(() => httpsCallable(functions, "addVisitor")(visitorInputSchema.parse(data)));
+  const input = visitorInputSchema.parse(data);
+  return connectedOperation(() => httpsCallable(functions, "addVisitor")(input));
 }
 export async function createHousehold(data: unknown) {
-  return connectedOperation(() => httpsCallable(
-    functions,
-    "createHousehold",
-  )(createHouseholdSchema.parse(data)));
+  const input = createHouseholdSchema.parse(data);
+  return connectedOperation(() => httpsCallable(functions, "createHousehold")(input));
 }

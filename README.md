@@ -4,9 +4,9 @@ Attendance, communication and shepherding with staff and member web access. Prod
 
 ## Next development milestone
 
-The approved direction is an online PWA service on Firebase, with church branding and a separate Firebase project for each church. Read [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) for Phases 13 through 18, implementation order and release gates. Start with Phase 13 church configuration and branding.
+The approved direction is an online PWA service on Firebase, with church branding and a separate Firebase project for each church. Read [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) for Phases 13 through 18, implementation order and release gates. Phase 13 branding is verified. Phases 14–17 now have implementation and automated checks; live staging acceptance remains separate.
 
-This is a plan, not a completed migration. Existing commands below still describe the baseline. Native Windows releases, signing, kiosk and offline persistence are no longer PWA launch requirements. Provisioning, security/provider acceptance, backups and recovery remain required. Giving/accounting and denomination configuration are deferred.
+The supported product path is staff/member web. See [PWA verification](docs/PHASE_14.md) and the [operator runbook](docs/OPERATOR_RUNBOOK.md) for the current code, evidence and staging gates. Earlier phase notes below describe their historical baselines. Native Windows releases, signing, kiosk and offline persistence are no longer PWA launch requirements. Provisioning, security/provider acceptance, backups and recovery remain required. Giving/accounting and denomination configuration are deferred.
 
 ## Approved expansion
 
@@ -14,7 +14,7 @@ All ten feature areas from the October 18 TendFlock comparison are in scope. [Ex
 
 ## Run locally
 
-Install Node 22 and Java 21 or newer. From the repository root run `npm install`, then `npm run dev`. Firebase emulators start locally, fictional people are seeded, and Electron opens. The seed script refuses to run without emulator endpoints.
+Install Node 22 and Java 21 or newer. From the repository root run `npm install`, then `npm run dev`. Firebase emulators start locally, fictional people are seeded, and the staff/member web development servers start. Staff opens at http://localhost:5175/staff/ and the portal at http://localhost:5174. The seed script refuses to run without emulator endpoints.
 
 Local accounts, both using password `LocalDemo123!`
 
@@ -23,13 +23,13 @@ Local accounts, both using password `LocalDemo123!`
 | pastor@example.test | Pastor and Admin |
 | volunteer@example.test | Attendance Volunteer |
 
-`npm run dev:ui` opens only the renderer development server for browser testing. It still needs running Firebase emulators. `npm run seed` can populate emulators that are already running when the Auth and Firestore emulator environment variables are set.
+`npm run dev:ui` serves the staff web at `/staff/` without starting emulators. `npm run dev:legacy` is the optional Electron development path. It still needs running Firebase emulators. `npm run seed` can populate emulators that are already running when the Auth and Firestore emulator environment variables are set.
 
 ## Implemented in this milestone
 
-* Hardened Electron shell, named preload methods, sign-in, custom-claim roles, 30-minute idle sign-out, light/dark/system themes.
+* Staff/member web with an install manifest, controlled updates, sign-in, live role/assurance checks, 30-minute idle sign-out and light/dark/system themes. The hardened Electron source remains optional.
 * Names-only attendance roster, household roll call, search, Enter/Space/arrow shortcuts, live totals, household clear with Undo, collapsed non-resident list.
-* Firestore IndexedDB persistence and field-level roll-call updates. Starting a service requires a connection; marking a cached service works offline.
+* Memory-only records and field-level attendance updates. A connection is required; unconfirmed writes stay pending and disconnected users cannot start changes. Closing the app may lose unconfirmed work.
 * Visitor quick add and household entry through validated Functions. Consent defaults off. Atomic membership history on household creation and membership changes. The person update API takes only changed fields.
 * Historical attendance reports with date, service type, membership and district filters. Reports include a summary, matrix, shepherding, visitor follow-up and membership roll. XLSX files use Summary, Detail and Data sheets, and PDF templates support readable multi-page reports. Missing history is flagged.
 * Default-deny Firestore and Storage rules, Session isolation, assigned Deacon task completion, a server-owned audit trail, emulator tests and browser workflow tests.
@@ -38,19 +38,19 @@ Private records cannot be read or written directly by clients, even by Session. 
 
 ## Checks
 
-Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run test:rules`, and `npm run test:e2e`. Install the Playwright browser once with `npx playwright install chromium`. Rules tests need Java 21 and use local emulators. End-to-end tests exercise the same Firebase renderer code in Chromium, including marking offline and checking synchronization in a second browser context. They do not yet test an Electron restart while disconnected.
+Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run test:rules`, and `npm run test:e2e`. Install the Playwright browser once with `npx playwright install chromium`. Rules tests need Java 21 and use local emulators. End-to-end tests exercise the supported web renderer in Chromium, including connection loss, server acknowledgments, concurrent field updates, security lock and the existing privacy workflows. CI also provisions two fictional emulator churches and restores a fictional church into an isolated recovery project.
 
 ## Connecting a live church project
 
 No live Firebase project is created or deployed by this milestone. Create the church-owned project with Firestore, email/password Authentication and Storage, and enable billing before deploying Functions. Copy `.env.example` to `.env`, set `VITE_USE_EMULATORS=false`, and fill the public Firebase web config. Never place service-account keys or provider secrets in the renderer.
 
-The first administrator must be bootstrapped through a trusted Admin SDK environment with `roles: ['pastor', 'admin']` in custom claims, verified email and the Phase 7 MFA setup. No account may grant itself roles. Only a Session administrator can grant or remove Session roles. After bootstrap, Account security can create other staff accounts and manage roles without sending an invitation email. An Admin or Pastor can configure church settings, service types and elder districts in Settings. The church settings include an IANA `timeZone`. The emulator seed is not a production provisioning tool.
+The chosen administrator is bootstrapped through the trusted operator process with explicitly approved roles, starting with Admin. Session is never automatic. Email verification and real MFA/passkey enrollment remain required before record access. No account may grant itself roles. Only a Session administrator can grant or remove Session roles. After bootstrap, Account security can create other staff accounts and manage roles without sending an invitation email. An Admin or Pastor can configure church settings, service types and elder districts in Settings. The church settings include an IANA `timeZone`. The emulator seed is not a production provisioning tool.
 
 Functions bundle shared schemas into their output so deployment does not depend on a private npm registry. Build before deployment, then deploy using an explicit project ID. This foundation has not been reviewed for production use with real church records.
 
 ## Remaining Phase 1 work
 
-Managed backup provisioning, signed installer/release testing, offline restart recovery and update publishing remain. Phase 7 adds staff account/role setup and security screens; live Identity Platform, origin, key and recovery configuration still require staging verification. Phase 5 adds person editing, membership history, elder districts, church/service setup and a scoped document archive. The archive has explicit exclusions and does not replace managed backups. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
+Historical native release work (signed installers, offline restart recovery and native update publishing) is outside the supported PWA launch path. Managed backup/recovery and live staging acceptance are covered by Phases 15–18. Phase 7 adds staff account/role setup and security screens; live Identity Platform, origin, key and recovery configuration still require staging verification. Phase 5 adds person editing, membership history, elder districts, church/service setup and a scoped document archive. The archive has explicit exclusions and does not replace managed backups. `npm run dist` defines NSIS packaging and GitHub update metadata, but does not publish or sign a release.
 
 ## Phase 2 communication
 
