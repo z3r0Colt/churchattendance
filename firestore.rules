@@ -36,7 +36,7 @@ service cloud.firestore {
         marks[personId] is map && marks[personId].keys().hasAll(['at', 'method', 'byUid']) &&
         marks[personId].keys().hasOnly(['at', 'method', 'byUid', 'mode']) &&
         marks[personId].at == request.time && marks[personId].byUid == request.auth.uid &&
-        marks[personId].method in ['roll', 'kiosk'] &&
+        marks[personId].method == 'roll' &&
         marks[personId].get('mode', 'inPerson') in ['inPerson', 'online'] &&
         (marks[personId].method == 'roll' || marks[personId].get('mode', 'inPerson') == 'inPerson'));
     }

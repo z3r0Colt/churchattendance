@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import { randomBytes, createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { initializeTestEnvironment, assertFails } from "@firebase/rules-unit-testing";
+import { initializeTestEnvironment, assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
 import { doc, getDoc } from "firebase/firestore";
 import { descriptor } from "./model.mjs";
 import { firebaseDriver } from "./firebase.mjs";
 import { captureBackup, readBackup } from "./artifacts.mjs";
 import { restore } from "./recovery.mjs";
-import { seal, unseal } from "../../functions/lib/security/encryption.js";
+import { seal, unseal } from "../../functions/lib/recovery-encryption.js";
 const require = createRequire(new URL("../../functions/package.json", import.meta.url));
 const { deleteApp } = require("firebase-admin/app");
 const source = descriptor(JSON.parse(await readFile("config/deployments/cedar.example.json", "utf8")));
@@ -20,11 +20,14 @@ let rules;
 try {
   const ring = (await original.db.doc("operatorEmulator/secrets").get()).get("ring");
   if (!ring) throw new Error("Run emulator-smoke.mjs before the recovery drill");
+  const { personInputSchema, householdInputSchema, toRoster } = await import("@sycamore/shared");
   const privatePath = "careNotes/fictional-recovery";
-  await original.db.doc("people/fictional-recovery").set({ firstName: "Fictional", lastName: "Recovery", householdId: "fictional-family", membershipStatus: "communicant" });
+  const person = personInputSchema.parse({ firstName: "Fictional", lastName: "Recovery", householdId: "fictional-family", membershipStatus: "communicant" });
+  await original.db.doc("people/fictional-recovery").set(person);
+  await original.db.doc("attendanceRoster/fictional-recovery").set(toRoster("fictional-recovery", person, "Fictional Recovery Household"));
   await original.db.doc("people/fictional-recovery/membershipEvents/initial").set({ date: "2026-10-01", fromStatus: null, toStatus: "communicant", method: "initial" });
-  await original.db.doc("households/fictional-family").set({ name: "Fictional Recovery Household" });
-  await original.db.doc("services/am_2026-11-01").set({ date: "2026-11-01", present: { "fictional-recovery": { method: "roll", mode: "inPerson" } } });
+  await original.db.doc("households/fictional-family").set(householdInputSchema.parse({ name: "Fictional Recovery Household", address: "", homePhone: "" }));
+  await original.db.doc("services/am_2026-11-01").set({ serviceTypeId: "am", date: "2026-11-01", notes: "", lastAttendancePersonId: "fictional-recovery", present: { "fictional-recovery": { method: "roll", mode: "inPerson" } } });
   await original.db.doc(privatePath).set({ personId: "fictional-recovery", encrypted: seal({ body: "Fictional Session recovery fixture" }, privatePath, ring) });
   await original.db.doc("mercyNotes/fictional-recovery").set({ householdId: "fictional-family", encrypted: seal({ body: "Fictional mercy recovery fixture" }, "mercyNotes/fictional-recovery", ring) });
   const photo = Buffer.from("fictional-photo-recovery-bytes");
@@ -95,7 +98,9 @@ try {
       }
       if (step === "validate-role-denials") {
         for (const role of ["admin", "deacon", "elder"]) {
-          const db = rules.authenticatedContext(`fictional-${role}`, { roles: [role], email_verified: true }).firestore();
+          await recovered.db.doc(`staffAccess/fictional-${role}`).set({ enabled: true, roles: [role], validAfter: 0 });
+          const db = rules.authenticatedContext(`fictional-${role}`, { roles: [role], email_verified: true, auth_time: Math.floor(Date.now() / 1000), firebase: { sign_in_second_factor: "totp" } }).firestore();
+          await assertSucceeds(getDoc(doc(db, "people/fictional-recovery")));
           await assertFails(getDoc(doc(db, privatePath))); await assertFails(getDoc(doc(db, "mercyNotes/fictional-recovery")));
         }
         assert.equal((await recovered.db.doc("communicationSettings/church").get()).get("emailEnabled"), false);

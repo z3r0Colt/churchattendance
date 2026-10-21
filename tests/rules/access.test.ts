@@ -474,7 +474,7 @@ describe("roll call and identity", () => {
         lastAttendancePersonId: "alex",
       }),
     );
-    // Online worship is a mode on the same mark. Unknown modes and online kiosk marks are refused.
+    // Online worship is a mode on the same mark. New client kiosk attribution is retired.
     await assertSucceeds(
       updateDoc(service, {
         "present.alex": { ...mark("attendanceVolunteer"), mode: "online" },
@@ -503,6 +503,7 @@ describe("roll call and identity", () => {
         lastAttendancePersonId: "alex",
       }),
     );
+    await assertFails(updateDoc(service, { "present.alex": { ...mark("attendanceVolunteer"), method: "kiosk", mode: "inPerson" }, lastAttendancePersonId: "alex" }));
     await assertFails(updateDoc(service, { date: "2026-11-02" }));
     await assertFails(updateDoc(service, { notes: "Changed" }));
     await assertFails(

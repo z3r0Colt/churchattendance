@@ -1,8 +1,8 @@
 import { build } from "esbuild";
 // Bundle shared validation into the upload. There is no private npm package to resolve in Cloud Build.
 await build({
-  entryPoints: ["src/index.ts"],
-  outfile: "lib/index.js",
+  entryPoints: { index: "src/index.ts", "recovery-encryption": "src/security/encryption.ts" },
+  outdir: "lib",
   bundle: true,
   preserveSymlinks: true,
   platform: "node",
