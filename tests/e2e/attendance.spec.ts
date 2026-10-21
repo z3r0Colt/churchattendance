@@ -21,7 +21,7 @@ async function login(page: Page, email = "volunteer@example.test") {
     page.getByRole("button", { name: "James Calder,", exact: false }),
   ).toBeVisible();
 }
-test("a volunteer marks while offline and the mark reaches a second PC after reconnecting", async ({
+test("a disconnected volunteer cannot start a change, then confirms it online on a second device", async ({
   page,
   browser,
 }) => {
@@ -35,12 +35,13 @@ test("a volunteer marks while offline and the mark reaches a second PC after rec
   await expect(james).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText("Online", { exact: true })).toBeVisible();
   await page.context().setOffline(true);
+  await expect(page.locator(".content [inert]")).toBeVisible();
+  await expect(james).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByText("Connection required", { exact: true })).toBeVisible();
+  await page.context().setOffline(false);
+  await expect(page.getByText("Online", { exact: true })).toBeVisible();
   await james.click();
   await expect(james).toHaveAttribute("aria-pressed", "true");
-  await expect(
-    page.getByText("Offline, changes saved on this PC", { exact: true }),
-  ).toBeVisible();
-  await page.context().setOffline(false);
   await expect(page.getByText("Online", { exact: true })).toBeVisible();
   const second = await browser.newContext();
   const other = await second.newPage();

@@ -1,3 +1,4 @@
+import { ConnectionControls } from "../../pwa/runtime";
 import {
   lazy,
   Suspense,
@@ -176,9 +177,9 @@ import { staffWeb } from "./platform";
 function WorkspaceContent({ children }: { children: ReactNode }) {
   return (
     <main className="content">
-      <Suspense fallback={<Spinner label="Loading this workspace" />}>
+      <ConnectionControls><Suspense fallback={<Spinner label="Loading this workspace" />}>
         {children}
-      </Suspense>
+      </Suspense></ConnectionControls>
     </main>
   );
 }
@@ -463,13 +464,11 @@ function Workspace({
   const sync = data.error
     ? "Some changes did not save"
     : !data.online
-      ? staffWeb
-        ? "Offline, keep this tab open"
-        : "Offline, changes saved on this PC"
+      ? "Connection required"
       : data.pending
         ? "Saving"
         : data.cacheOnly
-          ? "Connecting, using cached data"
+          ? "Waiting for server records"
           : "Online";
   async function start() {
     setBusy(true);
@@ -756,11 +755,7 @@ function Workspace({
       <WorkspaceContent>
         {!data.online && (
           <MessageBar intent="warning">
-            {staffWeb && page !== "attendance"
-              ? "You are offline. Only attendance marks work offline in the browser. Changes on this page need a connection."
-              : staffWeb
-                ? "You are offline. Marks are kept in this tab until the connection returns, so keep this tab open."
-                : "You are offline. Attendance changes stay on this PC until the connection returns."}
+            Connection required. Reconnect before changing records. Unconfirmed work may be lost if this tab closes.
           </MessageBar>
         )}
         {data.error && (
@@ -855,8 +850,7 @@ function Workspace({
                 <CheckmarkCircleRegular fontSize={40} />
                 <Subtitle2>No roll call started for this service</Subtitle2>
                 <p>
-                  Open the service while connected, then attendance will also
-                  work offline.
+                  A connection is required to open the service and confirm attendance changes.
                 </p>
                 <Button
                   appearance="primary"
@@ -1426,6 +1420,7 @@ function VisitorDrawer({
   people: RosterPerson[];
   close: () => void;
 }) {
+  const [requestId] = useState(() => crypto.randomUUID());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [firstTime, setFirstTime] = useState(true);
@@ -1441,6 +1436,7 @@ function VisitorDrawer({
     setBusy(true);
     try {
       await addVisitor({
+        requestId,
         serviceId,
         firstName: form.get("firstName"),
         lastName: form.get("lastName"),
@@ -1543,6 +1539,7 @@ function HouseholdDrawer({ date, close }: { date: string; close: () => void }) {
       membershipStatus: "communicant" as MembershipStatus,
     },
   ]);
+  const [requestId] = useState(() => crypto.randomUUID());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -1551,6 +1548,7 @@ function HouseholdDrawer({ date, close }: { date: string; close: () => void }) {
     setBusy(true);
     try {
       await createHousehold({
+        requestId,
         date,
         household: {
           name: form.get("name"),

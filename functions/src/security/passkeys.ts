@@ -1,3 +1,4 @@
+import { requireLegacyDelivery } from "../delivery.js";
 import { readPublicBranding } from "../branding.js";
 import { createHash, randomBytes } from "node:crypto";
 import { getAuth } from "firebase-admin/auth";
@@ -301,6 +302,7 @@ export const removeMyPasskey = onCall(async (request) => {
 });
 // The verifier remains inside the desktop process. The browser receives its SHA-256 challenge.
 export const approveDesktopSignIn = onCall(async (request) => {
+  requireLegacyDelivery();
   origin(request);
   const actor = await requireRoles(request, allRoles);
   requireRecent(request);
@@ -326,6 +328,7 @@ export const approveDesktopSignIn = onCall(async (request) => {
   return { approved: true };
 });
 export const completeDesktopSignIn = onCall(async (request) => {
+  requireLegacyDelivery();
   const input = parse(handoffSchema, request.data),
     ref = db.doc(`desktopHandoffs/${input.id}`);
   const grant = await db.runTransaction(async (tx) => {

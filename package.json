@@ -10,7 +10,7 @@
     "apps/portal"
   ],
   "scripts": {
-    "dev": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/dev.mjs\"",
+    "dev": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/staff-web-dev.mjs\"",
     "dev:ui": "vite --config apps/desktop/vite.config.ts --host 127.0.0.1",
     "seed": "node scripts/seed.mjs",
     "lint": "eslint .",
@@ -18,13 +18,16 @@
     "test": "vitest run --configLoader runner",
     "test:rules": "firebase emulators:exec --project demo-sycamore --only firestore,storage \"vitest run --config vitest.rules.config.ts --configLoader runner\"",
     "test:e2e": "npm run build && npm run check:bundles && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/seed.mjs && playwright test\"",
-    "build": "npm run build -w @sycamore/shared && npm run build -w @sycamore/desktop && npm run build -w @sycamore/portal && npm run build:web -w @sycamore/desktop && npm run build -w @sycamore/functions",
-    "dist": "npm run build && npm exec -w @sycamore/desktop -- electron-builder --win nsis --publish never",
+    "build": "npm run build -w @sycamore/shared && npm run build -w @sycamore/portal && npm run build:web -w @sycamore/desktop && node scripts/build-pwa.mjs && npm run build -w @sycamore/functions",
+    "dist": "npm run build:legacy && npm exec -w @sycamore/desktop -- electron-builder --win nsis --publish never",
     "dev:portal": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/portal-dev.mjs\"",
     "dev:portal:ui": "npm run dev -w @sycamore/portal",
     "dev:staff": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/staff-web-dev.mjs\"",
     "audit:dependencies": "node scripts/audit-dependencies.mjs",
-    "check:bundles": "node scripts/check-bundle-budgets.mjs"
+    "check:bundles": "node scripts/check-bundle-budgets.mjs",
+    "dev:legacy": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/dev.mjs\"",
+    "build:legacy": "npm run build && npm run build -w @sycamore/desktop",
+    "test:operations": "node --experimental-strip-types --test scripts/tests/*.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

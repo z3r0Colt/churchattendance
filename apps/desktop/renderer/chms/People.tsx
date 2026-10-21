@@ -59,6 +59,8 @@ export function People({
     value: Record<string, unknown>;
     person?: Person;
   } | null>(null);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  useEffect(() => { setRequestId(crypto.randomUUID()); }, [editing]);
   const [contact, setContact] = useState<Person | null>(null);
   const editor = hasRole(roles, EDITOR_ROLES),
     selected = people.rows.find((row) => row.id === selectedId);
@@ -362,6 +364,7 @@ export function People({
               value;
             if (editing.kind === "new")
               return addPerson({
+                requestId,
                 date,
                 person: personInputSchema.parse(personFields),
               });

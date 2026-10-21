@@ -1033,3 +1033,12 @@ describe("public branding is exposed only through the reviewed callable projecti
     }
   });
 });
+
+describe("creation retry receipts stay server-owned", () => {
+  it("denies anonymous and every staff role both reads and writes", async () => {
+    for (const db of [env.unauthenticatedContext().firestore(), ...["admin", "pastor", "clerk", "elder", "deacon", "attendanceVolunteer", "readOnly"].map((role) => auth(role).firestore())]) {
+      await assertFails(getDoc(doc(db, "creationReceipts/receipt")));
+      await assertFails(setDoc(doc(db, "creationReceipts/receipt"), { result: { id: "forged" } }));
+    }
+  });
+});

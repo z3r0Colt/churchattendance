@@ -1,3 +1,4 @@
+import { createOnce } from "./creation.js";
 import {
   FieldPath,
   FieldValue,
@@ -151,7 +152,7 @@ export const addPerson = onCall(async (request) => {
       "invalid-argument",
       "Record communication consent after adding the person.",
     );
-  await db.runTransaction(async (tx) => {
+  return createOnce(actor.uid, "person", input, async (tx) => {
     const family = await tx.get(
       db.doc(`households/${input.person.householdId}`),
     );
@@ -186,8 +187,8 @@ export const addPerson = onCall(async (request) => {
         reason: "Initial roll entry",
       }),
     );
+    return { id: person.id };
   });
-  return { id: person.id };
 });
 
 // Timestamps retain nanoseconds in an inspectable, versioned archive; this is not a restore protocol.

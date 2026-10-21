@@ -55,7 +55,7 @@ export const saveHouseholdSchema = householdInputSchema.extend({
   expectedRevision: revisionSchema,
 });
 export const addPersonSchema = z
-  .object({ person: personInputSchema, date: dateSchema })
+  .object({ person: personInputSchema, date: dateSchema, requestId: z.uuid().optional() })
   .strict();
 
 // An explicit allowlist prevents an export request from reaching operational secrets or capabilities.

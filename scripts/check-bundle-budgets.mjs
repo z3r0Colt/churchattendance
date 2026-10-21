@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 const budgets = [
-  ["Desktop", "apps/desktop/dist/renderer", 510_000],
   ["Staff web", "apps/portal/dist/staff", 480_000],
   ["Member portal", "apps/portal/dist", 260_000],
 ];

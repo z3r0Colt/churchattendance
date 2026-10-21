@@ -50,6 +50,7 @@ export function useAuth() {
             assured: false,
             error: "",
           });
+          window.dispatchEvent(new Event("church-security-cleared"));
           location.reload();
           return;
         }

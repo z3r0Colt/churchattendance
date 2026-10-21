@@ -3,15 +3,12 @@ import { firebaseDeployment } from "@sycamore/shared";
 import {
   browserSessionPersistence,
   connectAuthEmulator,
-  getAuth,
   initializeAuth,
 } from "firebase/auth";
 import {
   connectFirestoreEmulator,
   initializeFirestore,
   memoryLocalCache,
-  persistentLocalCache,
-  persistentMultipleTabManager,
   clearIndexedDbPersistence,
 } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
@@ -20,18 +17,9 @@ import { emulators, staffWeb } from "../platform";
 export const configured =
   emulators || !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
 const app = initializeApp(firebaseDeployment(import.meta.env, emulators, staffWeb ? location.origin : undefined));
-// The staff web keeps its sign-in to this tab and its records in memory, so a shared or
-// borrowed browser holds nothing after the tab closes. The desktop keeps the persistent roll-call cache.
-export const auth = staffWeb
-  ? initializeAuth(app, { persistence: browserSessionPersistence })
-  : getAuth(app);
-export const db = initializeFirestore(app, {
-  localCache: staffWeb
-    ? memoryLocalCache()
-    : persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
-});
+// Browser session restoration may retain this session. Explicit sign-out is required on shared devices.
+export const auth = initializeAuth(app, { persistence: browserSessionPersistence });
+export const db = initializeFirestore(app, { localCache: memoryLocalCache() });
 // One-time upgrade from the old direct private-record subscriptions. Fail closed if another tab holds the cache open.
 export const privateCacheReady =
   staffWeb || localStorage.getItem("private-cache-version") === "8"

@@ -353,6 +353,8 @@ securityChallenges/{id}      uid, kind, challenge, used, expiresAt
 desktopHandoffs/{id}         uid, challenge, authTime, validAfter, used, expiresAt
 securityBudgets/{id}         count, expiresAt
 securityEvents/{id}          actorUid, action, outcome, scope (security | session), target, at
+creationReceipts/{sha256}    uid, kind, inputHash, result{id}, createdAt (server-only atomic creation retry receipts; no request body)
+
 publicBranding/church        churchId, projectId (operator-bound), churchName, appName, subtitle,
                              palette (forest | navy | plum), website (HTTPS or empty), contactEmail,
                              contactPhone, logo (inline PNG or empty), revision, updatedAt, updatedBy

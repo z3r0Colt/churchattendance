@@ -1,3 +1,4 @@
+import { connectedOperation } from "../../../pwa/runtime";
 import { useEffect, useState } from "react";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -62,7 +63,7 @@ export async function chmsCall<T = unknown>(
   name: string,
   input: unknown,
 ): Promise<T> {
-  const result = (await httpsCallable<unknown, T>(functions, name)(input)).data;
+  const result = await connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data);
   if (
     [
       "saveCareNote",
@@ -368,7 +369,7 @@ export async function uploadPersonPhoto(personId: string, file: File) {
   )
     throw new Error("Choose a JPEG, PNG or WebP image under 4 MB.");
   const path = `photos/${personId}/${crypto.randomUUID()}.${file.type.split("/")[1]}`;
-  await uploadBytes(ref(storage, path), file, { contentType: file.type });
+  await connectedOperation(() => uploadBytes(ref(storage, path), file, { contentType: file.type }));
   await chmsCall(
     "savePerson",
     savePersonSchema.parse({ id: personId, changes: { photoPath: path } }),

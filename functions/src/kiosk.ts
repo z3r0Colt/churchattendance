@@ -1,3 +1,4 @@
+import { requireLegacyDelivery } from "./delivery.js";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getAuth } from "firebase-admin/auth";
 import {
@@ -17,6 +18,7 @@ import {
 import { db } from "./admin.js";
 import { parse, requireRoles } from "./access.js";
 export const configureKiosk = onCall(async (request) => {
+  requireLegacyDelivery();
   await requireRoles(request, ["admin", "pastor"]);
   const input = parse(kioskSetupSchema, request.data);
   const salt = randomBytes(16).toString("hex");
@@ -28,6 +30,7 @@ export const configureKiosk = onCall(async (request) => {
   return { saved: true };
 });
 export const startKiosk = onCall(async (request) => {
+  requireLegacyDelivery();
   const actor = await requireRoles(request, ["admin", "pastor"]);
   const input = parse(kioskStartSchema, request.data);
   const [settings, service] = await Promise.all([
@@ -90,11 +93,13 @@ async function device(request: CallableRequest, count = true) {
   return result as { uid: string; serviceId: string };
 }
 export const kioskInfo = onCall(async (request) => {
+  requireLegacyDelivery();
   const active = await device(request, false);
   const service = await db.doc(`services/${active.serviceId}`).get();
   return { date: service.get("date") };
 });
 export const searchKioskHouseholds = onCall(async (request) => {
+  requireLegacyDelivery();
   const active = await device(request);
   const input = parse(kioskSearchSchema, request.data);
   const term = input.search.toLocaleLowerCase();
@@ -157,6 +162,7 @@ export const searchKioskHouseholds = onCall(async (request) => {
   };
 });
 export const checkInKiosk = onCall(async (request) => {
+  requireLegacyDelivery();
   const active = await device(request);
   const input = parse(kioskCheckSchema, request.data);
   await db.runTransaction(async (transaction) => {
@@ -204,6 +210,7 @@ export const checkInKiosk = onCall(async (request) => {
   return { checkedIn: true };
 });
 export const exitKiosk = onCall(async (request) => {
+  requireLegacyDelivery();
   const active = await device(request, false);
   const input = parse(kioskExitSchema, request.data);
   let accepted = false;

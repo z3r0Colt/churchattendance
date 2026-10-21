@@ -2,13 +2,12 @@ import {
   expect,
   test,
   type APIRequestContext,
-  type Browser,
   type Page,
 } from "@playwright/test";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { grantTestStaff } from "./staff-fixture";
 if (
   !process.env.FIRESTORE_EMULATOR_HOST ||
@@ -271,138 +270,14 @@ test("migrates legacy plaintext once, preserves revision checks and resumes safe
   expect((await ref.get()).get("revision")).toBe(5);
   await ref.delete();
 });
-test("binds desktop handoff to its verifier, consumes it once and rejects replay", async ({
-  request,
-}) => {
-  const id = randomBytes(32).toString("hex"),
-    verifier = randomBytes(32).toString("hex"),
-    challenge = createHash("sha256").update(verifier).digest("hex");
-  await call(request, "approveDesktopSignIn", { id, challenge });
-  await call(
-    request,
-    "completeDesktopSignIn",
-    { id, verifier: "b".repeat(64) },
-    "anonymous",
-    403,
-  );
-  const result = await call(
-    request,
-    "completeDesktopSignIn",
-    { id, verifier },
-    "anonymous",
-  );
-  expect(result.token).toBeTruthy();
-  await call(
-    request,
-    "completeDesktopSignIn",
-    { id, verifier },
-    "anonymous",
-    403,
-  );
-  await call(
-    request,
-    "beginPasskeySignIn",
-    { email: "phase7-elder@example.test" },
-    "anonymous",
-    403,
-    "https://attacker.invalid",
-  );
-});
-test("confirms in the browser only as the account already signed in on the desktop", async ({
-  request,
-}) => {
-  function handoff() {
-    const verifier = randomBytes(32).toString("hex");
-    return {
-      id: randomBytes(32).toString("hex"),
-      verifier,
-      challenge: createHash("sha256").update(verifier).digest("hex"),
-    };
-  }
-  const uidOf = (token: string) =>
-    JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"))
-      .uid as string;
-  const sessions = async (uid: string) =>
-    (
-      await db.collection("staffSessions").where("uid", "==", uid).count().get()
-    ).data().count;
-  async function complete(data: object, account?: string) {
-    const response = await request.post(`${base}/completeDesktopSignIn`, {
-      headers: {
-        ...(account ? { Authorization: `Bearer ${tokens[account]}` } : {}),
-        Origin: "http://localhost:5174",
-      },
-      data: { data },
-    });
-    return { status: response.status(), body: await response.json() };
-  }
-  // Another account approves; the account signed in on the desktop cannot use it.
-  const other = handoff(),
-    before = await sessions("phase7-admin");
-  await call(
-    request,
-    "approveDesktopSignIn",
-    { id: other.id, challenge: other.challenge },
-    "phase7-admin",
-  );
-  const refused = await complete(
-    { id: other.id, verifier: other.verifier, sameAccount: true },
-    "phase7-elder",
-  );
-  expect(refused.status).toBe(403);
-  expect(refused.body.error.message).toBe(
-    "Approve with the account signed in on this PC.",
-  );
-  expect(refused.body.result).toBeUndefined();
-  expect(await sessions("phase7-admin")).toBe(before);
-  // The refused approval is used up.
-  expect(
-    (await complete({ id: other.id, verifier: other.verifier })).status,
-  ).toBe(403);
-  // Confirming needs someone signed in on the desktop.
-  const unsigned = handoff();
-  await call(request, "approveDesktopSignIn", {
-    id: unsigned.id,
-    challenge: unsigned.challenge,
-  });
-  const anonymous = await complete({
-    id: unsigned.id,
-    verifier: unsigned.verifier,
-    sameAccount: true,
-  });
-  expect(anonymous.status).toBe(403);
-  expect(anonymous.body.result).toBeUndefined();
-  // The same account confirms.
-  const same = handoff();
-  const waiting = await complete(
-    { id: same.id, verifier: same.verifier, sameAccount: true },
-    "phase7-elder",
-  );
-  expect(waiting.body.result).toEqual({ pending: true });
-  await call(request, "approveDesktopSignIn", {
-    id: same.id,
-    challenge: same.challenge,
-  });
-  const confirmed = await complete(
-    { id: same.id, verifier: same.verifier, sameAccount: true },
-    "phase7-elder",
-  );
-  expect(confirmed.status).toBe(200);
-  expect(uidOf(confirmed.body.result.token)).toBe("phase7-elder");
-  // The sign-in screen still accepts whichever account approves.
-  const signIn = handoff();
-  await call(
-    request,
-    "approveDesktopSignIn",
-    { id: signIn.id, challenge: signIn.challenge },
-    "phase7-admin",
-  );
-  const switched = await complete(
-    { id: signIn.id, verifier: signIn.verifier },
-    "phase7-elder",
-  );
-  expect(switched.status).toBe(200);
-  expect(uidOf(switched.body.result.token)).toBe("phase7-admin");
+test("PWA deployments refuse both ends of legacy desktop handoffs without granting sessions", async ({ request }) => {
+  const id = randomBytes(32).toString("hex");
+  const before = (await db.collection("staffSessions").count().get()).data().count;
+  await call(request, "approveDesktopSignIn", { id, challenge: "a".repeat(64) }, "phase7-elder", 400);
+  await call(request, "completeDesktopSignIn", { id, verifier: "b".repeat(64) }, "anonymous", 400);
+  expect((await db.doc(`desktopHandoffs/${id}`).get()).exists).toBe(false);
+  expect((await db.collection("staffSessions").count().get()).data().count).toBe(before);
+  await call(request, "beginPasskeySignIn", { email: "phase7-elder@example.test" }, "anonymous", 403, "https://attacker.invalid");
 });
 test("allows no self-role grant or non-Session administrator factor reset of Session", async ({
   request,
@@ -554,117 +429,11 @@ test("a passkey sign-in on the church security page lasts only for this tab", as
   await expect(page.getByText(signedIn)).toBeVisible();
   await context.close();
 });
-// Signs in on the desktop sign-in screen through the church security page, as a
-// person at the booth PC would, with Keep this PC signed in ticked or not.
-async function desktopBrowserSignIn(browser: Browser, keep: boolean) {
-  const uid = `phase7-handoff-${keep ? "kept" : "closed"}`,
-    email = `${uid}@example.test`;
-  await auth.getUser(uid).catch(() =>
-    auth.createUser({
-      uid,
-      email,
-      password: "LocalDemo123!",
-      emailVerified: true,
-    }),
-  );
-  await grantTestStaff(uid, ["elder"]);
-  const context = await browser.newContext();
-  try {
-    const page = await context.newPage();
-    await page.goto("/");
-    const keepBox = page.getByRole("checkbox", {
-      name: "Keep this PC signed in",
-    });
-    await expect(keepBox).not.toBeChecked();
-    if (keep) await keepBox.check();
-    const opened = context.waitForEvent("page");
-    await page
-      .getByRole("button", {
-        name: "Sign in with browser or passkey",
-        exact: true,
-      })
-      .click();
-    const security = await opened;
-    const notice = page.getByText(/^Finish sign-in in your browser/);
-    await expect(notice).toBeVisible();
-    const code = /code: ([a-f0-9]{8})\./.exec(
-      (await notice.textContent()) || "",
-    )?.[1];
-    expect(code).toBeTruthy();
-    await security
-      .getByRole("textbox", { name: "Email", exact: true })
-      .fill(email);
-    await security.getByLabel(/^Password/).fill("LocalDemo123!");
-    await security
-      .getByRole("button", { name: "Sign in", exact: true })
-      .click();
-    await expect(security.getByText(code!, { exact: true })).toBeVisible();
-    await security
-      .getByRole("checkbox", { name: "This code matches the app on my own PC" })
-      .check();
-    await security
-      .getByRole("button", { name: "Approve desktop sign-in", exact: true })
-      .click();
-    await expect(
-      security.getByText("Approved. Return to the desktop app."),
-    ).toBeVisible();
-    await security.close();
-    await expect(
-      page.getByRole("heading", { name: "Take attendance" }),
-    ).toBeVisible();
-    const stored = await storedAccounts(page);
-    // A new page starts with empty sessionStorage, as reopening the app does.
-    const reopened = await context.newPage();
-    await reopened.goto("/");
-    if (keep) {
-      expect(stored.session).toEqual([]);
-      expect([...stored.indexed, ...stored.local]).toHaveLength(1);
-      await expect(
-        reopened.getByRole("heading", { name: "Take attendance" }),
-      ).toBeVisible();
-    } else {
-      expect(stored.indexed).toEqual([]);
-      expect(stored.local).toEqual([]);
-      expect(stored.session).toHaveLength(1);
-      // The sign-in screen shows while Firebase restores any stored account, so give it time.
-      await reopened.waitForTimeout(2000);
-      await expect(
-        reopened.getByRole("button", {
-          name: "Sign in with browser or passkey",
-          exact: true,
-        }),
-      ).toBeVisible();
-      await expect(
-        reopened.getByRole("heading", { name: "Take attendance" }),
-      ).toHaveCount(0);
-    }
-  } finally {
-    await context.close();
-    await auth.deleteUser(uid).catch(() => undefined);
-    const rows = [
-      db.doc(`staffAccess/${uid}`),
-      ...(
-        await db.collection("staffSessions").where("uid", "==", uid).get()
-      ).docs.map((row) => row.ref),
-      ...(
-        await db.collection("desktopHandoffs").where("uid", "==", uid).get()
-      ).docs.map((row) => row.ref),
-      ...(
-        await db.collection("securityEvents").where("actorUid", "==", uid).get()
-      ).docs.map((row) => row.ref),
-    ];
-    await Promise.all(rows.map((ref) => ref.delete()));
-  }
-}
-test("the desktop browser sign-in lasts until the app closes when Keep this PC signed in is off", async ({
-  browser,
-}) => {
-  await desktopBrowserSignIn(browser, false);
-});
-test("the desktop browser sign-in keeps the PC signed in when Keep this PC signed in is on", async ({
-  browser,
-}) => {
-  await desktopBrowserSignIn(browser, true);
+test("the supported staff entry offers session sign-in without persistent desktop handoff", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("checkbox", { name: "Keep this PC signed in" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign in with browser or passkey", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign in with passkey", exact: true })).toBeVisible();
 });
 
 test("creates staff accounts, serializes security updates and recovers lost factors", async ({

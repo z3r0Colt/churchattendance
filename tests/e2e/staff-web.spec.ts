@@ -51,14 +51,24 @@ function recordDialogs(page: Page) {
   return dialogs;
 }
 async function markOffline(page: Page, context: BrowserContext, name: string) {
-  await context.setOffline(true);
+  await page.evaluate(async () => {
+    const firebasePath = "/staff/data/firebase.ts";
+    const firestorePath = performance.getEntriesByType("resource").find((row) => row.name.includes("firebase_firestore.js"))?.name;
+    if (!firestorePath) throw new Error("Firestore test module unavailable");
+    const [{ db }, { disableNetwork }] = await Promise.all([import(firebasePath), import(firestorePath)]);
+    await disableNetwork(db);
+  });
   await page.getByRole("button", { name: `${name}, absent` }).click();
-  await expect(
-    page.getByRole("button", { name: `${name}, present` }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Offline, keep this tab open", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: `${name}, present` })).toBeVisible();
+  await context.setOffline(true);
+  await expect(page.getByText("Connection required", { exact: true })).toBeVisible();
+  // Returning the network lets Firestore reconcile the already in-flight write.
+  await page.evaluate(async () => {
+    const firebasePath = "/staff/data/firebase.ts";
+    const firestorePath = performance.getEntriesByType("resource").find((row) => row.name.includes("firebase_firestore.js"))!.name;
+    const [{ db }, { enableNetwork }] = await Promise.all([import(firebasePath), import(firestorePath)]);
+    await enableNetwork(db);
+  });
 }
 // The tab must be able to load the sign-in page again, so the network returns
 // while the church records stay out of reach and the mark stays unsaved.
@@ -82,7 +92,7 @@ test.afterAll(async () => {
     .get();
   await Promise.all(services.docs.map((row) => row.ref.delete()));
 });
-test("a phone and the desktop mark different names at once and both marks survive going offline", async ({
+test("two devices preserve concurrent fields and a disconnected device pauses new changes", async ({
   browser,
 }) => {
   const phoneContext = await browser.newContext(phone);
@@ -108,21 +118,14 @@ test("a phone and the desktop mark different names at once and both marks surviv
       page.getByRole("button", { name: "John Baker, present" }),
     ).toBeVisible();
   }
-  // The phone keeps an offline mark in memory and sends it on reconnecting,
-  // while the desktop's independent change in the meantime is kept too.
   await phoneContext.setOffline(true);
-  await handset.getByRole("button", { name: "Ruth Calder, absent" }).click();
-  await expect(
-    handset.getByText("Offline, keep this tab open", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    handset.getByText(/Marks are kept in this tab until the connection/),
-  ).toBeVisible();
+  await expect(handset.locator(".content [inert]")).toBeVisible();
+  await expect(handset.getByRole("button", { name: "Ruth Calder, absent" })).toBeVisible();
   await desk.getByRole("button", { name: "John Baker, present" }).click();
   await phoneContext.setOffline(false);
   await expect(handset.getByText("Online", { exact: true })).toBeVisible();
   await expect(
-    desk.getByRole("button", { name: "Ruth Calder, present" }),
+    desk.getByRole("button", { name: "Ruth Calder, absent" }),
   ).toBeVisible();
   await expect(
     handset.getByRole("button", { name: "John Baker, absent" }),
@@ -358,8 +361,9 @@ test("Keep working closes the Lock now warning and stays signed in after the mar
   await warning.getByRole("button", { name: "Keep working" }).click();
   await expect(warning).toBeHidden();
   // Clearing the mark again leaves the roll as other tests expect it.
-  await page.getByRole("button", { name: "Grace Calder, present" }).click();
   await context.setOffline(false);
+  await expect(page.getByText("Online", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Grace Calder, present" }).click();
   await expect(page.getByText("Online", { exact: true })).toBeVisible();
   // The cancelled lock must not finish once the marks save. A short wait gives
   // a lock that wrongly finished the time to reach the sign-in page.
@@ -398,7 +402,7 @@ test("Lock now stays open and says so when a waiting mark is rejected", async ({
       name: "Some marks did not save",
     });
     await expect(warning).toBeVisible();
-    await expect(warning).toContainText("rejected and has been undone");
+    await expect(warning).toContainText("not confirmed");
     await expect(warning).toContainText("Check the roll before you lock.");
     // The lock must not finish by itself. A short wait gives a lock that
     // wrongly finished the time to reach the sign-in page.

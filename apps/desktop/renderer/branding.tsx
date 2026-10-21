@@ -1,3 +1,4 @@
+import { ServiceRuntime } from "../../pwa/runtime";
 import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { brandPalettes, publicBrandingSchema, type PublicBranding } from "@sycamore/shared";
 
@@ -37,6 +38,7 @@ export function BrandingProvider({ load, children }: { load: () => Promise<unkno
   const palette = brandPalettes[value?.palette || "forest"];
   return <Context.Provider value={{ value, reload: () => setRevision((v) => v + 1) }}>
     <div className="church-branding" style={{ "--church-brand": palette.light, "--church-brand-dark": palette.dark } as CSSProperties}>
+      <ServiceRuntime check={load} />
       {error && <div role="alert" className="branding-error">{error} <button onClick={() => setRevision((v) => v + 1)}>Retry branding</button></div>}
       {loading ? <p role="status">Loading church configuration</p> : children}
     </div>

@@ -1,3 +1,4 @@
+import { connectedOperation } from "../../../pwa/runtime";
 import { useEffect, useRef, useState } from "react";
 import {
   collection,
@@ -364,7 +365,7 @@ export function useUnreadSms(enabled: boolean) {
   return count;
 }
 async function call<T = unknown>(name: string, value: unknown): Promise<T> {
-  const result = (await httpsCallable<unknown, T>(functions, name)(value)).data;
+  const result = await connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(value)).data);
   if (
     [
       "createMessage",
@@ -421,10 +422,10 @@ export async function uploadPdf(file: File, folder: string) {
   )
     throw new Error("Choose a PDF no larger than 20 MB.");
   const path = `${folder}/${crypto.randomUUID()}.pdf`;
-  await uploadBytes(ref(storage, path), file, {
+  await connectedOperation(() => uploadBytes(ref(storage, path), file, {
     contentType: "application/pdf",
     customMetadata: { originalName: file.name.slice(0, 150) },
-  });
+  }));
   return { name: file.name, path };
 }
 export const uploadMessagePdf = (file: File) => {

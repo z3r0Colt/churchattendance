@@ -300,62 +300,15 @@ test("sends one consented serving reminder, deduplicates ticks and suppresses ch
     (await db.doc("messages/serving_second_1").get()).get("totals.skipped"),
   ).toBe(1);
 });
-test("keeps kiosk search results minimal and check-in limited to a short-lived household capability", async ({
-  request,
-}) => {
-  await db.doc("services/am_2027-03-07").set({
-    serviceTypeId: "am",
-    date: "2027-03-07",
-    notes: "",
-    present: {},
-    lastAttendancePersonId: "",
-  });
-  await call(request, "configureKiosk", { enabled: true, pin: "718294" });
-  const opened = await call(request, "startKiosk", {
-    serviceId: "am_2027-03-07",
-  });
-  const signed = await request.post(
-    "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=demo-key",
-    { data: { token: opened.token, returnSecureToken: true } },
-  );
+test("PWA deployments deny kiosk provisioning and legacy kiosk tokens", async ({ request }) => {
+  await call(request, "configureKiosk", { enabled: true, pin: "718294" }, 400);
+  await call(request, "startKiosk", { serviceId: "am_2027-03-07" }, 400);
+  const token = await auth.createCustomToken("kiosk_retired", { kiosk: true });
+  const signed = await request.post("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=demo-key", { data: { token, returnSecureToken: true } });
   const kiosk = (await signed.json()).idToken as string;
-  const result = await call(
-    request,
-    "searchKioskHouseholds",
-    { search: "Calder" },
-    200,
-    kiosk,
-  );
-  expect(JSON.stringify(result)).not.toMatch(
-    /@|mobilePhone|birthDate|membershipStatus|address/,
-  );
-  await call(
-    request,
-    "checkInKiosk",
-    { searchToken: result.searchToken, personIds: ["eli"] },
-    403,
-    kiosk,
-  );
-  await call(
-    request,
-    "checkInKiosk",
-    { searchToken: result.searchToken, personIds: ["james", "ruth"] },
-    200,
-    kiosk,
-  );
-  expect(
-    Object.keys((await db.doc("services/am_2027-03-07").get()).get("present")),
-  ).toHaveLength(2);
-  await call(
-    request,
-    "checkInKiosk",
-    { searchToken: result.searchToken, personIds: ["james"] },
-    403,
-    kiosk,
-  );
-  await call(request, "exitKiosk", { pin: "111111" }, 403, kiosk);
-  await call(request, "exitKiosk", { pin: "718294" }, 200, kiosk);
-  await call(request, "kioskInfo", {}, 403, kiosk);
+  for (const name of ["searchKioskHouseholds", "checkInKiosk", "exitKiosk", "kioskInfo"])
+    await call(request, name, {}, 400, kiosk);
+  expect((await db.doc("kioskDevices/kiosk_retired").get()).exists).toBe(false);
 });
 async function login(page: Page, email = "pastor@example.test") {
   await page.goto("/");
@@ -436,75 +389,11 @@ test("exports annual statistics and monthly chart to a three-sheet workbook", as
     animations: "disabled",
   });
 });
-test("starts the kiosk through Settings, checks a household in, and exits to staff sign-in", async ({
-  page,
-  request,
-}) => {
-  await call(request, "configureKiosk", { enabled: true, pin: "718294" });
+test("the supported staff Settings screen has no kiosk provisioning", async ({ page }) => {
   await login(page);
-  // The default service follows the current church time, so read which one is open.
-  const serviceId = `${
-    (await page
-      .getByRole("combobox", { name: "Service", exact: true })
-      .textContent())!.includes("Evening")
-      ? "pm"
-      : "am"
-  }_2027-03-14`;
-  await page.getByLabel("Service date").fill("2027-03-14");
-  const start = page.getByRole("button", {
-    name: "Start roll call",
-    exact: true,
-  });
-  await expect(
-    start.or(page.getByRole("button", { name: /^James Calder,/ })),
-  ).toBeVisible();
-  if (await start.isVisible()) await start.click();
-  await expect(
-    page.getByRole("button", { name: "James Calder,", exact: false }),
-  ).toBeVisible();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Start kiosk for open service", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Welcome to the Lord's Day service",
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Settings", exact: true }),
-  ).toHaveCount(0);
-  await page
-    .getByLabel("Type your last name or full phone number")
-    .fill("Calder");
-  await page
-    .getByRole("button", { name: "Find household", exact: true })
-    .click();
-  await page.getByLabel("James Calder", { exact: true }).check();
-  await page.screenshot({
-    path: "test-results/phase3-kiosk.png",
-    fullPage: true,
-    animations: "disabled",
-  });
-  await page.getByRole("button", { name: "Check in", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("You are checked in");
-  await expect
-    .poll(async () =>
-      (await db.doc(`services/${serviceId}`).get()).get("present.james.method"),
-    )
-    .toBe("kiosk");
-  await page.getByRole("button", { name: "Exit kiosk", exact: true }).click();
-  await expect(
-    page.getByLabel("Administrator or Pastor exit PIN"),
-  ).toBeVisible();
-  await page.getByLabel("Administrator or Pastor exit PIN").fill("718294");
-  await page
-    .getByRole("button", { name: "Close kiosk and sign out", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Sign in", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Optional household kiosk")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start kiosk for open service" })).toHaveCount(0);
 });
 test("prevents concurrent double booking and frees the slot after cancellation", async ({
   request,
@@ -589,4 +478,18 @@ test("creates print-ready annual and photo-directory PDFs without exposing priva
     fullPage: true,
   });
   await directory.close();
+});
+
+test("uncertain creation retries return the original visitor and household, without duplicate history", async ({ request }) => {
+  await db.doc("services/am_2027-06-06").set({ serviceTypeId: "am", date: "2027-06-06", notes: "", present: {}, lastAttendancePersonId: "" });
+  const visitor = { requestId: crypto.randomUUID(), firstName: "Fictional", lastName: "RetryVisitor", serviceId: "am_2027-06-06" };
+  const [first, retry] = await Promise.all([call(request, "addVisitor", visitor), call(request, "addVisitor", visitor)]);
+  expect(retry.id).toBe(first.id);
+  expect((await db.collection("people").where("lastName", "==", "RetryVisitor").get()).size).toBe(1);
+  expect((await db.collection(`people/${first.id}/membershipEvents`).get()).size).toBe(1);
+  await call(request, "addVisitor", { ...visitor, firstName: "Changed" }, 409);
+  const household = { requestId: crypto.randomUUID(), household: { name: "Fictional Retry Household", address: "", homePhone: "" }, people: [{ firstName: "Fictional", lastName: "RetryHousehold", membershipStatus: "visitor" }], date: "2027-06-06" };
+  const family = await call(request, "createHousehold", household);
+  expect((await call(request, "createHousehold", household)).id).toBe(family.id);
+  expect((await db.collection("people").where("lastName", "==", "RetryHousehold").get()).size).toBe(1);
 });

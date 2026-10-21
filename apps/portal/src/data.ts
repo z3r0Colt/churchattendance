@@ -1,3 +1,4 @@
+import { connectedOperation } from "../../pwa/runtime";
 import { useEffect, useState } from "react";
 import { initializeApp } from "firebase/app";
 import {
@@ -60,7 +61,9 @@ export const portalConfigured =
 export const callPortal = async <T>(
   name: string,
   input: unknown = {},
-): Promise<T> => (await httpsCallable<unknown, T>(functions, name)(input)).data;
+): Promise<T> => name === "getPublicBranding"
+  ? (await httpsCallable<unknown, T>(functions, name)(input)).data
+  : connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data);
 export type PortalEvent = Occurrence & { description: string; zone: string };
 export type MemberProfile = {
   person: {
@@ -88,12 +91,19 @@ export type MemberProfile = {
   preferences: DirectoryPreferences;
   rsvps: { eventId: string; date: string; status: string }[];
 };
+let authUid = "";
 export function usePortalAuth() {
   const [user, setUser] = useState(auth.currentUser);
   const [loading, setLoading] = useState(true);
   useEffect(
     () =>
       onIdTokenChanged(auth, (value) => {
+        if (authUid && authUid !== value?.uid) {
+          setUser(null); setLoading(true);
+          window.dispatchEvent(new Event("church-security-cleared"));
+          location.reload(); return;
+        }
+        authUid = value?.uid || "";
         setUser(value);
         setLoading(false);
       }),

@@ -134,3 +134,5 @@ Photo cleanup jobs in `photoCleanup` are server-only. Photo replacement/removal 
 
 
 Phase 13 public branding uses `publicBranding/church`, served anonymously only through `getPublicBranding`'s allowlisted projection. Raw client reads/writes remain denied. Only assured Admin/Pastor callables may publish with a revision check. Never expose protected settings or use branding to select a Firebase project. Production clients require operator-bound project/church/origin values. PNG logos are inline and bounded; no SVG, HTML or remote image resources. Preserve existing message templates during explicit branding migration. See `docs/PHASE_13.md` for passing automated acceptance and the separate live setup requirements.
+
+Phase 14 work in progress: `creationReceipts` is server-only and denied by the catchall rule. Creation receipts must commit atomically with their records and never contain private request bodies. Default builds now target staff/member web. `build:legacy` retains optional Electron output.

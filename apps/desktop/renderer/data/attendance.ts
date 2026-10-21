@@ -1,3 +1,5 @@
+import { connectedOperation, useOperations } from "../../../pwa/runtime";
+import { operations } from "../../../pwa/operations";
 import { useEffect, useState } from "react";
 import {
   collection,
@@ -38,12 +40,9 @@ export function useAttendanceData(selectedDate = "") {
   const [cacheOnly, setCacheOnly] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
-  const [online, setOnline] = useState(navigator.onLine);
+  const connection = useOperations();
+  const online = connection.connected && !connection.frozen;
   useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
     const failed = () =>
       setError(
         "The records could not be loaded. Check your connection and sign in again.",
@@ -83,8 +82,6 @@ export function useAttendanceData(selectedDate = "") {
     ];
     return () => {
       stops.forEach((stop) => stop());
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
     };
   }, []);
   useEffect(() => {
@@ -109,7 +106,7 @@ export function useAttendanceData(selectedDate = "") {
             (row) => ({ ...row.data(), id: row.id }) as Service,
           ),
           key: windowKey,
-          ready: !snapshot.metadata.fromCache || !navigator.onLine,
+          ready: !snapshot.metadata.fromCache,
         });
         setCacheOnly(snapshot.metadata.fromCache);
         // waitForPendingWrites covers marks queued on dates no longer in the visible query.
@@ -142,24 +139,25 @@ export function useAttendanceData(selectedDate = "") {
       method: "roll",
       mode,
     });
-    if (!auth.currentUser) return;
-    // Do not await acknowledgements here. Offline writes appear immediately and queue in IndexedDB.
-    void updateDoc(
+    if (!auth.currentUser || !online) return;
+    const uid = auth.currentUser.uid;
+    // Firestore resolves this promise only after the server acknowledges this field write.
+    void operations.run(() => updateDoc(
       doc(db, "services", serviceId),
       new FieldPath("present", input.personId),
       present
         ? {
             at: serverTimestamp(),
             method: input.method,
-            byUid: auth.currentUser.uid,
+            byUid: uid,
             mode: input.mode,
           }
         : deleteField(),
       "lastAttendancePersonId",
       input.personId,
-    ).catch(() =>
+    )).catch(() =>
       setError(
-        "An attendance change was rejected and has been undone. Check your role and try again.",
+        "An attendance change was not confirmed. Reconnect and review the roll before retrying.",
       ),
     );
   }
@@ -173,16 +171,16 @@ export function useAttendanceData(selectedDate = "") {
     });
     const ref = doc(db, "services", `${serviceTypeId}_${date}`);
     // Creation requires a connection. A transaction prevents another PC's existing marks being replaced.
-    await runTransaction(db, async (transaction) => {
+    await connectedOperation(() => runTransaction(db, async (transaction) => {
       if (!(await transaction.get(ref)).exists()) transaction.set(ref, value);
-    });
+    }));
   }
   return {
     people,
     types,
     services,
     timeZone,
-    pending,
+    pending: pending || connection.pending > 0,
     cacheOnly,
     online,
     loaded,
@@ -196,11 +194,11 @@ export function useAttendanceData(selectedDate = "") {
   };
 }
 export async function addVisitor(data: unknown) {
-  return httpsCallable(functions, "addVisitor")(visitorInputSchema.parse(data));
+  return connectedOperation(() => httpsCallable(functions, "addVisitor")(visitorInputSchema.parse(data)));
 }
 export async function createHousehold(data: unknown) {
-  return httpsCallable(
+  return connectedOperation(() => httpsCallable(
     functions,
     "createHousehold",
-  )(createHouseholdSchema.parse(data));
+  )(createHouseholdSchema.parse(data)));
 }

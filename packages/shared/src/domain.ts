@@ -142,6 +142,7 @@ export type Service = {
 };
 export const visitorInputSchema = z
   .object({
+    requestId: z.uuid().optional(),
     firstName: name,
     lastName: name,
     email: z.union([z.email(), z.literal("")]).default(""),
@@ -198,6 +199,7 @@ export const savePersonSchema = z
   .strict();
 export const createHouseholdSchema = z
   .object({
+    requestId: z.uuid().optional(),
     household: householdInputSchema,
     people: z
       .array(personInputSchema.omit({ householdId: true }))

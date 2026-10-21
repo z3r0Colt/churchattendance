@@ -1,3 +1,4 @@
+import { ConnectionControls } from "../../pwa/runtime";
 import { StrictMode, useEffect, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -100,7 +101,7 @@ function App() {
           <Button onClick={() => void signOutPortal()}>Sign out</Button>
         )}
       </header>
-      <main>
+      <main><ConnectionControls>
         {local && (
           <MessageBar intent="info">
             Local demonstration with fictional people. No live church forms or
@@ -155,7 +156,7 @@ function App() {
             )}
           </>
         )}
-      </main>
+      </ConnectionControls></main>
       <footer>
         {branding?.churchName} · Keep member contact details within the congregation.
         {branding?.website && <p><a href={branding.website} rel="noreferrer" target="_blank">Church website</a></p>}
@@ -704,9 +705,14 @@ function Sharing({
 }
 createRoot(document.getElementById("root")!).render(
   <StrictMode><BrandingProvider load={loadBranding}>
-    {location.pathname === "/staff-security" ? <StaffSecurity /> : <App />}
+    {location.pathname === "/launch" ? <Launch /> : location.pathname === "/staff-security" ? <StaffSecurity /> : <App />}
   </BrandingProvider></StrictMode>,
 );
 
 
 async function loadBranding() { return callPortal("getPublicBranding"); }
+
+function Launch() {
+  const { value } = useBranding();
+  return <main><h1>{value?.appName || "Church app"}</h1><p>Choose your workspace. Your account determines access.</p><p><a href="/staff/">Staff workspace</a></p><p><a href="/">Member portal</a></p><p>A connection is required. Browser session restoration may retain sign-in; sign out on shared devices.</p></main>;
+}

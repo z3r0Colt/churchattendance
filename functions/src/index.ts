@@ -1,3 +1,5 @@
+import { createOnce } from "./creation.js";
+export * from "./pwa.js";
 import { getAuth } from "firebase-admin/auth";
 import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
@@ -66,7 +68,7 @@ export const createHousehold = onCall(async (request) => {
       "Record contact consent after creating the household.",
     );
   const household = db.collection("households").doc();
-  const batch = db.batch();
+  return createOnce(actor.uid, "household", input, async (batch) => {
   batch.create(household, input.household);
   for (const row of input.people) {
     const person = personInputSchema.parse({
@@ -94,8 +96,8 @@ export const createHousehold = onCall(async (request) => {
       }),
     );
   }
-  await batch.commit();
   return { id: household.id };
+  });
 });
 
 export const savePerson = onCall(async (request) => {
@@ -212,7 +214,7 @@ export const addVisitor = onCall(async (request) => {
     .collection("households")
     .doc(input.householdId || db.collection("households").doc().id);
   const service = db.collection("services").doc(input.serviceId);
-  await db.runTransaction(async (transaction) => {
+  return createOnce(actor.uid, "visitor", input, async (transaction) => {
     const [meeting, family] = await Promise.all([
       transaction.get(service),
       transaction.get(household),
@@ -268,8 +270,8 @@ export const addVisitor = onCall(async (request) => {
       "lastAttendancePersonId",
       person.id,
     );
+    return { id: person.id };
   });
-  return { id: person.id };
 });
 
 export const setUserRoles = onCall(privateOptions, async (request) => {
