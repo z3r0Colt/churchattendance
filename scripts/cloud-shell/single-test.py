@@ -305,6 +305,17 @@ try {
 '''
 
 
+def discover_endpoints(root, discovery_env):
+    names = command(["node", "--input-type=module", "-e",
+                     'const m = await import("./functions/lib/index.js"); const names = Object.entries(m).filter(([name, fn]) => name !== "dailyRecoveryBackup" && fn?.__endpoint).map(([name]) => name); if (!names.length) throw Error("No app endpoints discovered"); console.log("FOLDKEEPER_ENDPOINTS=" + JSON.stringify(names));'],
+                    capture=True, cwd=root, env=discovery_env)
+    line = next((line for line in (names or "").splitlines() if line.startswith("FOLDKEEPER_ENDPOINTS=")), None)
+    endpoints = json.loads(line.split("=", 1)[1]) if line else []
+    if not endpoints or any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", name) for name in endpoints):
+        raise SetupError("Could not safely determine app endpoints.")
+    return endpoints
+
+
 def deploy(args, google, config, root):
     env = dict(os.environ)
     sdk = config["firebase"]
@@ -361,13 +372,7 @@ def deploy(args, google, config, root):
     # Deploy the actual app endpoints, deliberately excluding the daily recovery job.
     discovery_env = dict(env, GCLOUD_PROJECT=args.project,
                          FIREBASE_CONFIG=json.dumps({"projectId": args.project, "storageBucket": config["bucket"]}))
-    names = command(["node", "--input-type=module", "-e",
-                     'const m = await import("./functions/lib/index.js"); const names = Object.entries(m).filter(([name, fn]) => name !== "dailyRecoveryBackup" && fn?.__endpoint).map(([name]) => name); if (!names.length) throw Error("No app endpoints discovered"); console.log("FOLDKEEPER_ENDPOINTS=" + JSON.stringify(names));'],
-                    cwd=root, env=discovery_env)
-    line = next((line for line in names.splitlines() if line.startswith("FOLDKEEPER_ENDPOINTS=")), None)
-    endpoints = json.loads(line.split("=", 1)[1]) if line else []
-    if not endpoints or any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", name) for name in endpoints):
-        raise SetupError("Could not safely determine app endpoints.")
+    endpoints = discover_endpoints(root, discovery_env)
     command(cli + ["--only", ",".join("functions:" + name for name in endpoints)], cwd=root, env=env)
     command(cli + ["--only", "hosting"], cwd=root, env=env)
     print("Verifying public deployment identity...", flush=True)

@@ -33,3 +33,18 @@ class ServiceEnableTests(unittest.TestCase):
             with self.assertRaises(setup.SetupError):
                 setup.enable_services("foldkeeper-fixture")
         self.assertEqual(command.call_count, 1)
+
+
+class EndpointDiscoveryTests(unittest.TestCase):
+    def test_captures_endpoint_list_for_deployment_instead_of_printing_it(self):
+        output = 'SDK diagnostic\nFOLDKEEPER_ENDPOINTS=["pwaManifest","getPublicBranding"]\n'
+        with patch.object(setup, "command", side_effect=lambda args, **kwargs: output if kwargs.get("capture") else None) as command:
+            names = setup.discover_endpoints(Path("/fictional/checkout"), {"GCLOUD_PROJECT": "fixture-project"})
+        self.assertEqual(names, ["pwaManifest", "getPublicBranding"])
+        self.assertEqual(command.call_args.kwargs["env"]["GCLOUD_PROJECT"], "fixture-project")
+
+    def test_missing_discovery_output_stops_before_deployment(self):
+        for output in [None, '', 'SDK diagnostic only', 'FOLDKEEPER_ENDPOINTS=[]', 'FOLDKEEPER_ENDPOINTS=["unsafe,name"]']:
+            with self.subTest(output=output), patch.object(setup, "command", return_value=output):
+                with self.assertRaises(setup.SetupError):
+                    setup.discover_endpoints(Path("/fictional/checkout"), {})
