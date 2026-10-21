@@ -65,6 +65,9 @@ export function firebaseDriver(config, { attestations = {}, deploy } = {}) {
     if (id === "administrator") {
       const user = await auth.getUserByEmail(config.admin.email).catch((error) => { if (error.code === "auth/user-not-found") return null; throw error; });
       if (!user) return result(false, "chosen-administrator-not-created");
+      // A crash can leave the chosen account created before its approved claims are written.
+      if (!(user.customClaims?.roles || []).length) return result(false, "administrator-roles-pending");
+      if (user.disabled) return result(false, "administrator-disabled-review-required");
       if (fingerprint([...(user.customClaims?.roles || [])].sort()) !== fingerprint([...config.admin.roles].sort())) throw new Error("Existing administrator roles need explicit reconciliation");
       return result(true, "enrollment-required-no-assurance-granted");
     }

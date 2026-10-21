@@ -10,11 +10,14 @@ const configs = await Promise.all(["cedar", "harbor"].map(async (name) => descri
 const registry = { version: 1, allowedProjects: configs.map((config) => config.projectId), churches: {} };
 const drivers = configs.map((config) => firebaseDriver(config, { attestations: { deployedRelease: "a".repeat(40) } }));
 try {
+  // Simulate interruption after Auth creation but before the approved bootstrap claims.
+  const interrupted = await drivers[0].auth.getUserByEmail(configs[0].admin.email).catch(() => drivers[0].auth.createUser({ email: configs[0].admin.email }));
   for (const [index, config] of configs.entries()) {
     const driver = drivers[index];
     await runSetup({ config, registry, project: config.projectId, release: "a".repeat(40), driver, save: async () => {} });
     const keys = (await driver.db.doc("operatorEmulator/secrets").get()).get("ring");
     const user = await driver.auth.getUserByEmail(config.admin.email);
+    if (index === 0) assert.equal(user.uid, interrupted.uid);
     assert.deepEqual(user.customClaims.roles, ["admin"]);
     assert.equal(user.emailVerified, false);
     assert.equal(user.passwordHash, undefined);
