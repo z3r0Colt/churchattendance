@@ -94,3 +94,7 @@ The Session-only Shepherding page plans household visits with invited deacons, t
 ## Managed PWA implementation
 
 The approved next work is on the PWA service plan in `docs/PWA_SERVICE_PLAN.md`. Phase 13 branding implementation passed automated acceptance; see `docs/PHASE_13.md` for the public/protected split, required deployment binding, explicit legacy migration and verification evidence. Phases 14–18 remain planned. Existing native/offline behavior is not yet replaced.
+
+## Managed PWA implementation
+
+The current `codex/pwa-service` work makes `npm run build` and `npm run dev` target the staff/member web apps. Optional native output uses `npm run build:legacy`; `npm run dist` is outside the PWA release path. Phase 13 has verified acceptance; Phases 14–17 are in implementation/verification and retain separate live staging gates. See [PWA verification](docs/PHASE_14.md), [operator runbook](docs/OPERATOR_RUNBOOK.md), and [service plan](docs/PWA_SERVICE_PLAN.md). No live infrastructure or real provider sends are performed by the local examples/drills.

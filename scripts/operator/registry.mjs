@@ -26,5 +26,11 @@ export async function withRegistryLock(path, action) {
   finally { await file.close(); await rm(lock, { force: true }); }
 }
 export function readiness(registry) {
-  return Object.entries(registry.churches).map(([churchId, row]) => ({ churchId, projectId: row.projectId, environment: row.environment, origin: row.origin, release: row.release || null, checkpoints: row.checkpoints, providers: row.providers || { email: "disabled", sms: "disabled" }, backup: row.backup || { status: "unverified" }, subscription: row.subscription || { status: "unrecorded" } }));
+  const state = (value) => ["ready", "disabled", "pending", "failed", "unverified", "captured", "drill-verified", "active", "scholarship", "paused", "unrecorded"].includes(value) ? value : "unverified";
+  return Object.entries(registry.churches).map(([churchId, row]) => ({ churchId, projectId: row.projectId, environment: row.environment, origin: row.origin, release: row.release || null,
+    checkpoints: Object.fromEntries(Object.entries(row.checkpoints || {}).map(([key, value]) => [key, { status: state(value.status), at: value.at }])),
+    providers: { email: state(row.providers?.email || "disabled"), sms: state(row.providers?.sms || "disabled") },
+    backup: { status: state(row.backup?.status), verifiedAt: row.backup?.verifiedAt, capturedAt: row.backup?.capturedAt },
+    subscription: { status: state(row.subscription?.status || "unrecorded"), reviewOn: row.subscription?.reviewOn },
+  }));
 }

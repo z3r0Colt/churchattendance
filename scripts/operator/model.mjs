@@ -3,7 +3,7 @@ const fail = (message) => { throw new Error(message); };
 const object = (value, keys) => {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some((key) => !keys.includes(key))) fail("Invalid descriptor fields");
 };
-const text = (value, pattern, label) => { if (typeof value !== "string" || !pattern.test(value)) fail(`Invalid ${label}`); return value; };
+const text = (value, pattern, label) => { if (typeof value !== "string" || !pattern.test(value) || [...value].some((char) => char.charCodeAt(0) < 32)) fail(`Invalid ${label}`); return value; };
 export function descriptor(value) {
   object(value, ["version", "churchId", "projectId", "environment", "origin", "region", "storageBucket", "hostingSite", "authDomains", "firebase", "branding", "admin", "services", "providers", "backupBucket", "budgetMonthlyUsd", "timeZone", "backupServiceAccount"]);
   if (value.version !== 1) fail("Unsupported descriptor version");
@@ -28,7 +28,7 @@ export function descriptor(value) {
   for (const key of ["apiKey", "appId", "authDomain"]) text(value.firebase[key], /^[A-Za-z0-9:._-]{3,256}$/, `Firebase ${key}`);
   if (!value.authDomains.includes(value.firebase.authDomain)) fail("Allowlist the Firebase auth domain explicitly");
   object(value.branding, ["churchName", "appName", "subtitle", "palette", "website", "contactEmail", "contactPhone", "logo"]);
-  for (const key of ["churchName", "appName"]) text(value.branding[key], /^[^<>\x00-\x1f]{1,80}$/, key);
+  for (const key of ["churchName", "appName"]) text(value.branding[key], /^[^<>]{1,80}$/, key);
   if (!["forest", "navy", "plum"].includes(value.branding.palette)) fail("Invalid brand palette");
   object(value.admin, ["email", "roles"]);
   text(value.admin.email, /^[^\s@]+@[^\s@]+\.[^\s@]+$/, "chosen administrator email");
@@ -38,7 +38,7 @@ export function descriptor(value) {
   for (const service of value.services) {
     object(service, ["id", "name", "time", "dayOfWeek"]);
     text(service.id, /^[a-z][a-z0-9-]{0,39}$/, "service ID");
-    text(service.name, /^[^<>\x00-\x1f]{1,80}$/, "service name");
+    text(service.name, /^[^<>]{1,80}$/, "service name");
     text(service.time, /^(?:[01]\d|2[0-3]):[0-5]\d$/, "service time");
     if (!Number.isInteger(service.dayOfWeek) || service.dayOfWeek < 0 || service.dayOfWeek > 6) fail("Invalid service day");
   }
@@ -76,6 +76,7 @@ export async function runSetup({ config, registry, project, release, driver, sav
   assertTarget(config, registry, project);
   const plan = setupPlan(config, release);
   const row = registry.churches[config.churchId] ||= { projectId: project, environment: config.environment, origin: config.origin, region: config.region, checkpoints: {} };
+  row.providers = { email: config.providers.email === "disabled" ? "disabled" : "pending", sms: config.providers.sms === "disabled" ? "disabled" : "pending" };
   // No private bodies or raw exception/provider output enters the registry.
   for (const step of plan) {
     row.checkpoints[step.id] = { status: "checking", at: new Date().toISOString() };

@@ -68,7 +68,7 @@ try {
         for (const row of parts.firestore) {
           // Never restore delivery queues, passkey sessions, challenges or grants into an active product.
           // This isolated target has no public Functions and applies deny-by-default rules first.
-          await recovered.db.doc(row.path).set(row.data);
+          if (!/^(?:deploymentIdentity|backupStatus|operatorEmulator)\//.test(row.path)) await recovered.db.doc(row.path).set(row.data);
         }
         await recovered.db.doc("communicationSettings/church").update({ emailEnabled: false, smsEnabled: false, bulletinEnabled: false });
       }

@@ -39,7 +39,13 @@ export const pwaManifest = onRequest(async (_request, response) => {
       id: "/", scope: "/", start_url: "/launch", name: branding.appName, short_name: branding.appName.slice(0, 30),
       description: branding.subtitle || branding.churchName, display: "standalone", background_color: "#ffffff",
       theme_color: brandPalettes[branding.palette].light,
-      icons: [192, 512].map((size) => ({ src: `/app-icon.png?size=${size}`, sizes: `${size}x${size}`, type: "image/png", purpose: "any maskable" })),
+      icons: [
+        ...[192, 512].map((size) => ({ src: `/app-icon.png?size=${size}`, sizes: `${size}x${size}`, type: "image/png", purpose: branding.logo ? "maskable" : "any maskable" })),
+        ...(branding.logo ? (() => {
+          const png = Buffer.from(branding.logo.split(",")[1], "base64");
+          return [{ src: "/app-icon.png?logo=1", sizes: `${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, type: "image/png", purpose: "any" }];
+        })() : []),
+      ],
     });
   } catch { response.status(503).send("Church configuration unavailable"); }
 });
@@ -47,6 +53,7 @@ export const pwaIcon = onRequest(async (request, response) => {
   response.set("Cache-Control", "no-store");
   try {
     const branding = await readPublicBranding();
+    if (request.query.logo === "1" && branding.logo) { response.type("png").send(Buffer.from(branding.logo.split(",")[1], "base64")); return; }
     const size = request.query.size === "192" ? 192 : 512;
     response.type("png").send(icon(size, brandPalettes[branding.palette].light));
   } catch { response.status(503).send("Church configuration unavailable"); }

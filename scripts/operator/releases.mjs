@@ -7,10 +7,11 @@ export function releasePlan({ config, registry, project, release, rollback = fal
   if (!entry || !Number.isInteger(entry.schema) || !Number.isInteger(entry.readsFromSchema) || entry.schema < entry.readsFromSchema || !entry.ciPassed) throw new Error("Register a validated release and schema compatibility first");
   if (config.environment === "live" && (!entry.stagingVerifiedAt || !entry.pilotVerifiedAt || !entry.selectedChurches?.includes(config.churchId))) throw new Error("Stage, verify a pilot and explicitly select each church before rollout");
   const installed = registry.churches[config.churchId];
-  const schema = installed?.schema ?? entry.schema;
+  if (!installed) throw new Error("Provision and reserve the church before releasing");
+  const schema = installed.schema ?? entry.schema;
   if (schema < entry.readsFromSchema || schema > entry.schema) throw new Error("Schema is incompatible; plan a migration and backup, not a Hosting-only rollback");
   if (rollback && (!installed?.previousRelease || installed.previousRelease !== release || entry.rollbackCompatible !== true)) throw new Error("Rollback requires the recorded previous compatible release");
-  if (entry.irreversibleMigration && installed?.backup?.status !== "drill-verified") throw new Error("Verified recovery is required before irreversible migration");
+  if (entry.irreversibleMigration && (installed.backup?.status !== "drill-verified" || !entry.migrationVerifiedAt)) throw new Error("Verified recovery and a supervised migration are required before irreversible migration");
   return { project, release, previousRelease: installed?.release || null, schema, components: ["firestore:rules", "firestore:indexes", "storage", "functions", "hosting:portal"], publicConfig: { churchId: config.churchId, origin: config.origin }, rollback };
 }
 export async function deployRelease({ config, registry, project, release, driver, save, rollback = false }) {

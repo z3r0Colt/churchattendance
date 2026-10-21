@@ -10,6 +10,11 @@ export function deploymentDriver() {
   return {
     async deploy(plan, config) {
       if (["emulator", "recovery"].includes(config.environment)) throw new Error("Public deployment requires an explicitly selected staging or live descriptor");
+      const { firebaseDriver } = await import("./firebase.mjs");
+      const guard = firebaseDriver(config);
+      try {
+        for (const step of ["identity", "infrastructure", "domains"]) if (!(await guard.verify(step, config, plan.release)).ready) throw new Error("Deployment prerequisites must be verified in the selected project");
+      } finally { const { deleteApp } = await import("firebase-admin/app"); await deleteApp(guard.app); }
       const directory = await mkdtemp(join(tmpdir(), "church-release-"));
       try {
         const archive = execute("git", ["archive", "--format=tar", plan.release], process.cwd());

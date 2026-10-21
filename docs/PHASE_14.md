@@ -2,7 +2,7 @@
 
 Work in progress on `codex/pwa-service`; acceptance is not yet claimed.
 
-The default build produces staff/member web plus Functions. `build:legacy` and `dist` retain optional Electron packaging. `dev` starts the staff web and portal emulator servers. Hosting serves one manifest (`id: /`, `start_url: /launch`) for both audiences, named by the server's allowlisted public branding. Icons use the selected church palette. Installation grants no roles. Reports retain the existing browser print-to-PDF fallback, CSV/XLSX, bulletin preview and explicit directions links.
+The default build produces staff/member web plus Functions. `build:legacy` and `dist` retain optional Electron packaging. `dev` starts the staff web and portal emulator servers. Hosting serves one manifest (`id: /`, `start_url: /launch`) for both audiences, named by the server's allowlisted public branding. Icons use the selected church palette and the published PNG logo when present. Installation grants no roles. Reports retain the existing browser print-to-PDF fallback, CSV/XLSX, bulletin preview and explicit directions links.
 
 The generated service worker caches only exact hashed application assets, never API, record/photo, calendar or export responses. HTML, manifests, icons and worker stay fresh; hashed assets have immutable caching. A failed navigation shows a connection-required page. Activation requires each open app tab to freeze without pending operations or dirty controls; a refusal or timeout cancels activation. Restart is explicit and edits require an explicit discard choice. Browser termination and mobile leave warnings cannot guarantee preservation.
 
@@ -12,4 +12,4 @@ A fresh public callable response establishes server reachability before callable
 
 Kiosk and desktop-handoff callables reject PWA deployments before doing work. `SERVICE_DELIVERY` defaults to `pwa`; only an explicitly selected retained legacy deployment enables them. Historical kiosk attribution is unchanged. Online-only tests intentionally replace the superseded offline and kiosk product acceptance; Session/mercy/privacy tests remain required.
 
-Local dependency-free operation/worker tests pass. TypeScript syntax scan passes. Lint, full typecheck, Vitest and emulator/browser checks require dependencies unavailable in the current sandbox, so the branch must pass CI before acceptance. Real desktop/phone installation, App Check, domain and session-restoration checks remain staging gates.
+Local dependency-free operation/worker tests pass. CI passed lint/type/unit/rules for the initial PWA batch; browser findings are being resolved in the combined operations batch. TypeScript syntax scan passes. Lint, full typecheck, Vitest and emulator/browser checks require dependencies unavailable in the current sandbox, so the branch must pass CI before acceptance. Real desktop/phone installation, App Check, domain and session-restoration checks remain staging gates.
