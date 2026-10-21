@@ -4,7 +4,7 @@ Attendance, communication and shepherding with staff and member web access. Prod
 
 ## Next development milestone
 
-The approved direction is an online PWA service on Firebase, with church branding and a separate Firebase project for each church. Read [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) for Phases 13 through 18, implementation order and release gates. Phase 13 branding is verified. Phases 14–17 now have implementation and automated checks; live staging acceptance remains separate.
+The approved direction is an online PWA service on Firebase, with church branding and a separate Firebase project for each church. Read [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) for Phases 13 through 18, implementation order and release gates. Phase 13 branding is verified. Phases 14–17 now have implementation and passing automated checks; live staging acceptance remains separate.
 
 The supported product path is staff/member web. See [PWA verification](docs/PHASE_14.md) and the [operator runbook](docs/OPERATOR_RUNBOOK.md) for the current code, evidence and staging gates. Earlier phase notes below describe their historical baselines. Native Windows releases, signing, kiosk and offline persistence are no longer PWA launch requirements. Provisioning, security/provider acceptance, backups and recovery remain required. Giving/accounting and denomination configuration are deferred.
 
@@ -97,4 +97,4 @@ The approved next work is on the PWA service plan in `docs/PWA_SERVICE_PLAN.md`.
 
 ## Managed PWA implementation
 
-The current `codex/pwa-service` work makes `npm run build` and `npm run dev` target the staff/member web apps. Optional native output uses `npm run build:legacy`; `npm run dist` is outside the PWA release path. Phase 13 has verified acceptance; Phases 14–17 are in implementation/verification and retain separate live staging gates. See [PWA verification](docs/PHASE_14.md), [operator runbook](docs/OPERATOR_RUNBOOK.md), and [service plan](docs/PWA_SERVICE_PLAN.md). No live infrastructure or real provider sends are performed by the local examples/drills.
+The current `codex/pwa-service` work makes `npm run build` and `npm run dev` target the staff/member web apps. Optional native output uses `npm run build:legacy`; `npm run dist` is outside the PWA release path. Phase 13 has verified acceptance; Phases 14–17 have implementation and passing automated checks, with separate live staging gates. See [PWA verification](docs/PHASE_14.md), [operator runbook](docs/OPERATOR_RUNBOOK.md), and [service plan](docs/PWA_SERVICE_PLAN.md). No live infrastructure or real provider sends are performed by the local examples/drills.

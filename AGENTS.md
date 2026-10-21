@@ -11,7 +11,7 @@ Windows desktop church management app for **Sycamore Reformed Presbyterian Churc
 
 ## Approved product direction
 
-The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phase 13 is implemented with passing automated acceptance; Phases 14 through 17 are in implementation and verification; Phase 18 remains planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.
+The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phase 13 is implemented with passing automated acceptance; Phases 14 through 17 have implementation and passing automated workflow checks; live staging gates remain. Phase 18 remains planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.
 
 The target is staff/member PWAs on Firebase Hosting, with one maintained codebase and a separate Firebase project, credentials and encryption keys for each church. Preserve the existing Presbyterian model and security/privacy rules. Giving/accounting and denomination configuration remain deferred. Separate operator subscription/scholarship administration is not congregation financial tracking and must not be added to church collections.
 
@@ -135,6 +135,6 @@ Photo cleanup jobs in `photoCleanup` are server-only. Photo replacement/removal 
 
 Phase 13 public branding uses `publicBranding/church`, served anonymously only through `getPublicBranding`'s allowlisted projection. Raw client reads/writes remain denied. Only assured Admin/Pastor callables may publish with a revision check. Never expose protected settings or use branding to select a Firebase project. Production clients require operator-bound project/church/origin values. PNG logos are inline and bounded; no SVG, HTML or remote image resources. Preserve existing message templates during explicit branding migration. See `docs/PHASE_13.md` for passing automated acceptance and the separate live setup requirements.
 
-Phase 14 work in progress: `creationReceipts` is server-only and denied by the catchall rule. Creation receipts must commit atomically with their records and never contain private request bodies. Default builds now target staff/member web. `build:legacy` retains optional Electron output.
+Phase 14 implementation: `creationReceipts` is server-only and denied by the catchall rule. Creation receipts must commit atomically with their records and never contain private request bodies. Default builds now target staff/member web. `build:legacy` retains optional Electron output.
 
 Operator infrastructure tools live under `scripts/operator`. Registry files, release attestations and support/subscription records stay outside congregation collections and outside version control. `deploymentIdentity` and `backupStatus` are server/operator-only, denied by catchall rules. `operatorEmulator` is used only by fictional demo-project setup/drills; never put production secrets in Firestore. Recovery targets must remain isolated with delivery and automation off. The dedicated backup identity and `RECOVERY_WRAPPING_KEY` are separate from ordinary application permissions. See `docs/OPERATOR_RUNBOOK.md`.

@@ -6,7 +6,7 @@ Scope extension approved on October 18, 2026. All ten feature areas from the Ten
 
 ## 0. Approved PWA service direction
 
-Approved October 20, 2026. [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) defines Phases 13 through 18 and their acceptance checks. Phase 13 is implemented with passing automated acceptance; Phases 14 through 17 are in implementation and verification; Phase 18 remains planned. See `docs/OPERATOR_RUNBOOK.md` for implementation limits and staging gates.
+Approved October 20, 2026. [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) defines Phases 13 through 18 and their acceptance checks. Phase 13 is implemented with passing automated acceptance; Phases 14 through 17 have implementation and passing automated workflow checks; live staging gates remain. Phase 18 remains planned. See `docs/OPERATOR_RUNBOOK.md` for implementation limits and staging gates.
 
 - Deliver staff and member access through an online PWA on Firebase Hosting. Retain the existing Firebase backend and privacy boundaries.
 - Maintain one codebase with separate Firebase projects, identities, records, secrets and encryption keys for each church. Colt manages setup and releases. Start with a service-owned subdomain, with a church-owned subdomain optional.

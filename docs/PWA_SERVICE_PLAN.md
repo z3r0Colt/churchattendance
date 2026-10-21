@@ -40,7 +40,7 @@ Build from the reviewed repair branch, including its fixes. Do not silently star
 | Phase | Deliverable | Depends on | Status |
 |---|---|---|---|
 | 13 | Church configuration and branding | Repaired application baseline | Implemented; automated acceptance passed, see [Phase 13](PHASE_13.md) |
-| 14 | PWA packaging and online-only workflows | 13 | Implemented; automated verification in progress, device/install staging pending |
+| 14 | PWA packaging and online-only workflows | 13 | Implemented; automated workflow checks passed, device/install staging pending |
 | 15 | Repeatable Firebase church provisioning | 13 and 14 | Operator tooling implemented; emulator/staging gates tracked in the runbook |
 | 16 | Backups and verified recovery | 15 | Backup job and fictional recovery drill implemented; cloud recovery staging pending |
 | 17 | Operator tools and controlled releases | 15 and 16 | Registry/release CLI implemented; live release/rollback staging pending |
@@ -194,4 +194,4 @@ Update the earlier workflow documentation as each affected behavior actually cha
 
 ## Current implementation branch
 
-Phases 14–17 are in implementation and verification on `codex/pwa-service`. No acceptance checkbox is complete merely because tooling exists. See [Phase 14 evidence](PHASE_14.md) and [operator runbook](OPERATOR_RUNBOOK.md). The runbook separates automated fictional checks from real infrastructure, recovery, provider and installation gates.
+Phases 14–17 implementation is on `codex/pwa-service`; automated checks passed in [run 39531708880](https://github.com/z3r0Colt/churchattendance/actions/runs/39531708880). No acceptance checkbox is complete merely because tooling exists. See [Phase 14 evidence](PHASE_14.md) and [operator runbook](OPERATOR_RUNBOOK.md). The runbook separates automated fictional checks from real infrastructure, recovery, provider and installation gates.
