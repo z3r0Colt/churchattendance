@@ -100,7 +100,7 @@ test("two devices preserve concurrent fields and a disconnected device pauses ne
   const desktopContext = await browser.newContext();
   const desk = await desktopContext.newPage();
   await desk.goto("/");
-  await desk.getByLabel("Email", { exact: true }).fill("volunteer@example.test");
+  await desk.getByRole("textbox", { name: "Email", exact: true }).fill("volunteer@example.test");
   await desk.getByLabel("Password").fill("LocalDemo123!");
   await desk.getByRole("button", { name: "Sign in", exact: true }).click();
   await openRoll(desk);

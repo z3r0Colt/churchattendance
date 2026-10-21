@@ -404,7 +404,7 @@ async function portalLogin(page: Page) {
   await page.goto("http://127.0.0.1:5174");
   await page.getByRole("tab", { name: "Member sign in", exact: true }).click();
   await page.getByRole("tab", { name: "Use my password", exact: true }).click();
-  await page.getByLabel("Email", { exact: true }).fill("member-james@example.test");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("member-james@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
@@ -488,13 +488,13 @@ test("submits a visitor form and reviews it in the staff desktop", async ({
   await page.getByRole("tab", { name: "Plan a visit", exact: true }).click();
   await page.getByLabel("First name").fill("Lena");
   await page.getByLabel("Last name").fill("Ashford");
-  await page.getByLabel("Email", { exact: true }).fill("lena@example.test");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("lena@example.test");
   await page
     .getByRole("button", { name: "Submit request", exact: true })
     .click();
   await expect(page.getByText(/Your request has been received/)).toBeVisible();
   await page.goto("http://127.0.0.1:5173");
-  await page.getByLabel("Email", { exact: true }).fill("pastor@example.test");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("pastor@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page

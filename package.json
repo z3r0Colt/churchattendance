@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "dev": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/staff-web-dev.mjs\"",
-    "dev:ui": "vite --config apps/desktop/vite.config.ts --host 127.0.0.1",
+    "dev:ui": "vite --config apps/desktop/vite.web.config.ts --host 127.0.0.1",
     "seed": "node scripts/seed.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p apps/desktop && tsc --noEmit -p functions && tsc --noEmit -p apps/portal && tsc --noEmit -p tests",
@@ -25,7 +25,7 @@
     "dev:staff": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/staff-web-dev.mjs\"",
     "audit:dependencies": "node scripts/audit-dependencies.mjs",
     "check:bundles": "node scripts/check-bundle-budgets.mjs",
-    "dev:legacy": "npm run build && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/dev.mjs\"",
+    "dev:legacy": "npm run build:legacy && firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage \"node scripts/dev.mjs\"",
     "build:legacy": "npm run build && npm run build -w @sycamore/desktop",
     "test:operations": "node --experimental-strip-types --test scripts/tests/*.test.mjs",
     "operator": "node scripts/operator/cli.mjs"

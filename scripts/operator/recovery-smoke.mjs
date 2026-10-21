@@ -37,8 +37,8 @@ try {
   await original.db.doc("services/am_2026-11-01").set({ serviceTypeId: "am", date: "2026-11-01", notes: "", lastAttendancePersonId: "fictional-recovery", present: { "fictional-recovery": { method: "roll", mode: "inPerson" } } });
   await original.db.doc(privatePath).set({ personId: "fictional-recovery", encrypted: seal({ body: "Fictional Session recovery fixture" }, privatePath, ring) });
   await original.db.doc("mercyNotes/fictional-recovery").set({ householdId: "fictional-family", encrypted: seal({ body: "Fictional mercy recovery fixture" }, "mercyNotes/fictional-recovery", ring) });
-  const photo = Buffer.from("fictional-photo-recovery-bytes");
-  await original.storage.bucket().file("photos/fictional-recovery/current.png").save(photo, { resumable: false });
+  const photo = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==", "base64");
+  await original.storage.bucket().file("photos/fictional-recovery/current.png").save(photo, { resumable: false, metadata: { contentType: "image/png" } });
   let member = await original.auth.getUserByEmail("member-recovery@example.test").catch(() => null);
   if (!member) member = await original.auth.createUser({ email: "member-recovery@example.test", emailVerified: true });
   await original.db.doc(`users/${member.uid}`).set({ personId: "fictional-recovery" });

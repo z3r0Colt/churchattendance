@@ -291,7 +291,7 @@ test("queues one reminder on its day, never late, and drops it after the date ch
 
 async function login(page: Page) {
   await page.goto("/");
-  await page.getByLabel("Email", { exact: true }).fill("d9-elder@example.test");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("d9-elder@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(

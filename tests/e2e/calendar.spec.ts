@@ -388,7 +388,7 @@ test("lists the public calendar and manages a member calendar link in the portal
   });
   await page.getByRole("tab", { name: "Member sign in", exact: true }).click();
   await page.getByRole("tab", { name: "Use my password", exact: true }).click();
-  await page.getByLabel("Email", { exact: true }).fill("cal-member@example.test");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("cal-member@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("tab", { name: "Me", exact: true }).click();
@@ -409,7 +409,7 @@ test("cancels one date from the desktop calendar and keeps it listed for restori
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Email", { exact: true }).fill("pastor@example.test");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("pastor@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
@@ -689,7 +689,7 @@ test.describe("event reminders", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.getByLabel("Email", { exact: true }).fill("pastor@example.test");
+    await page.getByRole("textbox", { name: "Email", exact: true }).fill("pastor@example.test");
     await page.getByLabel("Password").fill("LocalDemo123!");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.getByRole("button", { name: "Calendar", exact: true }).click();
@@ -726,7 +726,7 @@ test("shows the month with Lord's Day first and opens a date from the grid", asy
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Email", { exact: true }).fill("pastor@example.test");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("pastor@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
