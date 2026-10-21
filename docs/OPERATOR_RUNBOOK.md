@@ -1,5 +1,7 @@
 # Managed church operations: Phases 15–17
 
+**Architecture revision, October 21:** the [multi-tenant plan](MULTITENANT_PLAN.md) supersedes per-church project provisioning as the target. This runbook and its current CLI describe the single-church baseline. They do not provision a safe shared tenant. Complete MT1–MT6 and update this runbook before onboarding multiple real churches into one project. Do not bypass the current project-reuse protection.
+
 Implementation has passing automated checks: [run 39531708880](https://github.com/z3r0Colt/churchattendance/actions/runs/39531708880), application source `592f350af0f58dd8d06d6657547462234176b14c`. No live projects, billing, DNS, provider sends or production restores have been performed by this change. The source includes provisioning/release tools, a daily recovery job, portable encrypted artifact contracts and an automated fictional emulator recovery drill. Real infrastructure acceptance remains a staging gate; a mocked adapter test is not live deployment or backup evidence.
 
 ## Private operator workspace

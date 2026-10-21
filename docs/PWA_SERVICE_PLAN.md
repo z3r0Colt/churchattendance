@@ -2,9 +2,13 @@
 
 Approved direction on October 20, 2026. This is a development plan, not a claim that the service is implemented or ready for customers. `PLAN.md` remains the product scope and implemented data-model authority. This document defines the next work in Phases 13 through 18.
 
+## October 21 multi-tenant revision
+
+The user approved a shared Foldkeeper backend with church tenants rather than one project per church. [Multi-tenant architecture and implementation plan](MULTITENANT_PLAN.md) is the authority for the revised architecture and MT1–MT6 work before Phase 18. Earlier work/status below describes the implemented single-church baseline. Its automated evidence does not establish tenant isolation; do not provision multiple churches into the existing backend.
+
 ## Outcome
 
-Colt manages the service. A church supplies its initial information, receives a configured church-branded app, and uses it through a browser or installed PWA. The church does not need to manage a server or Firebase console. One maintained codebase serves separate church deployments.
+Colt manages the service. A church supplies its initial information, receives a configured church-branded app, and uses it through a browser or installed PWA. The church does not need to manage a server or Firebase console. One maintained application will serve many church tenants in a shared backend, with separate production/staging environments. Tenant migration and acceptance are not yet implemented.
 
 The service should cover its operating costs. Any surplus can support ministry scholarships. Pricing remains provisional until pilot usage and support costs are measured. This plan does not promise a price or lifetime scholarship availability.
 
@@ -15,9 +19,9 @@ The service should cover its operating costs. Any surplus can support ministry s
 | Product | Foldkeeper, with church branding and a fixed Powered by Foldkeeper credit |
 | Delivery | Online PWA for staff and members on Firebase Hosting |
 | Backend | Keep Firebase Auth, Firestore, Storage, Functions and Secret Manager |
-| Isolation | Separate Firebase project, accounts, records, secrets and keys for each church |
+| Isolation | Shared backend with tenant-scoped Auth, records, files, secrets and keys; separate production/staging projects; see MT1–MT6 |
 | Source | One repository and release version, with configuration rather than customer forks |
-| Domains | Service-owned church subdomain by default, optional church-owned subdomain |
+| Domains | Central application origin and church routes initially; optional church domains behind validated routing and security acceptance |
 | Windows | Retain existing Electron source temporarily, remove it from the launch and ongoing customer release requirements |
 | Kiosk | Not part of the service launch |
 | Offline | No offline attendance or persistent church-record storage |
@@ -45,7 +49,8 @@ Build from the reviewed repair branch, including its fixes. Do not silently star
 | 15 | Repeatable Firebase church provisioning | 13 and 14 | Operator tooling implemented; emulator/staging gates tracked in the runbook |
 | 16 | Backups and verified recovery | 15 | Backup job and fictional recovery drill implemented; cloud recovery staging pending |
 | 17 | Operator tools and controlled releases | 15 and 16 | Registry/release CLI implemented; live release/rollback staging pending |
-| 18 | Pilot and paid-service acceptance | 13 through 17 | Planned |
+| MT1–MT6 | Shared tenant platform, migration and acceptance | Single-church baseline | Planned; see [multi-tenant plan](MULTITENANT_PLAN.md) |
+| 18 | Pilot and paid-service acceptance | 13 through 17 and MT1–MT6 | Planned |
 
 Implement one phase at a time in focused commits. Mark a phase complete only after its acceptance checks have evidence. Do not create live projects, change DNS, send real messages or enable billing merely to implement local tooling. Live staging work is a separate explicitly authorized rollout step.
 
@@ -103,6 +108,9 @@ Implement one phase at a time in focused commits. Mark a phase complete only aft
 - [ ] Replace obsolete offline/kiosk acceptance requirements with online-only regressions as an intentional scope change. Do not drop unrelated coverage or disable tests to hide failures.
 
 ## Phase 15. Firebase church provisioning
+
+Historical single-church baseline: the MT1–MT6 plan supersedes project-per-church provisioning and project-reuse rejection for the future shared service. Current tooling still enforces those assumptions and must not be used to attach multiple churches to a shared live project.
+
 
 ### Work
 

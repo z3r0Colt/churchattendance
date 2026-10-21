@@ -6,10 +6,13 @@ Scope extension approved on October 18, 2026. All ten feature areas from the Ten
 
 ## 0. Approved PWA service direction
 
+Updated October 21, 2026: the user selected a **shared multi-tenant Foldkeeper backend**, replacing one Firebase project per church as the target architecture. [Multi-tenant architecture and implementation plan](docs/MULTITENANT_PLAN.md) defines church-scoped Identity Platform authentication, data/files/keys, trusted tenant resolution, shared context adapters, background work, per-church recovery and capacity expansion. Insert MT1–MT6 before Phase 18. Current source and section 4.3 still describe the single-church implementation; this decision does not make it safe for multiple churches yet.
+
+
 Approved October 20, 2026. [Managed church PWA development plan](docs/PWA_SERVICE_PLAN.md) defines Phases 13 through 18 and their acceptance checks. Phase 13 is implemented with passing automated acceptance; Phases 14 through 17 have implementation and passing automated workflow checks; live staging gates remain. Phase 18 remains planned. See `docs/OPERATOR_RUNBOOK.md` for implementation limits and staging gates.
 
 - Deliver staff and member access through an online PWA on Firebase Hosting. Retain the existing Firebase backend and privacy boundaries.
-- Maintain one codebase with separate Firebase projects, identities, records, secrets and encryption keys for each church. Colt manages setup and releases. Start with a service-owned subdomain, with a church-owned subdomain optional.
+- Maintain one shared multi-tenant service with separate production/staging projects. Scope identities, records, secrets and encryption keys to each church. Colt manages onboarding and releases. Start with a central application origin and church routes; design optional church domains behind trusted resolution, subject to Auth/passkey/domain acceptance. Use routing adapters for future backend partitions rather than project selection in feature code.
 - The service is named **Foldkeeper**. Preserve each church’s name, logo and colors, with a fixed **Powered by Foldkeeper** credit on staff/member screens and Foldkeeper in browser titles and full PWA installation names. The credit is product-owned and cannot be removed in church branding settings.
 - Replace customer-specific source edits with validated branding and deployment configuration. The existing Presbyterian membership/governance model remains unchanged for now.
 - Retire native Windows releases, code signing, kiosk support and offline record persistence as launch requirements. Existing source remains temporarily while web replacements are verified.
