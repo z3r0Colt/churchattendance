@@ -387,6 +387,20 @@ def deploy(args, google, config, root):
           "Full recovery/backup jobs and a billing budget alert are NOT configured by this script.", flush=True)
 
 
+def enable_services(project):
+    services = ["cloudresourcemanager.googleapis.com", "cloudbilling.googleapis.com",
+             "firebase.googleapis.com", "firestore.googleapis.com", "firebasestorage.googleapis.com",
+             "firebasehosting.googleapis.com", "firebaserules.googleapis.com", "identitytoolkit.googleapis.com",
+             "firebaseappcheck.googleapis.com", "recaptchaenterprise.googleapis.com", "secretmanager.googleapis.com",
+             "cloudfunctions.googleapis.com", "run.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com",
+             "eventarc.googleapis.com", "pubsub.googleapis.com", "cloudscheduler.googleapis.com", "iam.googleapis.com",
+             "iamcredentials.googleapis.com", "compute.googleapis.com"]
+    # Service Usage rejects enable requests containing more than 20 services.
+    for start in range(0, len(services), 20):
+        command(["gcloud", "services", "enable", *services[start:start + 20],
+                 "--project", project, "--quiet"])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", required=True)
@@ -405,13 +419,7 @@ def main():
           "Real cloud resources will be created; Google Cloud usage is billable. Delivery remains disabled.", flush=True)
     google = Google(args.project)
     # Explicit target everywhere; never change the user's default gcloud project.
-    command(["gcloud", "services", "enable", "cloudresourcemanager.googleapis.com", "cloudbilling.googleapis.com",
-             "firebase.googleapis.com", "firestore.googleapis.com", "firebasestorage.googleapis.com",
-             "firebasehosting.googleapis.com", "firebaserules.googleapis.com", "identitytoolkit.googleapis.com",
-             "firebaseappcheck.googleapis.com", "recaptchaenterprise.googleapis.com", "secretmanager.googleapis.com",
-             "cloudfunctions.googleapis.com", "run.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com",
-             "eventarc.googleapis.com", "pubsub.googleapis.com", "cloudscheduler.googleapis.com", "iam.googleapis.com",
-             "iamcredentials.googleapis.com", "compute.googleapis.com", "--project", args.project, "--quiet"])
+    enable_services(args.project)
     root = source_checkout(args.release)
     config = provision(args, google)
     deploy(args, google, config, root)
