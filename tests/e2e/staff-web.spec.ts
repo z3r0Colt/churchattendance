@@ -53,22 +53,20 @@ function recordDialogs(page: Page) {
 async function markOffline(page: Page, context: BrowserContext, name: string) {
   await page.evaluate(async () => {
     const firebasePath = "/staff/data/firebase.ts";
-    const firestorePath = performance.getEntriesByType("resource").find((row) => row.name.includes("firebase_firestore.js"))?.name;
-    if (!firestorePath) throw new Error("Firestore test module unavailable");
-    const [{ db }, { disableNetwork }] = await Promise.all([import(firebasePath), import(firestorePath)]);
-    await disableNetwork(db);
+    const source = await (await fetch(firebasePath)).text();
+    const path = /from\s*["']([^"']*firebase_firestore[^"']*)["']/.exec(source)?.[1];
+    if (!path) throw new Error("Firestore test module unavailable");
+    const [{ db }, sdk] = await Promise.all([import(firebasePath), import(path)]);
+    // Test-only control of the real SDK transport, never an application mock or production hook.
+    (window as unknown as { resumeTestFirestore: () => Promise<void> }).resumeTestFirestore = () => sdk.enableNetwork(db);
+    await sdk.disableNetwork(db);
   });
   await page.getByRole("button", { name: `${name}, absent` }).click();
   await expect(page.getByRole("button", { name: `${name}, present` })).toBeVisible();
   await context.setOffline(true);
   await expect(page.getByText("Connection required", { exact: true })).toBeVisible();
   // Returning the network lets Firestore reconcile the already in-flight write.
-  await page.evaluate(async () => {
-    const firebasePath = "/staff/data/firebase.ts";
-    const firestorePath = performance.getEntriesByType("resource").find((row) => row.name.includes("firebase_firestore.js"))!.name;
-    const [{ db }, { enableNetwork }] = await Promise.all([import(firebasePath), import(firestorePath)]);
-    await enableNetwork(db);
-  });
+  await page.evaluate(() => (window as unknown as { resumeTestFirestore: () => Promise<void> }).resumeTestFirestore());
 }
 // The tab must be able to load the sign-in page again, so the network returns
 // while the church records stay out of reach and the mark stays unsaved.
@@ -102,7 +100,7 @@ test("two devices preserve concurrent fields and a disconnected device pauses ne
   const desktopContext = await browser.newContext();
   const desk = await desktopContext.newPage();
   await desk.goto("/");
-  await desk.getByLabel("Email").fill("volunteer@example.test");
+  await desk.getByLabel("Email", { exact: true }).fill("volunteer@example.test");
   await desk.getByLabel("Password").fill("LocalDemo123!");
   await desk.getByRole("button", { name: "Sign in", exact: true }).click();
   await openRoll(desk);
@@ -120,7 +118,7 @@ test("two devices preserve concurrent fields and a disconnected device pauses ne
   }
   await phoneContext.setOffline(true);
   await expect(handset.locator(".content [inert]")).toBeVisible();
-  await expect(handset.getByRole("button", { name: "Ruth Calder, absent" })).toBeVisible();
+  await expect(handset.getByRole("button", { name: "Ruth Calder, absent", includeHidden: true })).toBeVisible();
   await desk.getByRole("button", { name: "John Baker, present" }).click();
   await phoneContext.setOffline(false);
   await expect(handset.getByText("Online", { exact: true })).toBeVisible();

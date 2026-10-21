@@ -1,4 +1,4 @@
-import { connectedOperation } from "../../../pwa/runtime";
+import { connectedOperation, isReadCall } from "../../../pwa/runtime";
 import { httpsCallable } from "firebase/functions";
 import {
   browserLocalPersistence,
@@ -17,7 +17,7 @@ export const securityCall = <T = unknown>(
   input: unknown = {},
 ): Promise<T> =>
   withRecentSignIn(
-    () => connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data),
+    () => connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data, isReadCall(name)),
   );
 const random = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>

@@ -312,7 +312,7 @@ test("PWA deployments deny kiosk provisioning and legacy kiosk tokens", async ({
 });
 async function login(page: Page, email = "pastor@example.test") {
   await page.goto("/");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(

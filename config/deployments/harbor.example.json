@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "churchId": "harbor-fictional",
+  "projectId": "demo-harbor-church",
+  "environment": "emulator",
+  "origin": "http://localhost:5174",
+  "region": "us-central1",
+  "storageBucket": "demo-harbor-church.appspot.com",
+  "backupBucket": "demo-harbor-recovery",
+  "hostingSite": "demo-harbor-church",
+  "authDomains": [
+    "localhost",
+    "demo-harbor-church.firebaseapp.com"
+  ],
+  "firebase": {
+    "apiKey": "demo-key",
+    "appId": "demo-app",
+    "authDomain": "demo-harbor-church.firebaseapp.com"
+  },
+  "branding": {
+    "churchName": "Harbor Reformed Church",
+    "appName": "Harbor Church",
+    "palette": "navy"
+  },
+  "admin": {
+    "email": "administrator@harbor.example.test",
+    "roles": [
+      "admin"
+    ]
+  },
+  "services": [
+    {
+      "id": "am",
+      "name": "Lord's Day Morning",
+      "time": "10:00",
+      "dayOfWeek": 0
+    }
+  ],
+  "providers": {
+    "email": "disabled",
+    "sms": "disabled"
+  },
+  "budgetMonthlyUsd": 50,
+  "timeZone": "America/Indiana/Indianapolis",
+  "backupServiceAccount": "church-backup@demo-harbor-church.iam.gserviceaccount.com"
+}

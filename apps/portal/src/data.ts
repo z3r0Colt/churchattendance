@@ -1,4 +1,4 @@
-import { connectedOperation } from "../../pwa/runtime";
+import { connectedOperation, isReadCall } from "../../pwa/runtime";
 import { useEffect, useState } from "react";
 import { initializeApp } from "firebase/app";
 import {
@@ -63,7 +63,7 @@ export const callPortal = async <T>(
   input: unknown = {},
 ): Promise<T> => name === "getPublicBranding"
   ? (await httpsCallable<unknown, T>(functions, name)(input)).data
-  : connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data);
+  : connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data, isReadCall(name));
 export type PortalEvent = Occurrence & { description: string; zone: string };
 export type MemberProfile = {
   person: {

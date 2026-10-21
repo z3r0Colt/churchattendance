@@ -191,3 +191,7 @@ This first slice does not include subscriptions, a large operator dashboard, giv
 Phases 1 through 12 and their setup documents remain evidence of the existing implementation. Their Windows packaging, native handoff, kiosk and offline acceptance requirements are superseded for this service. Security, privacy, consent, historical report correctness and non-native live release checks remain mandatory.
 
 Update the earlier workflow documentation as each affected behavior actually changes. This planning commit does not delete working code, change security rules or introduce the proposed configuration model into production.
+
+## Current implementation branch
+
+Phases 14–17 are in implementation and verification on `codex/pwa-service`. No acceptance checkbox is complete merely because tooling exists. See [Phase 14 evidence](PHASE_14.md) and [operator runbook](OPERATOR_RUNBOOK.md). The runbook separates automated fictional checks from real infrastructure, recovery, provider and installation gates.

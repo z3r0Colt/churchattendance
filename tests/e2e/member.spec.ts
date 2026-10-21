@@ -205,7 +205,7 @@ test("finishes a link sign-in in the portal and ignores a malicious return targe
   );
   await page.goto(attack.url);
   await expect(page).toHaveURL(`${portal}/`);
-  await page.getByLabel("Email").fill("link-member@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("link-member@example.test");
   await page
     .getByRole("button", { name: "Finish signing in", exact: true })
     .click();
@@ -220,7 +220,7 @@ test("finishes a link sign-in in the portal and ignores a malicious return targe
 
   // A spent link explains itself and offers a new one.
   await page.goto(attack.url);
-  await page.getByLabel("Email").fill("link-member@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("link-member@example.test");
   await page
     .getByRole("button", { name: "Finish signing in", exact: true })
     .click();
@@ -243,7 +243,7 @@ test("finishes a link sign-in in the portal and ignores a malicious return targe
     "/?tab=account",
   );
   await page.goto(account.url);
-  await page.getByLabel("Email").fill("link-member@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("link-member@example.test");
   await page
     .getByRole("button", { name: "Finish signing in", exact: true })
     .click();
@@ -258,7 +258,7 @@ test("requests a sign-in link from the portal without revealing whether the acco
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(portal);
   await page.getByRole("tab", { name: "Member sign in", exact: true }).click();
-  await page.getByLabel("Email").fill("link-member@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("link-member@example.test");
   await page
     .getByRole("button", { name: "Send sign-in link", exact: true })
     .click();
@@ -538,7 +538,7 @@ test.describe("member details", () => {
       "/?tab=profile",
     );
     await page.goto(link.url);
-    await page.getByLabel("Email").fill("link-member@example.test");
+    await page.getByLabel("Email", { exact: true }).fill("link-member@example.test");
     await page
       .getByRole("button", { name: "Finish signing in", exact: true })
       .click();
@@ -802,7 +802,7 @@ test.describe("member requests", () => {
       "/?tab=requests",
     );
     await page.goto(link.url);
-    await page.getByLabel("Email").fill("link-member@example.test");
+    await page.getByLabel("Email", { exact: true }).fill("link-member@example.test");
     await page
       .getByRole("button", { name: "Finish signing in", exact: true })
       .click();
@@ -833,7 +833,7 @@ test.describe("member requests", () => {
 
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto("http://127.0.0.1:5173");
-    await page.getByLabel("Email").fill("pastor@example.test");
+    await page.getByLabel("Email", { exact: true }).fill("pastor@example.test");
     await page.getByLabel("Password").fill("LocalDemo123!");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.getByRole("button", { name: /Pastoral care/ }).click();

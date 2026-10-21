@@ -500,7 +500,7 @@ test("creates staff accounts, serializes security updates and recovers lost fact
   ).toBe(false);
   expect((await ref.get()).get("enabled")).toBe(false);
   await page.goto("/");
-  await page.getByLabel("Email").fill("phase7-admin@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("phase7-admin@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page

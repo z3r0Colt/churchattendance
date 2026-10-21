@@ -1,4 +1,4 @@
-import { connectedOperation } from "../../../pwa/runtime";
+import { connectedOperation, isReadCall } from "../../../pwa/runtime";
 import { useEffect, useRef, useState } from "react";
 import {
   collection,
@@ -365,7 +365,7 @@ export function useUnreadSms(enabled: boolean) {
   return count;
 }
 async function call<T = unknown>(name: string, value: unknown): Promise<T> {
-  const result = await connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(value)).data);
+  const result = await connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(value)).data, isReadCall(name));
   if (
     [
       "createMessage",

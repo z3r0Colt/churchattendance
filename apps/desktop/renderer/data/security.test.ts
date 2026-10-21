@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
     input: unknown,
   ) => unknown,
 }));
-vi.mock("../../../pwa/runtime", () => ({ connectedOperation: (action: () => Promise<unknown>) => action() }));
+vi.mock("../../../pwa/runtime", () => ({ isReadCall: () => false, connectedOperation: (action: () => Promise<unknown>) => action() }));
 vi.mock("./firebase", () => ({ auth: mocks.auth, functions: {} }));
 vi.mock("../platform", () => ({
   native: undefined,

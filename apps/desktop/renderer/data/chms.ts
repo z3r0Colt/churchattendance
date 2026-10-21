@@ -1,4 +1,4 @@
-import { connectedOperation } from "../../../pwa/runtime";
+import { connectedOperation, isReadCall } from "../../../pwa/runtime";
 import { useEffect, useState } from "react";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -63,7 +63,7 @@ export async function chmsCall<T = unknown>(
   name: string,
   input: unknown,
 ): Promise<T> {
-  const result = await connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data);
+  const result = await connectedOperation(async () => (await httpsCallable<unknown, T>(functions, name)(input)).data, isReadCall(name));
   if (
     [
       "saveCareNote",

@@ -203,7 +203,7 @@ test("keeps office history with the Session and decisions sealed", async ({
 
 async function login(page: Page) {
   await page.goto("/");
-  await page.getByLabel("Email").fill("r11-clerk@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("r11-clerk@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(

@@ -22,7 +22,10 @@ test("uncertain outcomes block restart until explicitly reconciled", async () =>
   await assert.rejects(state.run(async () => { throw Object.assign(new Error("lost response"), { code: "functions/unavailable" }); }));
   assert.equal(state.getSnapshot().uncertain, true);
   assert.equal(state.freeze(), false);
-  state.connection(true); state.reconcile();
+  state.connection(true);
+  await assert.rejects(state.run(async () => "duplicate"), /Review the unconfirmed/);
+  assert.equal(await state.run(async () => "review existing records", true), "review existing records");
+  state.reconcile();
   assert.equal(state.freeze(), true);
   await assert.rejects(state.run(async () => 1), /confirmed connection/);
   state.resume(); assert.equal(await state.run(async () => 2), 2);

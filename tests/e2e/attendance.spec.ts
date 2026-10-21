@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import ExcelJS from "exceljs";
 async function login(page: Page, email = "volunteer@example.test") {
   await page.goto("/");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
@@ -36,7 +36,7 @@ test("a disconnected volunteer cannot start a change, then confirms it online on
   await expect(page.getByText("Online", { exact: true })).toBeVisible();
   await page.context().setOffline(true);
   await expect(page.locator(".content [inert]")).toBeVisible();
-  await expect(james).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "James Calder,", exact: false, includeHidden: true })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText("Connection required", { exact: true })).toBeVisible();
   await page.context().setOffline(false);
   await expect(page.getByText("Online", { exact: true })).toBeVisible();

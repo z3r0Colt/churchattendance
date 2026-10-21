@@ -1042,3 +1042,15 @@ describe("creation retry receipts stay server-owned", () => {
     }
   });
 });
+
+describe("operator infrastructure records are not church administration APIs", () => {
+  it("denies all church clients identity reservations, backup status and emulator secrets", async () => {
+    for (const role of ["admin", "pastor", "clerk", "elder", "deacon", "attendanceVolunteer", "readOnly"]) {
+      const db = auth(role).firestore();
+      for (const path of ["deploymentIdentity/church", "backupStatus/daily", "operatorEmulator/secrets"]) {
+        await assertFails(getDoc(doc(db, path)));
+        await assertFails(setDoc(doc(db, path), { forged: true }));
+      }
+    }
+  });
+});

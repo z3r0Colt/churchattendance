@@ -311,7 +311,7 @@ test("sends one content-free reminder and suppresses it after a reschedule or ca
 
 async function login(page: Page) {
   await page.goto("/");
-  await page.getByLabel("Email").fill("p8-elder@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("p8-elder@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
@@ -712,7 +712,7 @@ test("saves the digest schedule and channel from Settings", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Email").fill("pastor@example.test");
+  await page.getByLabel("Email", { exact: true }).fill("pastor@example.test");
   await page.getByLabel("Password").fill("LocalDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();

@@ -396,8 +396,8 @@ function Workspace({
   const [navOpen, setNavOpen] = useState(false);
   // While Lock now waits on unsaved marks, this holds the sync error already
   // showing, so a mark rejected during the wait is told apart and not hidden.
-  const [lockWarning, setLockWarning] = useState<{ error: string }>();
-  const lockRejected = !!lockWarning && data.error !== lockWarning.error;
+  const [lockWarning, setLockWarning] = useState<{ error: string; failures: number }>();
+  const lockRejected = !!lockWarning && (data.error !== lockWarning.error || data.failures !== lockWarning.failures);
   const menuButton = useRef<HTMLButtonElement>(null);
   const editor = hasRole(roles, EDITOR_ROLES);
   const volunteer = roles.length === 1 && roles[0] === "attendanceVolunteer";
@@ -455,7 +455,7 @@ function Workspace({
     if (lockWarning && !data.pending && !lockRejected) void signOutUser();
   }, [lockWarning, data.pending, lockRejected]);
   function lock() {
-    if (staffWeb && data.pending) setLockWarning({ error: data.error });
+    if (staffWeb && data.pending) setLockWarning({ error: data.error, failures: data.failures });
     else void signOutUser();
   }
   const service = data.services.find(
@@ -517,6 +517,7 @@ function Workspace({
                   : "success"
             }
             aria-live="polite"
+            style={{ color: theme === "dark" ? "#ffffff" : "#242424", backgroundColor: theme === "dark" ? "#292929" : "#ffffff" }}
           >
             {sync}
           </Badge>

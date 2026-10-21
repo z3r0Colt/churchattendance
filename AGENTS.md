@@ -11,7 +11,7 @@ Windows desktop church management app for **Sycamore Reformed Presbyterian Churc
 
 ## Approved product direction
 
-The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phase 13 is implemented with passing automated acceptance; Phases 14 through 18 remain planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.
+The user approved the PWA-only managed service on October 20, 2026. Read `docs/PWA_SERVICE_PLAN.md` before implementing the next work. Phase 13 is implemented with passing automated acceptance; Phases 14 through 17 are in implementation and verification; Phase 18 remains planned. They supersede prior Windows-release, kiosk, offline-persistence and single-customer launch requirements.
 
 The target is staff/member PWAs on Firebase Hosting, with one maintained codebase and a separate Firebase project, credentials and encryption keys for each church. Preserve the existing Presbyterian model and security/privacy rules. Giving/accounting and denomination configuration remain deferred. Separate operator subscription/scholarship administration is not congregation financial tracking and must not be added to church collections.
 
@@ -54,14 +54,14 @@ These are created in Phase 1. Keep the names stable.
 | Command | What it does |
 |---|---|
 | `npm install` | Install all workspaces |
-| `npm run dev` | Start Firebase emulators and the Electron app against them |
+| `npm run dev` | Start Firebase emulators and the supported staff/member web apps |
 | `npm run lint` | ESLint across all workspaces |
 | `npm run typecheck` | `tsc --noEmit` across all workspaces |
 | `npm test` | Vitest unit tests |
 | `npm run test:rules` | Security rule tests inside `firebase emulators:exec` |
 | `npm run test:e2e` | Playwright tests against the emulators |
 | `npm run dev:staff` | Start the emulators and serve the staff web at http://localhost:5175/staff/ |
-| `npm run build` | Build renderer, main, preload, portal, staff web and functions |
+| `npm run build` | Build portal, staff PWA, recovery configuration and functions |
 | `npm run dist` | Build the Windows installer |
 
 Before every commit run `npm run lint`, `npm run typecheck` and `npm test`. If you touched `firestore.rules`, `storage.rules`, roles, or anything under `sessionPrivate`, `careNotes`, `followUps`, `diaconalTasks`, `pastoralVisits`, `visitRounds`, `shepherdingSettings`, `householdLocations`, `flockAssessments`, `bereavementDates`, `importantDates`, `memberRequests`, `workflows`, `workflowVersions`, `workflowRuns`, `officerPolicies`, `officerDecisions`, `quorumPolicies`, `quorumMeetings`, `communionDecisions`, `communionRecords` or any `mercy*` collection, also run `npm run test:rules`.
@@ -97,7 +97,7 @@ Use these words in code, UI text and docs.
 ## Data model notes
 
 * The full model is in `PLAN.md` section 4.3. Update `PLAN.md` in the same commit if you change it.
-* Attendance lives on `services/{serviceId}.present.{personId}`. Mark present with `updateDoc` on that one field path and unmark with `deleteField()`. Never rewrite the whole `present` map, because that breaks offline merging between the booth and the kiosk.
+* Attendance lives on `services/{serviceId}.present.{personId}`. Mark present with `updateDoc` on that one field path and unmark with `deleteField()`. Never rewrite the whole `present` map, because that loses concurrent changes from another staff device.
 * Edits to people send only the changed fields with `updateDoc`. Never `setDoc` a whole person from a form.
 * Store dates as ISO `YYYY-MM-DD` strings for calendar dates (birthdays, service dates) and Firestore `Timestamp` for moments (check-in time, sent time). The church time zone setting (`settings/church.timeZone`) decides what "Saturday 6:00 PM" means. Never use the PC's local zone in Functions.
 * Security expiration/audit moments also use Firestore Timestamps. `validAfter` and handoff `authTime` are explicitly Auth-protocol epoch-second cutoffs for comparison with the signed `auth_time` claim. They are not church calendar dates.
@@ -120,7 +120,7 @@ Use these words in code, UI text and docs.
 * Pure logic (report math, membership counts, statistical report, merge fields, bulletin scheduling) gets Vitest unit tests in `packages/shared`.
 * Every Firestore and Storage rule gets allow and deny tests in `tests/rules/`, including Admin without Session denied from Session data.
 * Functions are tested against the emulators with Twilio and Graph faked behind their provider interfaces. Tests never call real Twilio or Microsoft.
-* Offline behavior for roll call (mark while offline, reconnect, data syncs) has a Playwright test.
+* Connection-loss behavior has Playwright coverage for blocked new writes, unconfirmed in-flight writes, reconnection and security lock.
 * Local staff fixtures require both Auth and Firestore emulators and create synthetic server-owned assurance. They are not a real MFA flow and must never be bundled into deployed code. WebAuthn verification must be tested with actual signatures, not a permissive production mock.
 * Never skip, disable or delete a failing test to get green. Fix the cause.
 
@@ -136,3 +136,5 @@ Photo cleanup jobs in `photoCleanup` are server-only. Photo replacement/removal 
 Phase 13 public branding uses `publicBranding/church`, served anonymously only through `getPublicBranding`'s allowlisted projection. Raw client reads/writes remain denied. Only assured Admin/Pastor callables may publish with a revision check. Never expose protected settings or use branding to select a Firebase project. Production clients require operator-bound project/church/origin values. PNG logos are inline and bounded; no SVG, HTML or remote image resources. Preserve existing message templates during explicit branding migration. See `docs/PHASE_13.md` for passing automated acceptance and the separate live setup requirements.
 
 Phase 14 work in progress: `creationReceipts` is server-only and denied by the catchall rule. Creation receipts must commit atomically with their records and never contain private request bodies. Default builds now target staff/member web. `build:legacy` retains optional Electron output.
+
+Operator infrastructure tools live under `scripts/operator`. Registry files, release attestations and support/subscription records stay outside congregation collections and outside version control. `deploymentIdentity` and `backupStatus` are server/operator-only, denied by catchall rules. `operatorEmulator` is used only by fictional demo-project setup/drills; never put production secrets in Firestore. Recovery targets must remain isolated with delivery and automation off. The dedicated backup identity and `RECOVERY_WRAPPING_KEY` are separate from ordinary application permissions. See `docs/OPERATOR_RUNBOOK.md`.

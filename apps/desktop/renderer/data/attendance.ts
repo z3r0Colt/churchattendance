@@ -188,6 +188,7 @@ export function useAttendanceData(selectedDate = "") {
       serviceWindow.key === `${selectedDate}|${timeZone}` &&
       serviceWindow.ready,
     error,
+    failures: connection.failures,
     setError,
     mark,
     startService,

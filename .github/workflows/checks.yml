@@ -43,9 +43,9 @@ jobs:
       - run: npm run build
       - run: npm run check:bundles
       - name: Prepare fictional emulator secrets
-        run: node -e 'require("fs").writeFileSync("functions/.secret.local", "PRIVATE_RECORD_KEYS=fictional-emulator-only\nCOMMUNICATIONS_CONFIG=fictional-emulator-only\nPORTAL_RATE_LIMIT_KEY=fictional-emulator-only\n")'
+        run: node -e 'require("fs").writeFileSync("functions/.secret.local", "PRIVATE_RECORD_KEYS=fictional-emulator-only\nRECOVERY_WRAPPING_KEY=fictional-emulator-only\nCOMMUNICATIONS_CONFIG=fictional-emulator-only\nPORTAL_RATE_LIMIT_KEY=fictional-emulator-only\n")'
       - name: Run end-to-end shard
-        run: npx firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage "node scripts/seed.mjs && npx playwright test --shard=${{ matrix.shard }}/3"
+        run: npx firebase emulators:exec --project demo-sycamore --only auth,firestore,functions,storage "node scripts/seed.mjs && node scripts/operator/emulator-smoke.mjs && node scripts/operator/recovery-smoke.mjs && npx playwright test --shard=${{ matrix.shard }}/3"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

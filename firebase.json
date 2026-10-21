@@ -6,6 +6,7 @@
       "runtime": "nodejs22",
       "predeploy": [
         "npm run build -w @sycamore/shared",
+        "node scripts/build-recovery-config.mjs",
         "npm run build -w @sycamore/functions"
       ]
     }

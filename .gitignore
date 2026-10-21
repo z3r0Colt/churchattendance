@@ -20,3 +20,8 @@ communication-config.json
 *.secrets.json
 service-account*.json
 .firebase/
+
+.church-operator/
+*.operator-registry.json
+recovery-artifacts/
+functions/recovery-config.json

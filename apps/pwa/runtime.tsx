@@ -19,10 +19,11 @@ export function confirmConnection() {
   })().finally(() => { checking = undefined; });
   return checking;
 }
-export async function connectedOperation<T>(action: () => Promise<T>) {
+export function isReadCall(name: string) { return /^(?:get|list|my)/.test(name) || /^(?:portalPublicEvents|portalPublicCalendar|portalMemberEvents|portalMe|portalDirectory|portalPhoto)$/.test(name); }
+export async function connectedOperation<T>(action: () => Promise<T>, readOnly = false) {
   // Recheck before side effects, including when a browser reports a stale online state.
   await confirmConnection();
-  return operations.run(action);
+  return operations.run(action, readOnly);
 }
 const dirty = new Set<Element>();
 function hasEdits() {
