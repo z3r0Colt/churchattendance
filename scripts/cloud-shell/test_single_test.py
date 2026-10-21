@@ -2,6 +2,9 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import json
+import tempfile
+from types import SimpleNamespace
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("single_test_setup", Path(__file__).with_name("single-test.py"))
@@ -48,3 +51,27 @@ class EndpointDiscoveryTests(unittest.TestCase):
             with self.subTest(output=output), patch.object(setup, "command", return_value=output):
                 with self.assertRaises(setup.SetupError):
                     setup.discover_endpoints(Path("/fictional/checkout"), {})
+
+
+class FunctionParameterTests(unittest.TestCase):
+    def test_excluded_backup_parameters_are_explicitly_disabled_before_build(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "functions").mkdir()
+            (root / "firebase.json").write_text(json.dumps({"hosting": {"target": "portal"}}))
+            args = SimpleNamespace(project="fixture-project", release="a" * 40)
+            config = {"firebase": {"apiKey": "fixture-key", "appId": "fixture-app", "authDomain": "fixture-project.firebaseapp.com"},
+                      "bucket": "fixture-project.firebasestorage.app", "churchId": "testing-rpc",
+                      "origin": "https://fixture-project.web.app", "siteKey": "fixture-site-key"}
+            def stop_before_build(args, **kwargs):
+                if args[:3] == ["gcloud", "auth", "application-default"]:
+                    return "fixture-local-authorization"
+                raise setup.SetupError("stop fixture before installation or deployment")
+            with patch.dict(setup.os.environ, {}, clear=True), patch.object(setup, "command", side_effect=stop_before_build):
+                with self.assertRaisesRegex(setup.SetupError, "stop fixture"):
+                    setup.deploy(args, None, config, root)
+            params = dict(line.split("=", 1) for line in (root / "functions/.env.fixture-project").read_text().splitlines())
+            self.assertEqual(params["BACKUP_BUCKET"], "not-configured")
+            self.assertEqual(params["BACKUP_SERVICE_ACCOUNT"], "not-configured@not-configured.iam.gserviceaccount.com")
+            self.assertEqual(params["CHURCH_ID"], "testing-rpc")
+            self.assertEqual(params["STAFF_AUTH_ORIGIN"], config["origin"])

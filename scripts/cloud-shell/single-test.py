@@ -342,7 +342,11 @@ def deploy(args, google, config, root):
     firebase["hosting"].pop("target", None)
     firebase["hosting"]["site"] = args.project
     private_json(root / "firebase.json", firebase)
-    params = {"CHURCH_ID": config["churchId"], "SERVICE_DELIVERY": "pwa", "PORTAL_ORIGIN": config["origin"],
+    # Firebase resolves all discovered params, including the excluded recovery endpoint.
+    # Explicit disabled defaults fail closed if that endpoint is accidentally selected.
+    params = {"BACKUP_BUCKET": "not-configured",
+              "BACKUP_SERVICE_ACCOUNT": "not-configured@not-configured.iam.gserviceaccount.com",
+              "CHURCH_ID": config["churchId"], "SERVICE_DELIVERY": "pwa", "PORTAL_ORIGIN": config["origin"],
               "STAFF_AUTH_ORIGIN": config["origin"], "STAFF_AUTH_RP_ID": f"{args.project}.web.app",
               "CALENDAR_UID_DOMAIN": f"{args.project}.web.app"}
     parameter_file = root / "functions" / f".env.{args.project}"
