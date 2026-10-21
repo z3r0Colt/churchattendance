@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { initializeTestEnvironment, assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
 import { doc, getDoc } from "firebase/firestore";
+import { getBytes, ref } from "firebase/storage";
 import { descriptor } from "./model.mjs";
 import { firebaseDriver } from "./firebase.mjs";
 import { captureBackup, readBackup } from "./artifacts.mjs";
@@ -17,6 +18,12 @@ const target = descriptor({ ...source, churchId: "cedar-recovery", projectId: "d
 const original = firebaseDriver(source), recovered = firebaseDriver(target);
 const registry = { version: 1, allowedProjects: [source.projectId, target.projectId], churches: { [source.churchId]: { projectId: source.projectId, environment: source.environment, origin: source.origin, region: source.region } } };
 let rules;
+const denyFirestore = "rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if false; } } }";
+const denyStorage = "rules_version = '2'; service firebase.storage { match /b/{bucket}/o { match /{object=**} { allow read, write: if false; } } }";
+async function applyRules(firestoreRules, storageRules) {
+  await rules?.cleanup();
+  rules = await initializeTestEnvironment({ projectId: target.projectId, firestore: { host: "127.0.0.1", port: 8080, rules: firestoreRules }, storage: { host: "127.0.0.1", port: 9199, rules: storageRules } });
+}
 try {
   const ring = (await original.db.doc("operatorEmulator/secrets").get()).get("ring");
   if (!ring) throw new Error("Run emulator-smoke.mjs before the recovery drill");
@@ -65,13 +72,14 @@ try {
       if (rules) assert.equal(target.environment, "emulator");
     },
     run: async (step) => {
-      if (step === "deny-public-access") rules = await initializeTestEnvironment({ projectId: target.projectId, firestore: { host: "127.0.0.1", port: 8080, rules: parts.configuration.firestoreRules }, storage: { host: "127.0.0.1", port: 9199, rules: parts.configuration.storageRules } });
+      if (step === "deny-public-access") await applyRules(denyFirestore, denyStorage);
       if (step === "restore-keys") await recovered.db.doc("operatorEmulator/recoveredKeys").set({ ring: parts.keyRing });
       if (step === "restore-firestore") {
         for (const row of parts.firestore) {
           // Never restore delivery queues, passkey sessions, challenges or grants into an active product.
           // This isolated target has no public Functions and applies deny-by-default rules first.
-          if (!/^(?:deploymentIdentity|backupStatus|operatorEmulator)\//.test(row.path)) await recovered.db.doc(row.path).set(row.data);
+          if (/^(?:deploymentIdentity|backupStatus|operatorEmulator|staffSessions|securityChallenges|desktopHandoffs)\//.test(row.path)) continue;
+          await recovered.db.doc(row.path).set(row.path.startsWith("staffAccess/") ? { ...row.data, enabled: false, locked: true } : row.data);
         }
         await recovered.db.doc("communicationSettings/church").update({ emailEnabled: false, smsEnabled: false, bulletinEnabled: false });
       }
@@ -97,12 +105,19 @@ try {
         assert.equal((await recovered.db.doc(`users/${member.uid}`).get()).get("personId"), "fictional-recovery");
       }
       if (step === "validate-role-denials") {
+        // Temporarily exercise reviewed permissions with synthetic identities in this emulator-only drill.
+        // The target returns to deny-all even if a permission assertion fails.
+        await applyRules(parts.configuration.firestoreRules, parts.configuration.storageRules);
+        try {
         for (const role of ["admin", "deacon", "elder"]) {
           await recovered.db.doc(`staffAccess/fictional-${role}`).set({ enabled: true, roles: [role], validAfter: 0 });
           const db = rules.authenticatedContext(`fictional-${role}`, { roles: [role], email_verified: true, auth_time: Math.floor(Date.now() / 1000), firebase: { sign_in_second_factor: "totp" } }).firestore();
           await assertSucceeds(getDoc(doc(db, "people/fictional-recovery")));
           await assertFails(getDoc(doc(db, privatePath))); await assertFails(getDoc(doc(db, "mercyNotes/fictional-recovery")));
         }
+        } finally { await applyRules(denyFirestore, denyStorage); }
+        await assertFails(getDoc(doc(rules.unauthenticatedContext().firestore(), "people/fictional-recovery")));
+        await assertFails(getBytes(ref(rules.unauthenticatedContext().storage(target.storageBucket), "photos/fictional-recovery/current.png")));
         assert.equal((await recovered.db.doc("communicationSettings/church").get()).get("emailEnabled"), false);
         assert.equal((await recovered.db.doc("communicationSettings/church").get()).get("smsEnabled"), false);
       }
@@ -111,4 +126,4 @@ try {
   };
   const report = await restore({ source, target, manifest, registry, driver, save });
   console.log(JSON.stringify({ drill: "fictional-emulator", status: report.status, measuredRtoSeconds: report.measuredRtoSeconds, measuredRpoSeconds: report.measuredRpoSeconds, restored: ["history", "photos", "disabled-accounts", "private-path-bound-encryption", "role-denials"], delivery: "disabled" }));
-} finally { await rules?.cleanup(); await Promise.all([deleteApp(original.app), deleteApp(recovered.app)]); }
+} finally { await rules?.cleanup(); await Promise.all([original.db.terminate(), recovered.db.terminate()]); await Promise.all([deleteApp(original.app), deleteApp(recovered.app)]); }

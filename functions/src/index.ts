@@ -1,3 +1,4 @@
+import "./runtime.js";
 export * from "./backups.js";
 import { createOnce } from "./creation.js";
 export * from "./pwa.js";

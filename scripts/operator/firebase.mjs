@@ -41,14 +41,15 @@ export function firebaseDriver(config, { attestations = {}, deploy } = {}) {
     if (id === "identity") return result((await identity.get()).exists, "unreserved-project");
     if (id === "infrastructure") {
       if (emulator) { await Promise.all([db.listCollections(), auth.listUsers(1)]); return result(true, "emulator-only"); }
-      const [firebase, database, bucket, authConfig, appCheck] = await Promise.all([
+      const [firebase, database, bucket, authConfig, appCheck, backupIdentity] = await Promise.all([
         api("firebase.googleapis.com", `/v1beta1/projects/${config.projectId}`),
         api("firestore.googleapis.com", `/v1/projects/${config.projectId}/databases/(default)`),
         api("storage.googleapis.com", `/storage/v1/b/${config.storageBucket}`),
         api("identitytoolkit.googleapis.com", `/admin/v2/projects/${config.projectId}/config`),
         api("firebaseappcheck.googleapis.com", `/v1/projects/${config.projectId}/apps/${encodeURIComponent(config.firebase.appId)}/recaptchaEnterpriseConfig`),
+        api("iam.googleapis.com", `/v1/projects/${config.projectId}/serviceAccounts/${encodeURIComponent(config.backupServiceAccount)}`),
       ]);
-      const ready = firebase?.state === "ACTIVE" && String(bucket?.projectNumber) === String(firebase.projectNumber) && database?.locationId === config.region && bucket?.location?.toLowerCase() === config.region && authConfig?.mfa?.state === "ENABLED" && !!appCheck?.siteKey;
+      const ready = backupIdentity?.email === config.backupServiceAccount && !backupIdentity?.disabled && firebase?.state === "ACTIVE" && String(bucket?.projectNumber) === String(firebase.projectNumber) && bucket?.versioning?.enabled && database?.locationId === config.region && bucket?.location?.toLowerCase() === config.region && authConfig?.mfa?.state === "ENABLED" && !!appCheck?.siteKey;
       return result(!!ready, "verify-firebase-region-identity-platform-appcheck");
     }
     if (id === "secrets") {

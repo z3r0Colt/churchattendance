@@ -19,7 +19,7 @@ export function confirmConnection() {
   })().finally(() => { checking = undefined; });
   return checking;
 }
-export function isReadCall(name: string) { return /^(?:get|list|my)/.test(name) || /^(?:portalPublicEvents|portalPublicCalendar|portalMemberEvents|portalMe|portalDirectory|portalPhoto)$/.test(name); }
+export function isReadCall(name: string) { return /^(?:get|list|my)/.test(name) || /^(?:portalPublicEvents|portalPublicCalendar|portalMemberEvents|portalMe|portalDirectory|portalPhoto|staffSecurityStatus)$/.test(name); }
 export async function connectedOperation<T>(action: () => Promise<T>, readOnly = false) {
   // Recheck before side effects, including when a browser reports a stale online state.
   await confirmConnection();

@@ -38,21 +38,23 @@ export const dailyRecoveryBackup = onSchedule({
     const managed = await response.json() as { backups?: { name: string; state: string; snapshotTime: string }[] };
     const latest = managed.backups?.filter((row) => row.state === "READY").sort((a, b) => b.snapshotTime.localeCompare(a.snapshotTime))[0];
     if (!latest || Date.now() - Date.parse(latest.snapshotTime) > 30 * 3600000) throw new Error("Recent managed Firestore backup required");
-    const files: { path: string; generation: string; object: string; crc32c: string }[] = [];
+    const files: { path: string; generation: string; object: string; crc32c: string; updated: string }[] = [];
     const source = getStorage().bucket();
+    const [sourceMetadata] = await source.getMetadata();
+    if (!sourceMetadata.versioning?.enabled) throw new Error("Source object version retention is required for Firestore/Storage recovery alignment");
     // Bounded pages avoid buffering an entire congregation's photos and bulletin files.
     let pageToken: string | undefined;
     do {
-      const [page, next] = await source.getFiles({ autoPaginate: false, maxResults: 100, ...(pageToken ? { pageToken } : {}) });
+      const [page, next] = await source.getFiles({ autoPaginate: false, versions: true, maxResults: 100, ...(pageToken ? { pageToken } : {}) });
       for (const file of page) {
-        const [before] = await file.getMetadata();
-        const object = `${prefix}/storage/${file.name}`;
+        const before = file.metadata.generation ? file.metadata : (await file.getMetadata())[0];
+        const object = `${prefix}/storage/${before.generation}/${file.name}`;
         // Bind the copy to the captured source generation so replacement cannot silently mix content.
         const version = source.file(file.name, { generation: before.generation });
         await version.copy(backup.file(object), { preconditionOpts: { ifGenerationMatch: 0 } });
         const [copied] = await backup.file(object).getMetadata();
         if (!before.crc32c || copied.crc32c !== before.crc32c) throw new Error("Storage recovery checksum mismatch");
-        files.push({ path: file.name, generation: String(before.generation), object, crc32c: before.crc32c });
+        files.push({ path: file.name, generation: String(before.generation), object, crc32c: before.crc32c, updated: String(before.updated || "") });
       }
       pageToken = next?.pageToken;
     } while (pageToken);
